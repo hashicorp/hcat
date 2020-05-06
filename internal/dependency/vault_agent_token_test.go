@@ -3,10 +3,10 @@ package dependency
 import (
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
-	"github.com/hashicorp/consul-template/renderer"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -25,7 +25,7 @@ func TestVaultAgentTokenQuery_Fetch(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer os.Remove(tokenFile.Name())
-	renderer.AtomicWrite(tokenFile.Name(), false, []byte("token"), 0644, false)
+	testWrite(tokenFile.Name(), []byte("token"))
 
 	d, err := NewVaultAgentTokenQuery(tokenFile.Name())
 	if err != nil {
@@ -41,8 +41,7 @@ func TestVaultAgentTokenQuery_Fetch(t *testing.T) {
 	assert.Equal(t, "token", clientSet.Vault().Token())
 
 	// Update the contents.
-	renderer.AtomicWrite(
-		tokenFile.Name(), false, []byte("another_token"), 0644, false)
+	testWrite(tokenFile.Name(), []byte("another_token"))
 	_, _, err = d.Fetch(clientSet, nil)
 	if err != nil {
 		t.Fatal(err)
@@ -71,4 +70,41 @@ func TestVaultAgentTokenQuery_Fetch_missingFile(t *testing.T) {
 
 	// Token should be unaffected.
 	assert.Equal(t, "foo", clientSet.Vault().Token())
+}
+
+//
+func testWrite(path string, contents []byte) error {
+	if path == "" {
+		panic("missing path")
+	}
+
+	parent := filepath.Dir(path)
+	if _, err := os.Stat(parent); os.IsNotExist(err) {
+		if err := os.MkdirAll(parent, 0755); err != nil {
+			return err
+		}
+	}
+
+	f, err := ioutil.TempFile(parent, "")
+	if err != nil {
+		return err
+	}
+	defer os.Remove(f.Name())
+
+	if _, err := f.Write(contents); err != nil {
+		return err
+	}
+
+	for _, err := range []error{
+		f.Sync(),
+		f.Close(),
+		os.Chmod(f.Name(), 0644),
+		os.Rename(f.Name(), path),
+	} {
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

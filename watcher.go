@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	dep "github.com/hashicorp/consul-template/dependency"
+	dep "github.com/hashicorp/hat/internal/dependency"
 	"github.com/pkg/errors"
 )
 

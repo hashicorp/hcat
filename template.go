@@ -9,7 +9,7 @@ import (
 
 	"github.com/pkg/errors"
 
-	dep "github.com/hashicorp/consul-template/dependency"
+	dep "github.com/hashicorp/hat/internal/dependency"
 )
 
 var (

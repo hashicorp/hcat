@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	dep "github.com/hashicorp/consul-template/dependency"
+	dep "github.com/hashicorp/hat/internal/dependency"
 )
 
 func TestNewBrain(t *testing.T) {

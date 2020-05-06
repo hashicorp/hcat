@@ -236,7 +236,8 @@ func (c *Child) Stop() {
 
 // StopImmediately behaves almost identical to Stop except it does not wait
 // for any random splay if configured. This is used for performing a fast
-// shutdown of consul-template and its children when a kill signal is received.
+// shutdown the supervisor process and its children when a kill signal is
+// received.
 func (c *Child) StopImmediately() {
 	c.internalStop(true)
 }

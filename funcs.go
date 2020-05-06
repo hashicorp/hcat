@@ -20,9 +20,9 @@ import (
 	"time"
 
 	"github.com/BurntSushi/toml"
-	dep "github.com/hashicorp/consul-template/dependency"
 	"github.com/hashicorp/consul/api"
 	socktmpl "github.com/hashicorp/go-sockaddr/template"
+	dep "github.com/hashicorp/hat/internal/dependency"
 	"github.com/pkg/errors"
 	yaml "gopkg.in/yaml.v2"
 )
