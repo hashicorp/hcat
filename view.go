@@ -11,17 +11,17 @@ import (
 	dep "github.com/hashicorp/hat/internal/dependency"
 )
 
-// View is a representation of a Dependency and the most recent data it has
+// view is a representation of a Dependency and the most recent data it has
 // received from Consul.
-type View struct {
-	// dependency is the dependency that is associated with this View
+type view struct {
+	// dependency is the dependency that is associated with this view
 	dependency dep.Dependency
 
 	// clients is the list of clients to communicate upstream. This is passed
 	// directly to the dependency.
 	clients *dep.ClientSet
 
-	// data is the most-recently-received data from Consul for this View. It is
+	// data is the most-recently-received data from Consul for this view. It is
 	// accompanied by a series of locks and booleans to ensure consistency.
 	dataLock     sync.RWMutex
 	data         interface{}
@@ -41,12 +41,12 @@ type View struct {
 	// should be attempted.
 	retryFunc RetryFunc
 
-	// stopCh is used to stop polling on this View
+	// stopCh is used to stop polling on this view
 	stopCh chan struct{}
 }
 
 // NewViewInput is used as input to the NewView function.
-type NewViewInput struct {
+type newViewInput struct {
 	// Dependency is the dependency to associate with the new view.
 	Dependency dep.Dependency
 
@@ -70,8 +70,8 @@ type NewViewInput struct {
 }
 
 // NewView constructs a new view with the given inputs.
-func NewView(i *NewViewInput) (*View, error) {
-	return &View{
+func newView(i *newViewInput) (*view, error) {
+	return &view{
 		dependency:         i.Dependency,
 		clients:            i.Clients,
 		blockQueryWaitTime: i.BlockQueryWaitTime,
@@ -82,13 +82,13 @@ func NewView(i *NewViewInput) (*View, error) {
 	}, nil
 }
 
-// Dependency returns the dependency attached to this View.
-func (v *View) Dependency() dep.Dependency {
+// Dependency returns the dependency attached to this view.
+func (v *view) Dependency() dep.Dependency {
 	return v.dependency
 }
 
-// Data returns the most-recently-received data from Consul for this View.
-func (v *View) Data() interface{} {
+// Data returns the most-recently-received data from Consul for this view.
+func (v *view) Data() interface{} {
 	v.dataLock.RLock()
 	defer v.dataLock.RUnlock()
 	return v.data
@@ -97,7 +97,7 @@ func (v *View) Data() interface{} {
 // DataAndLastIndex returns the most-recently-received data from Consul for
 // this view, along with the last index. This is atomic so you will get the
 // index that goes with the data you are fetching.
-func (v *View) DataAndLastIndex() (interface{}, uint64) {
+func (v *view) DataAndLastIndex() (interface{}, uint64) {
 	v.dataLock.RLock()
 	defer v.dataLock.RUnlock()
 	return v.data, v.lastIndex
@@ -107,7 +107,7 @@ func (v *View) DataAndLastIndex() (interface{}, uint64) {
 // accounts for interrupts on the interrupt channel. This allows the poll
 // function to be fired in a goroutine, but then halted even if the fetch
 // function is in the middle of a blocking query.
-func (v *View) poll(viewCh chan<- *View, errCh chan<- error) {
+func (v *view) poll(viewCh chan<- *view, errCh chan<- error) {
 	var retries int
 
 	for {
@@ -181,8 +181,8 @@ func (v *View) poll(viewCh chan<- *View, errCh chan<- error) {
 // promises that either data will be written to doneCh or an error will be
 // written to errCh. It is designed to be run in a goroutine that selects the
 // result of doneCh and errCh. It is assumed that only one instance of fetch
-// is running per View and therefore no locking or mutexes are used.
-func (v *View) fetch(doneCh, successCh chan<- struct{}, errCh chan<- error) {
+// is running per view and therefore no locking or mutexes are used.
+func (v *view) fetch(doneCh, successCh chan<- struct{}, errCh chan<- error) {
 	log.Printf("[TRACE] (view) %s starting fetch", v.dependency)
 
 	var allowStale bool
@@ -292,7 +292,7 @@ func rateLimiter(start time.Time) time.Duration {
 }
 
 // stop halts polling of this view.
-func (v *View) stop() {
+func (v *view) stop() {
 	v.dependency.Stop()
 	close(v.stopCh)
 }

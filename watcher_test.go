@@ -17,13 +17,13 @@ func TestAdd_updatesMap(t *testing.T) {
 	}
 
 	d := &TestDep{}
-	if _, err := w.Add(d); err != nil {
+	if _, err := w.add(d); err != nil {
 		t.Fatal(err)
 	}
 
 	_, exists := w.depViewMap[d.String()]
 	if !exists {
-		t.Errorf("expected Add to append to map")
+		t.Errorf("expected add to append to map")
 	}
 }
 
@@ -37,15 +37,15 @@ func TestAdd_exists(t *testing.T) {
 	}
 
 	d := &TestDep{}
-	w.depViewMap[d.String()] = &View{}
+	w.depViewMap[d.String()] = &view{}
 
-	added, err := w.Add(d)
+	added, err := w.add(d)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	if added != false {
-		t.Errorf("expected Add to return false")
+		t.Errorf("expected add to return false")
 	}
 }
 
@@ -58,13 +58,13 @@ func TestAdd_startsViewPoll(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	added, err := w.Add(&TestDep{})
+	added, err := w.add(&TestDep{})
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	if added != true {
-		t.Errorf("expected Add to return true")
+		t.Errorf("expected add to return true")
 	}
 
 	select {
@@ -100,7 +100,7 @@ func TestWatching_exists(t *testing.T) {
 	}
 
 	d := &TestDep{}
-	if _, err := w.Add(d); err != nil {
+	if _, err := w.add(d); err != nil {
 		t.Fatal(err)
 	}
 
@@ -119,11 +119,11 @@ func TestRemove_exists(t *testing.T) {
 	}
 
 	d := &TestDep{}
-	if _, err := w.Add(d); err != nil {
+	if _, err := w.add(d); err != nil {
 		t.Fatal(err)
 	}
 
-	removed := w.Remove(d)
+	removed := w.remove(d)
 	if removed != true {
 		t.Error("expected Remove to return true")
 	}
@@ -142,7 +142,7 @@ func TestRemove_doesNotExist(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	removed := w.Remove(&TestDep{})
+	removed := w.remove(&TestDep{})
 	if removed != false {
 		t.Fatal("expected Remove to return false")
 	}
@@ -173,7 +173,7 @@ func TestSize_returnsNumViews(t *testing.T) {
 
 	for i := 0; i < 10; i++ {
 		d := &TestDep{name: fmt.Sprintf("%d", i)}
-		if _, err := w.Add(d); err != nil {
+		if _, err := w.add(d); err != nil {
 			t.Fatal(err)
 		}
 	}

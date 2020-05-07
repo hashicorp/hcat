@@ -65,7 +65,7 @@ func TestForceSet(t *testing.T) {
 		},
 	}
 
-	st.ForceSet(d.String(), nodes)
+	st.forceSet(d.String(), nodes)
 
 	data, ok := st.Recall(d)
 	if !ok {

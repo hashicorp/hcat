@@ -15,16 +15,16 @@ import (
 const (
 	// DefaultFilePerms are the default file permissions for files rendered onto
 	// disk when a specific file permission has not already been specified.
-	DefaultFilePerms = 0644
+	defaultFilePerms = 0644
 )
 
 var (
 	// ErrNoParentDir is the error returned with the parent directory is missing
 	// and the user disabled it.
-	ErrNoParentDir = errors.New("parent directory is missing")
+	errNoParentDir = errors.New("parent directory is missing")
 
 	// ErrMissingDest is the error returned with the destination is empty.
-	ErrMissingDest = errors.New("missing destination")
+	errMissingDest = errors.New("missing destination")
 )
 
 // RenderInput is used as input to the render function.
@@ -75,7 +75,7 @@ func Render(i *RenderInput) (*RenderResult, error) {
 	if i.Dry {
 		fmt.Fprintf(i.DryStream, "> %s\n%s", i.Path, i.Contents)
 	} else {
-		if err := AtomicWrite(i.Path, i.CreateDestDirs, i.Contents, i.Perms, i.Backup); err != nil {
+		if err := atomicWrite(i.Path, i.CreateDestDirs, i.Contents, i.Perms, i.Backup); err != nil {
 			return nil, errors.Wrap(err, "failed writing file")
 		}
 	}
@@ -102,9 +102,9 @@ func Render(i *RenderInput) (*RenderResult, error) {
 //
 // If no errors occur, the Tempfile is "renamed" (moved) to the destination
 // path.
-func AtomicWrite(path string, createDestDirs bool, contents []byte, perms os.FileMode, backup bool) error {
+func atomicWrite(path string, createDestDirs bool, contents []byte, perms os.FileMode, backup bool) error {
 	if path == "" {
-		return ErrMissingDest
+		return errMissingDest
 	}
 
 	parent := filepath.Dir(path)
@@ -114,7 +114,7 @@ func AtomicWrite(path string, createDestDirs bool, contents []byte, perms os.Fil
 				return err
 			}
 		} else {
-			return ErrNoParentDir
+			return errNoParentDir
 		}
 	}
 
@@ -143,7 +143,7 @@ func AtomicWrite(path string, createDestDirs bool, contents []byte, perms os.Fil
 		currentInfo, err := os.Stat(path)
 		if err != nil {
 			if os.IsNotExist(err) {
-				perms = DefaultFilePerms
+				perms = defaultFilePerms
 			} else {
 				return err
 			}

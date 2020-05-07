@@ -22,7 +22,7 @@ type Watcher struct {
 	clients *dep.ClientSet
 
 	// dataCh is the chan where Views will be published.
-	dataCh chan *View
+	dataCh chan *view
 
 	// errCh is the chan where any errors will be published.
 	errCh chan error
@@ -32,7 +32,7 @@ type Watcher struct {
 
 	// depViewMap is a map of Templates to Views. Templates are keyed by
 	// their string.
-	depViewMap map[string]*View
+	depViewMap map[string]*view
 
 	// maxStale specifies the maximum staleness of a query response.
 	maxStale time.Duration
@@ -79,8 +79,8 @@ type NewWatcherInput struct {
 func NewWatcher(i *NewWatcherInput) (*Watcher, error) {
 	w := &Watcher{
 		clients:            i.Clients,
-		depViewMap:         make(map[string]*View),
-		dataCh:             make(chan *View, dataBufferSize),
+		depViewMap:         make(map[string]*view),
+		dataCh:             make(chan *view, dataBufferSize),
 		errCh:              make(chan error),
 		maxStale:           i.MaxStale,
 		once:               i.Once,
@@ -96,7 +96,7 @@ func NewWatcher(i *NewWatcherInput) (*Watcher, error) {
 		if err != nil {
 			return nil, errors.Wrap(err, "watcher")
 		}
-		if _, err := w.Add(vt); err != nil {
+		if _, err := w.add(vt); err != nil {
 			return nil, errors.Wrap(err, "watcher")
 		}
 	}
@@ -106,7 +106,7 @@ func NewWatcher(i *NewWatcherInput) (*Watcher, error) {
 		if err != nil {
 			return nil, errors.Wrap(err, "watcher")
 		}
-		if _, err := w.Add(vag); err != nil {
+		if _, err := w.add(vag); err != nil {
 			return nil, errors.Wrap(err, "watcher")
 		}
 	}
@@ -114,18 +114,7 @@ func NewWatcher(i *NewWatcherInput) (*Watcher, error) {
 	return w, nil
 }
 
-// DataCh returns a read-only channel of Views which is populated when a view
-// receives data from its upstream.
-func (w *Watcher) DataCh() <-chan *View {
-	return w.dataCh
-}
-
-// ErrCh returns a read-only channel of errors returned by the upstream.
-func (w *Watcher) ErrCh() <-chan error {
-	return w.errCh
-}
-
-// Add adds the given dependency to the list of monitored dependencies
+// add adds the given dependency to the list of monitored dependencies
 // and start the associated view. If the dependency already exists, no action is
 // taken.
 //
@@ -133,7 +122,7 @@ func (w *Watcher) ErrCh() <-chan error {
 // view was successfully created, it will return true. If an error occurs while
 // creating the view, it will be returned here (but future errors returned by
 // the view will happen on the channel).
-func (w *Watcher) Add(d dep.Dependency) (bool, error) {
+func (w *Watcher) add(d dep.Dependency) (bool, error) {
 	w.Lock()
 	defer w.Unlock()
 
@@ -155,7 +144,7 @@ func (w *Watcher) Add(d dep.Dependency) (bool, error) {
 		retryFunc = w.retryFuncDefault
 	}
 
-	v, err := NewView(&NewViewInput{
+	v, err := newView(&newViewInput{
 		Dependency:         d,
 		Clients:            w.clients,
 		MaxStale:           w.maxStale,
@@ -186,7 +175,7 @@ func (w *Watcher) Watching(d dep.Dependency) bool {
 
 // ForceWatching is used to force setting the internal state of watching
 // a dependency. This is only used for unit testing purposes.
-func (w *Watcher) ForceWatching(d dep.Dependency, enabled bool) {
+func (w *Watcher) forceWatching(d dep.Dependency, enabled bool) {
 	w.Lock()
 	defer w.Unlock()
 
@@ -198,10 +187,10 @@ func (w *Watcher) ForceWatching(d dep.Dependency, enabled bool) {
 }
 
 // Remove removes the given dependency from the list and stops the
-// associated View. If a View for the given dependency does not exist, this
-// function will return false. If the View does exist, this function will return
+// associated view. If a view for the given dependency does not exist, this
+// function will return false. If the view does exist, this function will return
 // true upon successful deletion.
-func (w *Watcher) Remove(d dep.Dependency) bool {
+func (w *Watcher) remove(d dep.Dependency) bool {
 	w.Lock()
 	defer w.Unlock()
 
@@ -242,7 +231,7 @@ func (w *Watcher) Stop() {
 	}
 
 	// Reset the map to have no views
-	w.depViewMap = make(map[string]*View)
+	w.depViewMap = make(map[string]*view)
 
 	// Close any idle TCP connections
 	w.clients.Stop()

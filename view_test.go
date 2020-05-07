@@ -7,42 +7,42 @@ import (
 )
 
 func TestPoll_returnsViewCh(t *testing.T) {
-	view, err := NewView(&NewViewInput{
+	vw, err := newView(&newViewInput{
 		Dependency: &TestDep{},
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	viewCh := make(chan *View)
+	viewCh := make(chan *view)
 	errCh := make(chan error)
 
-	go view.poll(viewCh, errCh)
-	defer view.stop()
+	go vw.poll(viewCh, errCh)
+	defer vw.stop()
 
 	select {
 	case <-viewCh:
 		// Got this far, so the test passes
 	case err := <-errCh:
 		t.Errorf("error while polling: %s", err)
-	case <-view.stopCh:
+	case <-vw.stopCh:
 		t.Errorf("poll received premature stop")
 	}
 }
 
 func TestPoll_returnsErrCh(t *testing.T) {
-	view, err := NewView(&NewViewInput{
+	vw, err := newView(&newViewInput{
 		Dependency: &TestDepFetchError{},
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	viewCh := make(chan *View)
+	viewCh := make(chan *view)
 	errCh := make(chan error)
 
-	go view.poll(viewCh, errCh)
-	defer view.stop()
+	go vw.poll(viewCh, errCh)
+	defer vw.stop()
 
 	select {
 	case data := <-viewCh:
@@ -52,24 +52,24 @@ func TestPoll_returnsErrCh(t *testing.T) {
 		if err.Error() != expected {
 			t.Errorf("expected %q to be %q", err.Error(), expected)
 		}
-	case <-view.stopCh:
+	case <-vw.stopCh:
 		t.Errorf("poll received premature stop")
 	}
 }
 
 func TestPoll_stopsViewStopCh(t *testing.T) {
-	view, err := NewView(&NewViewInput{
+	vw, err := newView(&newViewInput{
 		Dependency: &TestDep{},
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	viewCh := make(chan *View)
+	viewCh := make(chan *view)
 	errCh := make(chan error)
 
-	go view.poll(viewCh, errCh)
-	view.stop()
+	go vw.poll(viewCh, errCh)
+	vw.stop()
 
 	select {
 	case <-viewCh:
@@ -82,25 +82,25 @@ func TestPoll_stopsViewStopCh(t *testing.T) {
 }
 
 func TestPoll_once(t *testing.T) {
-	view, err := NewView(&NewViewInput{
+	vw, err := newView(&newViewInput{
 		Dependency: &TestDep{},
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	viewCh := make(chan *View)
+	viewCh := make(chan *view)
 	errCh := make(chan error)
 
-	go view.poll(viewCh, errCh)
-	defer view.stop()
+	go vw.poll(viewCh, errCh)
+	defer vw.stop()
 
 	select {
 	case <-viewCh:
 		// Got this far, so the test passes
 	case err := <-errCh:
 		t.Errorf("error while polling: %s", err)
-	case <-view.stopCh:
+	case <-vw.stopCh:
 		t.Errorf("poll received premature stop")
 	}
 
@@ -109,7 +109,7 @@ func TestPoll_once(t *testing.T) {
 		t.Errorf("expected no data (should have stopped), but received view data")
 	case err := <-errCh:
 		t.Errorf("error while polling: %s", err)
-	case <-view.stopCh:
+	case <-vw.stopCh:
 		t.Errorf("poll received premature stop")
 	case <-time.After(20 * time.Millisecond):
 		// No data in 0.2s, so the test passes
@@ -117,7 +117,7 @@ func TestPoll_once(t *testing.T) {
 }
 
 func TestPoll_retries(t *testing.T) {
-	view, err := NewView(&NewViewInput{
+	vw, err := newView(&newViewInput{
 		Dependency: &TestDepRetry{},
 		RetryFunc: func(retry int) (bool, time.Duration) {
 			return retry < 1, 250 * time.Millisecond
@@ -127,11 +127,11 @@ func TestPoll_retries(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	viewCh := make(chan *View)
+	viewCh := make(chan *view)
 	errCh := make(chan error)
 
-	go view.poll(viewCh, errCh)
-	defer view.stop()
+	go vw.poll(viewCh, errCh)
+	defer vw.stop()
 
 	select {
 	case <-viewCh:
@@ -144,7 +144,7 @@ func TestPoll_retries(t *testing.T) {
 		// Got this far, so the test passes
 	case err := <-errCh:
 		t.Errorf("error while polling: %s", err)
-	case <-view.stopCh:
+	case <-vw.stopCh:
 		t.Errorf("poll received premature stop")
 	case <-time.After(2 * time.Second):
 		t.Fatalf("timeout")
@@ -152,7 +152,7 @@ func TestPoll_retries(t *testing.T) {
 }
 
 func TestFetch_resetRetries(t *testing.T) {
-	view, err := NewView(&NewViewInput{
+	view, err := newView(&newViewInput{
 		Dependency: &TestDepSameIndex{},
 	})
 	if err != nil {
@@ -175,7 +175,7 @@ func TestFetch_resetRetries(t *testing.T) {
 }
 
 func TestFetch_maxStale(t *testing.T) {
-	view, err := NewView(&NewViewInput{
+	view, err := newView(&newViewInput{
 		Dependency: &TestDepStale{},
 		MaxStale:   10 * time.Millisecond,
 	})
@@ -201,7 +201,7 @@ func TestFetch_maxStale(t *testing.T) {
 }
 
 func TestFetch_savesView(t *testing.T) {
-	view, err := NewView(&NewViewInput{
+	view, err := newView(&newViewInput{
 		Dependency: &TestDep{},
 	})
 	if err != nil {
@@ -226,7 +226,7 @@ func TestFetch_savesView(t *testing.T) {
 }
 
 func TestFetch_returnsErrCh(t *testing.T) {
-	view, err := NewView(&NewViewInput{
+	view, err := newView(&newViewInput{
 		Dependency: &TestDepFetchError{},
 	})
 	if err != nil {
@@ -251,25 +251,25 @@ func TestFetch_returnsErrCh(t *testing.T) {
 }
 
 func TestStop_stopsPolling(t *testing.T) {
-	view, err := NewView(&NewViewInput{
+	vw, err := newView(&newViewInput{
 		Dependency: &TestDep{},
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	viewCh := make(chan *View)
+	viewCh := make(chan *view)
 	errCh := make(chan error)
 
-	go view.poll(viewCh, errCh)
-	view.stop()
+	go vw.poll(viewCh, errCh)
+	vw.stop()
 
 	select {
 	case v := <-viewCh:
 		t.Errorf("got unexpected view: %#v", v)
 	case err := <-errCh:
 		t.Error(err)
-	case <-view.stopCh:
+	case <-vw.stopCh:
 		// Successfully stopped
 	}
 }

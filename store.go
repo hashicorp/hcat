@@ -55,7 +55,7 @@ func (b *Store) Recall(d dep.Dependency) (interface{}, bool) {
 
 // ForceSet is used to force set the value of a dependency
 // for a given hash code
-func (b *Store) ForceSet(hashCode string, data interface{}) {
+func (b *Store) forceSet(hashCode string, data interface{}) {
 	b.Lock()
 	defer b.Unlock()
 

@@ -10,19 +10,19 @@ func TestScratch_Key(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
 		name string
-		s    *Scratch
+		s    *scratch
 		k    string
 		e    bool
 	}{
 		{
 			"no_exist",
-			&Scratch{},
+			&scratch{},
 			"",
 			false,
 		},
 		{
 			"exist",
-			&Scratch{
+			&scratch{
 				values: map[string]interface{}{
 					"foo": nil,
 				},
@@ -46,19 +46,19 @@ func TestScratch_Get(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
 		name string
-		s    *Scratch
+		s    *scratch
 		k    string
 		e    interface{}
 	}{
 		{
 			"no_exist",
-			&Scratch{},
+			&scratch{},
 			"",
 			nil,
 		},
 		{
 			"exist",
-			&Scratch{
+			&scratch{
 				values: map[string]interface{}{
 					"foo": "bar",
 				},
@@ -82,15 +82,15 @@ func TestScratch_Set(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
 		name string
-		f    func(*Scratch)
-		e    *Scratch
+		f    func(*scratch)
+		e    *scratch
 	}{
 		{
 			"no_exist",
-			func(s *Scratch) {
+			func(s *scratch) {
 				s.Set("foo", "bar")
 			},
-			&Scratch{
+			&scratch{
 				values: map[string]interface{}{
 					"foo": "bar",
 				},
@@ -98,11 +98,11 @@ func TestScratch_Set(t *testing.T) {
 		},
 		{
 			"overwrites",
-			func(s *Scratch) {
+			func(s *scratch) {
 				s.Set("foo", "bar")
 				s.Set("foo", "zip")
 			},
-			&Scratch{
+			&scratch{
 				values: map[string]interface{}{
 					"foo": "zip",
 				},
@@ -112,7 +112,7 @@ func TestScratch_Set(t *testing.T) {
 
 	for i, tc := range cases {
 		t.Run(fmt.Sprintf("%d_%s", i, tc.name), func(t *testing.T) {
-			var s Scratch
+			var s scratch
 			tc.f(&s)
 
 			if !reflect.DeepEqual(tc.e.values, s.values) {
@@ -126,15 +126,15 @@ func TestScratch_SetX(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
 		name string
-		f    func(*Scratch)
-		e    *Scratch
+		f    func(*scratch)
+		e    *scratch
 	}{
 		{
 			"no_exist",
-			func(s *Scratch) {
+			func(s *scratch) {
 				s.SetX("foo", "bar")
 			},
-			&Scratch{
+			&scratch{
 				values: map[string]interface{}{
 					"foo": "bar",
 				},
@@ -142,11 +142,11 @@ func TestScratch_SetX(t *testing.T) {
 		},
 		{
 			"overwrites",
-			func(s *Scratch) {
+			func(s *scratch) {
 				s.SetX("foo", "bar")
 				s.SetX("foo", "zip")
 			},
-			&Scratch{
+			&scratch{
 				values: map[string]interface{}{
 					"foo": "bar",
 				},
@@ -156,7 +156,7 @@ func TestScratch_SetX(t *testing.T) {
 
 	for i, tc := range cases {
 		t.Run(fmt.Sprintf("%d_%s", i, tc.name), func(t *testing.T) {
-			var s Scratch
+			var s scratch
 			tc.f(&s)
 
 			if !reflect.DeepEqual(tc.e.values, s.values) {
@@ -170,16 +170,16 @@ func TestScratch_MapSet(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
 		name string
-		f    func(*Scratch)
-		e    *Scratch
+		f    func(*scratch)
+		e    *scratch
 	}{
 		{
 			"no_exist",
-			func(s *Scratch) {
+			func(s *scratch) {
 				s.MapSet("a", "foo", "bar")
 				s.MapSet("b", "foo", "bar")
 			},
-			&Scratch{
+			&scratch{
 				values: map[string]interface{}{
 					"a": map[string]interface{}{
 						"foo": "bar",
@@ -192,11 +192,11 @@ func TestScratch_MapSet(t *testing.T) {
 		},
 		{
 			"overwrites",
-			func(s *Scratch) {
+			func(s *scratch) {
 				s.MapSet("a", "foo", "bar")
 				s.MapSet("a", "foo", "zip")
 			},
-			&Scratch{
+			&scratch{
 				values: map[string]interface{}{
 					"a": map[string]interface{}{
 						"foo": "zip",
@@ -208,7 +208,7 @@ func TestScratch_MapSet(t *testing.T) {
 
 	for i, tc := range cases {
 		t.Run(fmt.Sprintf("%d_%s", i, tc.name), func(t *testing.T) {
-			var s Scratch
+			var s scratch
 			tc.f(&s)
 
 			if !reflect.DeepEqual(tc.e.values, s.values) {
@@ -222,16 +222,16 @@ func TestScratch_MapSetX(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
 		name string
-		f    func(*Scratch)
-		e    *Scratch
+		f    func(*scratch)
+		e    *scratch
 	}{
 		{
 			"no_exist",
-			func(s *Scratch) {
+			func(s *scratch) {
 				s.MapSetX("a", "foo", "bar")
 				s.MapSetX("b", "foo", "bar")
 			},
-			&Scratch{
+			&scratch{
 				values: map[string]interface{}{
 					"a": map[string]interface{}{
 						"foo": "bar",
@@ -244,11 +244,11 @@ func TestScratch_MapSetX(t *testing.T) {
 		},
 		{
 			"overwrites",
-			func(s *Scratch) {
+			func(s *scratch) {
 				s.MapSetX("a", "foo", "bar")
 				s.MapSetX("a", "foo", "zip")
 			},
-			&Scratch{
+			&scratch{
 				values: map[string]interface{}{
 					"a": map[string]interface{}{
 						"foo": "bar",
@@ -260,7 +260,7 @@ func TestScratch_MapSetX(t *testing.T) {
 
 	for i, tc := range cases {
 		t.Run(fmt.Sprintf("%d_%s", i, tc.name), func(t *testing.T) {
-			var s Scratch
+			var s scratch
 			tc.f(&s)
 
 			if !reflect.DeepEqual(tc.e.values, s.values) {
@@ -274,13 +274,13 @@ func TestScratch_MapValues(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
 		name string
-		s    *Scratch
+		s    *scratch
 		e    []interface{}
 		err  bool
 	}{
 		{
 			"sorted",
-			&Scratch{
+			&scratch{
 				values: map[string]interface{}{
 					"a": map[string]interface{}{
 						"foo":   "bar",
@@ -294,7 +294,7 @@ func TestScratch_MapValues(t *testing.T) {
 		},
 		{
 			"empty",
-			&Scratch{
+			&scratch{
 				values: map[string]interface{}{
 					"a": map[string]interface{}{},
 				},
@@ -304,7 +304,7 @@ func TestScratch_MapValues(t *testing.T) {
 		},
 		{
 			"not_map",
-			&Scratch{
+			&scratch{
 				values: map[string]interface{}{
 					"a": true,
 				},

@@ -15,12 +15,14 @@ import (
 var (
 	// ErrTemplateContentsAndSource is the error returned when a template
 	// specifies both a "source" and "content" argument, which is not valid.
-	ErrTemplateContentsAndSource = errors.New("template: cannot specify both 'source' and 'contents'")
+	errTemplateContentsAndSource = errors.New(
+		"template: cannot specify both 'source' and 'contents'")
 
-	// ErrTemplateMissingContentsAndSource is the error returned when a template
-	// does not specify either a "source" or "content" argument, which is not
-	// valid.
-	ErrTemplateMissingContentsAndSource = errors.New("template: must specify exactly one of 'source' or 'contents'")
+	// ErrTemplateMissingContentsAndSource is the error returned when a
+	// template does not specify either a "source" or "content" argument, which
+	// is not valid.
+	errTemplateMissingContentsAndSource = errors.New(
+		"template: must specify exactly one of 'source' or 'contents'")
 )
 
 // Template is the internal representation of an individual template to process.
@@ -93,9 +95,9 @@ func NewTemplate(i *NewTemplateInput) (*Template, error) {
 
 	// Validate that we are either given the path or the explicit contents
 	if i.Source != "" && i.Contents != "" {
-		return nil, ErrTemplateContentsAndSource
+		return nil, errTemplateContentsAndSource
 	} else if i.Source == "" && i.Contents == "" {
-		return nil, ErrTemplateMissingContentsAndSource
+		return nil, errTemplateMissingContentsAndSource
 	}
 
 	var t Template
@@ -125,19 +127,6 @@ func NewTemplate(i *NewTemplateInput) (*Template, error) {
 // ID returns the identifier for this template.
 func (t *Template) ID() string {
 	return t.hexMD5
-}
-
-// Contents returns the raw contents of the template.
-func (t *Template) Contents() string {
-	return t.contents
-}
-
-// Source returns the filepath source of this template.
-func (t *Template) Source() string {
-	if t.source == "" {
-		return "(dynamic)"
-	}
-	return t.source
 }
 
 // ExecuteInput is used as input to the template's execute function.
@@ -221,7 +210,7 @@ type funcMapInput struct {
 
 // funcMap is the map of template functions to their respective functions.
 func funcMap(i *funcMapInput) template.FuncMap {
-	var scratch Scratch
+	var scrat scratch
 
 	r := template.FuncMap{
 		// API functions
@@ -244,8 +233,8 @@ func funcMap(i *funcMapInput) template.FuncMap {
 		"caRoots":      connectCARootsFunc(i.store, i.used, i.missing),
 		"caLeaf":       connectLeafFunc(i.store, i.used, i.missing),
 
-		// Scratch
-		"scratch": func() *Scratch { return &scratch },
+		// scratch
+		"scratch": func() *scratch { return &scrat },
 
 		// Helper functions
 		"base64Decode":    base64Decode,
