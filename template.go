@@ -142,8 +142,8 @@ func (t *Template) Source() string {
 
 // ExecuteInput is used as input to the template's execute function.
 type ExecuteInput struct {
-	// Brain is the brain where data for the template is stored.
-	Brain *Brain
+	// Store is the cachewhere data for the template is stored.
+	Store *Store
 
 	// Env is a custom environment provided to the template for envvar resolution.
 	// Values specified here will take precedence over any values in the
@@ -176,7 +176,7 @@ func (t *Template) Execute(i *ExecuteInput) (*ExecuteResult, error) {
 
 	tmpl.Funcs(funcMap(&funcMapInput{
 		t:                 tmpl,
-		brain:             i.Brain,
+		store:             i.Store,
 		env:               i.Env,
 		used:              &used,
 		missing:           &missing,
@@ -211,7 +211,7 @@ func (t *Template) Execute(i *ExecuteInput) (*ExecuteResult, error) {
 // funcMapInput is input to the funcMap, which builds the template functions.
 type funcMapInput struct {
 	t                 *template.Template
-	brain             *Brain
+	store             *Store
 	env               []string
 	functionBlacklist []string
 	sandboxPath       string
@@ -225,24 +225,24 @@ func funcMap(i *funcMapInput) template.FuncMap {
 
 	r := template.FuncMap{
 		// API functions
-		"datacenters":  datacentersFunc(i.brain, i.used, i.missing),
-		"file":         fileFunc(i.brain, i.used, i.missing, i.sandboxPath),
-		"key":          keyFunc(i.brain, i.used, i.missing),
-		"keyExists":    keyExistsFunc(i.brain, i.used, i.missing),
-		"keyOrDefault": keyWithDefaultFunc(i.brain, i.used, i.missing),
-		"ls":           lsFunc(i.brain, i.used, i.missing, true),
-		"safeLs":       safeLsFunc(i.brain, i.used, i.missing),
-		"node":         nodeFunc(i.brain, i.used, i.missing),
-		"nodes":        nodesFunc(i.brain, i.used, i.missing),
-		"secret":       secretFunc(i.brain, i.used, i.missing),
-		"secrets":      secretsFunc(i.brain, i.used, i.missing),
-		"service":      serviceFunc(i.brain, i.used, i.missing),
-		"connect":      connectFunc(i.brain, i.used, i.missing),
-		"services":     servicesFunc(i.brain, i.used, i.missing),
-		"tree":         treeFunc(i.brain, i.used, i.missing, true),
-		"safeTree":     safeTreeFunc(i.brain, i.used, i.missing),
-		"caRoots":      connectCARootsFunc(i.brain, i.used, i.missing),
-		"caLeaf":       connectLeafFunc(i.brain, i.used, i.missing),
+		"datacenters":  datacentersFunc(i.store, i.used, i.missing),
+		"file":         fileFunc(i.store, i.used, i.missing, i.sandboxPath),
+		"key":          keyFunc(i.store, i.used, i.missing),
+		"keyExists":    keyExistsFunc(i.store, i.used, i.missing),
+		"keyOrDefault": keyWithDefaultFunc(i.store, i.used, i.missing),
+		"ls":           lsFunc(i.store, i.used, i.missing, true),
+		"safeLs":       safeLsFunc(i.store, i.used, i.missing),
+		"node":         nodeFunc(i.store, i.used, i.missing),
+		"nodes":        nodesFunc(i.store, i.used, i.missing),
+		"secret":       secretFunc(i.store, i.used, i.missing),
+		"secrets":      secretsFunc(i.store, i.used, i.missing),
+		"service":      serviceFunc(i.store, i.used, i.missing),
+		"connect":      connectFunc(i.store, i.used, i.missing),
+		"services":     servicesFunc(i.store, i.used, i.missing),
+		"tree":         treeFunc(i.store, i.used, i.missing, true),
+		"safeTree":     safeTreeFunc(i.store, i.used, i.missing),
+		"caRoots":      connectCARootsFunc(i.store, i.used, i.missing),
+		"caLeaf":       connectLeafFunc(i.store, i.used, i.missing),
 
 		// Scratch
 		"scratch": func() *Scratch { return &scratch },

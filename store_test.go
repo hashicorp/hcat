@@ -7,22 +7,22 @@ import (
 	dep "github.com/hashicorp/hat/internal/dependency"
 )
 
-func TestNewBrain(t *testing.T) {
+func TestNewStore(t *testing.T) {
 	t.Parallel()
-	b := NewBrain()
+	st := NewStore()
 
-	if b.data == nil {
+	if st.data == nil {
 		t.Errorf("expected data to not be nil")
 	}
 
-	if b.receivedData == nil {
+	if st.receivedData == nil {
 		t.Errorf("expected receivedData to not be nil")
 	}
 }
 
 func TestRecall(t *testing.T) {
 	t.Parallel()
-	b := NewBrain()
+	st := NewStore()
 
 	d, err := dep.NewCatalogNodesQuery("")
 	if err != nil {
@@ -36,11 +36,11 @@ func TestRecall(t *testing.T) {
 		},
 	}
 
-	b.Remember(d, nodes)
+	st.Save(d, nodes)
 
-	data, ok := b.Recall(d)
+	data, ok := st.Recall(d)
 	if !ok {
-		t.Fatal("expected data from brain")
+		t.Fatal("expected data from Store")
 	}
 
 	result := data.([]*dep.Node)
@@ -51,7 +51,7 @@ func TestRecall(t *testing.T) {
 
 func TestForceSet(t *testing.T) {
 	t.Parallel()
-	b := NewBrain()
+	st := NewStore()
 
 	d, err := dep.NewCatalogNodesQuery("")
 	if err != nil {
@@ -65,11 +65,11 @@ func TestForceSet(t *testing.T) {
 		},
 	}
 
-	b.ForceSet(d.String(), nodes)
+	st.ForceSet(d.String(), nodes)
 
-	data, ok := b.Recall(d)
+	data, ok := st.Recall(d)
 	if !ok {
-		t.Fatal("expected data from brain")
+		t.Fatal("expected data from Store")
 	}
 
 	result := data.([]*dep.Node)
@@ -80,7 +80,7 @@ func TestForceSet(t *testing.T) {
 
 func TestForget(t *testing.T) {
 	t.Parallel()
-	b := NewBrain()
+	st := NewStore()
 
 	d, err := dep.NewCatalogNodesQuery("")
 	if err != nil {
@@ -94,10 +94,10 @@ func TestForget(t *testing.T) {
 		},
 	}
 
-	b.Remember(d, nodes)
-	b.Forget(d)
+	st.Save(d, nodes)
+	st.Delete(d)
 
-	if _, ok := b.Recall(d); ok {
+	if _, ok := st.Recall(d); ok {
 		t.Errorf("expected %#v to not be forgotten", d)
 	}
 }

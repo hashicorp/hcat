@@ -165,7 +165,7 @@ func TestTemplate_Execute(t *testing.T) {
 				Contents: `{{ key "foo" }}`,
 			},
 			&ExecuteInput{
-				Brain: NewBrain(),
+				Store: NewStore(),
 			},
 			"",
 			false,
@@ -254,14 +254,14 @@ func TestTemplate_Execute(t *testing.T) {
 				Contents: `{{ datacenters }}`,
 			},
 			&ExecuteInput{
-				Brain: func() *Brain {
-					b := NewBrain()
+				Store: func() *Store {
+					st := NewStore()
 					d, err := dep.NewCatalogDatacentersQuery(false)
 					if err != nil {
 						t.Fatal(err)
 					}
-					b.Remember(d, []string{"dc1", "dc2"})
-					return b
+					st.Save(d, []string{"dc1", "dc2"})
+					return st
 				}(),
 			},
 			"[dc1 dc2]",
@@ -273,14 +273,14 @@ func TestTemplate_Execute(t *testing.T) {
 				Contents: `{{ datacenters true }}`,
 			},
 			&ExecuteInput{
-				Brain: func() *Brain {
-					b := NewBrain()
+				Store: func() *Store {
+					st := NewStore()
 					d, err := dep.NewCatalogDatacentersQuery(true)
 					if err != nil {
 						t.Fatal(err)
 					}
-					b.Remember(d, []string{"dc1", "dc2"})
-					return b
+					st.Save(d, []string{"dc1", "dc2"})
+					return st
 				}(),
 			},
 			"[dc1 dc2]",
@@ -292,14 +292,14 @@ func TestTemplate_Execute(t *testing.T) {
 				Contents: `{{ file "/path/to/file" }}`,
 			},
 			&ExecuteInput{
-				Brain: func() *Brain {
-					b := NewBrain()
+				Store: func() *Store {
+					st := NewStore()
 					d, err := dep.NewFileQuery("/path/to/file")
 					if err != nil {
 						t.Fatal(err)
 					}
-					b.Remember(d, "content")
-					return b
+					st.Save(d, "content")
+					return st
 				}(),
 			},
 			"content",
@@ -311,15 +311,15 @@ func TestTemplate_Execute(t *testing.T) {
 				Contents: `{{ key "key" }}`,
 			},
 			&ExecuteInput{
-				Brain: func() *Brain {
-					b := NewBrain()
+				Store: func() *Store {
+					st := NewStore()
 					d, err := dep.NewKVGetQuery("key")
 					if err != nil {
 						t.Fatal(err)
 					}
 					d.EnableBlocking()
-					b.Remember(d, "5")
-					return b
+					st.Save(d, "5")
+					return st
 				}(),
 			},
 			"5",
@@ -331,14 +331,14 @@ func TestTemplate_Execute(t *testing.T) {
 				Contents: `{{ keyExists "key" }} {{ keyExists "no_key" }}`,
 			},
 			&ExecuteInput{
-				Brain: func() *Brain {
-					b := NewBrain()
+				Store: func() *Store {
+					st := NewStore()
 					d, err := dep.NewKVGetQuery("key")
 					if err != nil {
 						t.Fatal(err)
 					}
-					b.Remember(d, true)
-					return b
+					st.Save(d, true)
+					return st
 				}(),
 			},
 			"true false",
@@ -350,14 +350,14 @@ func TestTemplate_Execute(t *testing.T) {
 				Contents: `{{ keyOrDefault "key" "100" }} {{ keyOrDefault "no_key" "200" }}`,
 			},
 			&ExecuteInput{
-				Brain: func() *Brain {
-					b := NewBrain()
+				Store: func() *Store {
+					st := NewStore()
 					d, err := dep.NewKVGetQuery("key")
 					if err != nil {
 						t.Fatal(err)
 					}
-					b.Remember(d, "150")
-					return b
+					st.Save(d, "150")
+					return st
 				}(),
 			},
 			"150 200",
@@ -369,18 +369,18 @@ func TestTemplate_Execute(t *testing.T) {
 				Contents: `{{ range ls "list" }}{{ .Key }}={{ .Value }}{{ end }}`,
 			},
 			&ExecuteInput{
-				Brain: func() *Brain {
-					b := NewBrain()
+				Store: func() *Store {
+					st := NewStore()
 					d, err := dep.NewKVListQuery("list")
 					if err != nil {
 						t.Fatal(err)
 					}
-					b.Remember(d, []*dep.KeyPair{
+					st.Save(d, []*dep.KeyPair{
 						&dep.KeyPair{Key: "", Value: ""},
 						&dep.KeyPair{Key: "foo", Value: "bar"},
 						&dep.KeyPair{Key: "foo/zip", Value: "zap"},
 					})
-					return b
+					return st
 				}(),
 			},
 			"foo=bar",
@@ -392,13 +392,13 @@ func TestTemplate_Execute(t *testing.T) {
 				Contents: `{{ with node }}{{ .Node.Node }}{{ range .Services }}{{ .Service }}{{ end }}{{ end }}`,
 			},
 			&ExecuteInput{
-				Brain: func() *Brain {
-					b := NewBrain()
+				Store: func() *Store {
+					st := NewStore()
 					d, err := dep.NewCatalogNodeQuery("")
 					if err != nil {
 						t.Fatal(err)
 					}
-					b.Remember(d, &dep.CatalogNode{
+					st.Save(d, &dep.CatalogNode{
 						Node: &dep.Node{Node: "node1"},
 						Services: []*dep.CatalogNodeService{
 							&dep.CatalogNodeService{
@@ -406,7 +406,7 @@ func TestTemplate_Execute(t *testing.T) {
 							},
 						},
 					})
-					return b
+					return st
 				}(),
 			},
 			"node1service1",
@@ -418,17 +418,17 @@ func TestTemplate_Execute(t *testing.T) {
 				Contents: `{{ range nodes }}{{ .Node }}{{ end }}`,
 			},
 			&ExecuteInput{
-				Brain: func() *Brain {
-					b := NewBrain()
+				Store: func() *Store {
+					st := NewStore()
 					d, err := dep.NewCatalogNodesQuery("")
 					if err != nil {
 						t.Fatal(err)
 					}
-					b.Remember(d, []*dep.Node{
+					st.Save(d, []*dep.Node{
 						&dep.Node{Node: "node1"},
 						&dep.Node{Node: "node2"},
 					})
-					return b
+					return st
 				}(),
 			},
 			"node1node2",
@@ -440,19 +440,19 @@ func TestTemplate_Execute(t *testing.T) {
 				Contents: `{{ with secret "secret/foo" }}{{ .Data.zip }}{{ end }}`,
 			},
 			&ExecuteInput{
-				Brain: func() *Brain {
-					b := NewBrain()
+				Store: func() *Store {
+					st := NewStore()
 					d, err := dep.NewVaultReadQuery("secret/foo")
 					if err != nil {
 						t.Fatal(err)
 					}
-					b.Remember(d, &dep.Secret{
+					st.Save(d, &dep.Secret{
 						LeaseID:       "abcd1234",
 						LeaseDuration: 120,
 						Renewable:     true,
 						Data:          map[string]interface{}{"zip": "zap"},
 					})
-					return b
+					return st
 				}(),
 			},
 			"zap",
@@ -464,23 +464,23 @@ func TestTemplate_Execute(t *testing.T) {
 				Contents: `{{with secret "secret/foo"}}{{.Data.zip}}{{end}}:{{with secret "secret/foo?version=1"}}{{.Data.zip}}{{end}}`,
 			},
 			&ExecuteInput{
-				Brain: func() *Brain {
-					b := NewBrain()
+				Store: func() *Store {
+					st := NewStore()
 					d, err := dep.NewVaultReadQuery("secret/foo")
 					if err != nil {
 						t.Fatal(err)
 					}
-					b.Remember(d, &dep.Secret{
+					st.Save(d, &dep.Secret{
 						Data: map[string]interface{}{"zip": "zap"},
 					})
 					d1, err := dep.NewVaultReadQuery("secret/foo?version=1")
 					if err != nil {
 						t.Fatal(err)
 					}
-					b.Remember(d1, &dep.Secret{
+					st.Save(d1, &dep.Secret{
 						Data: map[string]interface{}{"zip": "zed"},
 					})
-					return b
+					return st
 				}(),
 			},
 			"zap:zed",
@@ -492,8 +492,8 @@ func TestTemplate_Execute(t *testing.T) {
 				Contents: `{{ with secret "secret/nope" }}{{ .Data.zip }}{{ end }}`,
 			},
 			&ExecuteInput{
-				Brain: func() *Brain {
-					return NewBrain()
+				Store: func() *Store {
+					return NewStore()
 				}(),
 			},
 			"",
@@ -505,8 +505,8 @@ func TestTemplate_Execute(t *testing.T) {
 				Contents: `{{ if secret "secret/nope" }}yes{{ else }}no{{ end }}`,
 			},
 			&ExecuteInput{
-				Brain: func() *Brain {
-					return NewBrain()
+				Store: func() *Store {
+					return NewStore()
 				}(),
 			},
 			"no",
@@ -518,21 +518,21 @@ func TestTemplate_Execute(t *testing.T) {
 				Contents: `{{ with secret "transit/encrypt/foo" "plaintext=a" }}{{ .Data.ciphertext }}{{ end }}`,
 			},
 			&ExecuteInput{
-				Brain: func() *Brain {
-					b := NewBrain()
+				Store: func() *Store {
+					st := NewStore()
 					d, err := dep.NewVaultWriteQuery("transit/encrypt/foo", map[string]interface{}{
 						"plaintext": "a",
 					})
 					if err != nil {
 						t.Fatal(err)
 					}
-					b.Remember(d, &dep.Secret{
+					st.Save(d, &dep.Secret{
 						LeaseID:       "abcd1234",
 						LeaseDuration: 120,
 						Renewable:     true,
 						Data:          map[string]interface{}{"ciphertext": "encrypted"},
 					})
-					return b
+					return st
 				}(),
 			},
 			"encrypted",
@@ -544,8 +544,8 @@ func TestTemplate_Execute(t *testing.T) {
 				Contents: `{{ with secret "secret/nope" "a=b" }}{{ .Data.zip }}{{ end }}`,
 			},
 			&ExecuteInput{
-				Brain: func() *Brain {
-					return NewBrain()
+				Store: func() *Store {
+					return NewStore()
 				}(),
 			},
 			"",
@@ -557,8 +557,8 @@ func TestTemplate_Execute(t *testing.T) {
 				Contents: `{{ if secret "secret/nope" "a=b" }}yes{{ else }}no{{ end }}`,
 			},
 			&ExecuteInput{
-				Brain: func() *Brain {
-					return NewBrain()
+				Store: func() *Store {
+					return NewStore()
 				}(),
 			},
 			"no",
@@ -570,8 +570,8 @@ func TestTemplate_Execute(t *testing.T) {
 				Contents: `{{ with secret "secret/nope" }}{{ .Data.foo.bar }}{{ end }}`,
 			},
 			&ExecuteInput{
-				Brain: func() *Brain {
-					return NewBrain()
+				Store: func() *Store {
+					return NewStore()
 				}(),
 			},
 			"",
@@ -583,14 +583,14 @@ func TestTemplate_Execute(t *testing.T) {
 				Contents: `{{ secrets "secret/" }}`,
 			},
 			&ExecuteInput{
-				Brain: func() *Brain {
-					b := NewBrain()
+				Store: func() *Store {
+					st := NewStore()
 					d, err := dep.NewVaultListQuery("secret/")
 					if err != nil {
 						t.Fatal(err)
 					}
-					b.Remember(d, []string{"bar", "foo"})
-					return b
+					st.Save(d, []string{"bar", "foo"})
+					return st
 				}(),
 			},
 			"[bar foo]",
@@ -602,8 +602,8 @@ func TestTemplate_Execute(t *testing.T) {
 				Contents: `{{ secrets "secret/" }}`,
 			},
 			&ExecuteInput{
-				Brain: func() *Brain {
-					return NewBrain()
+				Store: func() *Store {
+					return NewStore()
 				}(),
 			},
 			"[]",
@@ -615,8 +615,8 @@ func TestTemplate_Execute(t *testing.T) {
 				Contents: `{{ if secrets "secret/" }}yes{{ else }}no{{ end }}`,
 			},
 			&ExecuteInput{
-				Brain: func() *Brain {
-					return NewBrain()
+				Store: func() *Store {
+					return NewStore()
 				}(),
 			},
 			"no",
@@ -628,8 +628,8 @@ func TestTemplate_Execute(t *testing.T) {
 				Contents: `{{ with secrets "secret/" }}{{ . }}{{ end }}`,
 			},
 			&ExecuteInput{
-				Brain: func() *Brain {
-					return NewBrain()
+				Store: func() *Store {
+					return NewStore()
 				}(),
 			},
 			"",
@@ -641,13 +641,13 @@ func TestTemplate_Execute(t *testing.T) {
 				Contents: `{{ range service "webapp" }}{{ .Address }}{{ end }}`,
 			},
 			&ExecuteInput{
-				Brain: func() *Brain {
-					b := NewBrain()
+				Store: func() *Store {
+					st := NewStore()
 					d, err := dep.NewHealthServiceQuery("webapp")
 					if err != nil {
 						t.Fatal(err)
 					}
-					b.Remember(d, []*dep.HealthService{
+					st.Save(d, []*dep.HealthService{
 						&dep.HealthService{
 							Node:    "node1",
 							Address: "1.2.3.4",
@@ -657,7 +657,7 @@ func TestTemplate_Execute(t *testing.T) {
 							Address: "5.6.7.8",
 						},
 					})
-					return b
+					return st
 				}(),
 			},
 			"1.2.3.45.6.7.8",
@@ -669,13 +669,13 @@ func TestTemplate_Execute(t *testing.T) {
 				Contents: `{{ range service "webapp" "passing,any" }}{{ .Address }}{{ end }}`,
 			},
 			&ExecuteInput{
-				Brain: func() *Brain {
-					b := NewBrain()
+				Store: func() *Store {
+					st := NewStore()
 					d, err := dep.NewHealthServiceQuery("webapp|passing,any")
 					if err != nil {
 						t.Fatal(err)
 					}
-					b.Remember(d, []*dep.HealthService{
+					st.Save(d, []*dep.HealthService{
 						&dep.HealthService{
 							Node:    "node1",
 							Address: "1.2.3.4",
@@ -685,7 +685,7 @@ func TestTemplate_Execute(t *testing.T) {
 							Address: "5.6.7.8",
 						},
 					})
-					return b
+					return st
 				}(),
 			},
 			"1.2.3.45.6.7.8",
@@ -697,13 +697,13 @@ func TestTemplate_Execute(t *testing.T) {
 				Contents: `{{ range services }}{{ .Name }}{{ end }}`,
 			},
 			&ExecuteInput{
-				Brain: func() *Brain {
-					b := NewBrain()
+				Store: func() *Store {
+					st := NewStore()
 					d, err := dep.NewCatalogServicesQuery("")
 					if err != nil {
 						t.Fatal(err)
 					}
-					b.Remember(d, []*dep.CatalogSnippet{
+					st.Save(d, []*dep.CatalogSnippet{
 						&dep.CatalogSnippet{
 							Name: "service1",
 						},
@@ -711,7 +711,7 @@ func TestTemplate_Execute(t *testing.T) {
 							Name: "service2",
 						},
 					})
-					return b
+					return st
 				}(),
 			},
 			"service1service2",
@@ -723,19 +723,19 @@ func TestTemplate_Execute(t *testing.T) {
 				Contents: `{{ range tree "key" }}{{ .Key }}={{ .Value }}{{ end }}`,
 			},
 			&ExecuteInput{
-				Brain: func() *Brain {
-					b := NewBrain()
+				Store: func() *Store {
+					st := NewStore()
 					d, err := dep.NewKVListQuery("key")
 					if err != nil {
 						t.Fatal(err)
 					}
-					b.Remember(d, []*dep.KeyPair{
+					st.Save(d, []*dep.KeyPair{
 						&dep.KeyPair{Key: "", Value: ""},
 						&dep.KeyPair{Key: "admin/port", Value: "1134"},
 						&dep.KeyPair{Key: "maxconns", Value: "5"},
 						&dep.KeyPair{Key: "minconns", Value: "2"},
 					})
-					return b
+					return st
 				}(),
 			},
 			"admin/port=1134maxconns=5minconns=2",
@@ -749,7 +749,7 @@ func TestTemplate_Execute(t *testing.T) {
 				Contents: `{{ scratch.Set "a" "2" }}{{ scratch.Key "a" }}`,
 			},
 			&ExecuteInput{
-				Brain: NewBrain(),
+				Store: NewStore(),
 			},
 			"true",
 			false,
@@ -760,7 +760,7 @@ func TestTemplate_Execute(t *testing.T) {
 				Contents: `{{ scratch.Set "a" "2" }}{{ scratch.Get "a" }}`,
 			},
 			&ExecuteInput{
-				Brain: NewBrain(),
+				Store: NewStore(),
 			},
 			"2",
 			false,
@@ -771,7 +771,7 @@ func TestTemplate_Execute(t *testing.T) {
 				Contents: `{{ scratch.SetX "a" "2" }}{{ scratch.SetX "a" "1" }}{{ scratch.Get "a" }}`,
 			},
 			&ExecuteInput{
-				Brain: NewBrain(),
+				Store: NewStore(),
 			},
 			"2",
 			false,
@@ -782,7 +782,7 @@ func TestTemplate_Execute(t *testing.T) {
 				Contents: `{{ scratch.MapSet "a" "foo" "bar" }}{{ scratch.MapValues "a" }}`,
 			},
 			&ExecuteInput{
-				Brain: NewBrain(),
+				Store: NewStore(),
 			},
 			"[bar]",
 			false,
@@ -793,7 +793,7 @@ func TestTemplate_Execute(t *testing.T) {
 				Contents: `{{ scratch.MapSetX "a" "foo" "bar" }}{{ scratch.MapSetX "a" "foo" "baz" }}{{ scratch.MapValues "a" }}`,
 			},
 			&ExecuteInput{
-				Brain: NewBrain(),
+				Store: NewStore(),
 			},
 			"[bar]",
 			false,
@@ -806,18 +806,18 @@ func TestTemplate_Execute(t *testing.T) {
 				Contents: `{{ range $key, $pairs := tree "list" | byKey }}{{ $key }}:{{ range $pairs }}{{ .Key }}={{ .Value }}{{ end }}{{ end }}`,
 			},
 			&ExecuteInput{
-				Brain: func() *Brain {
-					b := NewBrain()
+				Store: func() *Store {
+					st := NewStore()
 					d, err := dep.NewKVListQuery("list")
 					if err != nil {
 						t.Fatal(err)
 					}
-					b.Remember(d, []*dep.KeyPair{
+					st.Save(d, []*dep.KeyPair{
 						&dep.KeyPair{Key: "", Value: ""},
 						&dep.KeyPair{Key: "foo/bar", Value: "a"},
 						&dep.KeyPair{Key: "zip/zap", Value: "b"},
 					})
-					return b
+					return st
 				}(),
 			},
 			"foo:bar=azip:zap=b",
@@ -829,13 +829,13 @@ func TestTemplate_Execute(t *testing.T) {
 				Contents: `{{ range $tag, $services := service "webapp" | byTag }}{{ $tag }}:{{ range $services }}{{ .Address }}{{ end }}{{ end }}`,
 			},
 			&ExecuteInput{
-				Brain: func() *Brain {
-					b := NewBrain()
+				Store: func() *Store {
+					st := NewStore()
 					d, err := dep.NewHealthServiceQuery("webapp")
 					if err != nil {
 						t.Fatal(err)
 					}
-					b.Remember(d, []*dep.HealthService{
+					st.Save(d, []*dep.HealthService{
 						&dep.HealthService{
 							Address: "1.2.3.4",
 							Tags:    []string{"prod", "staging"},
@@ -845,7 +845,7 @@ func TestTemplate_Execute(t *testing.T) {
 							Tags:    []string{"staging"},
 						},
 					})
-					return b
+					return st
 				}(),
 			},
 			"prod:1.2.3.4staging:1.2.3.45.6.7.8",
@@ -857,13 +857,13 @@ func TestTemplate_Execute(t *testing.T) {
 				Contents: `{{ range service "webapp" }}{{ if .Tags | contains "prod" }}{{ .Address }}{{ end }}{{ end }}`,
 			},
 			&ExecuteInput{
-				Brain: func() *Brain {
-					b := NewBrain()
+				Store: func() *Store {
+					st := NewStore()
 					d, err := dep.NewHealthServiceQuery("webapp")
 					if err != nil {
 						t.Fatal(err)
 					}
-					b.Remember(d, []*dep.HealthService{
+					st.Save(d, []*dep.HealthService{
 						&dep.HealthService{
 							Address: "1.2.3.4",
 							Tags:    []string{"prod", "staging"},
@@ -873,7 +873,7 @@ func TestTemplate_Execute(t *testing.T) {
 							Tags:    []string{"staging"},
 						},
 					})
-					return b
+					return st
 				}(),
 			},
 			"1.2.3.4",
@@ -885,13 +885,13 @@ func TestTemplate_Execute(t *testing.T) {
 				Contents: `{{ $requiredTags := parseJSON "[\"prod\",\"us-realm\"]" }}{{ range service "webapp" }}{{ if .Tags | containsAll $requiredTags }}{{ .Address }}{{ end }}{{ end }}`,
 			},
 			&ExecuteInput{
-				Brain: func() *Brain {
-					b := NewBrain()
+				Store: func() *Store {
+					st := NewStore()
 					d, err := dep.NewHealthServiceQuery("webapp")
 					if err != nil {
 						t.Fatal(err)
 					}
-					b.Remember(d, []*dep.HealthService{
+					st.Save(d, []*dep.HealthService{
 						&dep.HealthService{
 							Address: "1.2.3.4",
 							Tags:    []string{"prod", "us-realm"},
@@ -901,7 +901,7 @@ func TestTemplate_Execute(t *testing.T) {
 							Tags:    []string{"prod", "ca-realm"},
 						},
 					})
-					return b
+					return st
 				}(),
 			},
 			"1.2.3.4",
@@ -913,13 +913,13 @@ func TestTemplate_Execute(t *testing.T) {
 				Contents: `{{ $requiredTags := parseJSON "[]" }}{{ range service "webapp" }}{{ if .Tags | containsAll $requiredTags }}{{ .Address }}{{ end }}{{ end }}`,
 			},
 			&ExecuteInput{
-				Brain: func() *Brain {
-					b := NewBrain()
+				Store: func() *Store {
+					st := NewStore()
 					d, err := dep.NewHealthServiceQuery("webapp")
 					if err != nil {
 						t.Fatal(err)
 					}
-					b.Remember(d, []*dep.HealthService{
+					st.Save(d, []*dep.HealthService{
 						&dep.HealthService{
 							Address: "1.2.3.4",
 							Tags:    []string{"prod", "us-realm"},
@@ -929,7 +929,7 @@ func TestTemplate_Execute(t *testing.T) {
 							Tags:    []string{"prod", "ca-realm"},
 						},
 					})
-					return b
+					return st
 				}(),
 			},
 			"1.2.3.45.6.7.8",
@@ -941,13 +941,13 @@ func TestTemplate_Execute(t *testing.T) {
 				Contents: `{{ $acceptableTags := parseJSON "[\"v2\",\"v3\"]" }}{{ range service "webapp" }}{{ if .Tags | containsAny $acceptableTags }}{{ .Address }}{{ end }}{{ end }}`,
 			},
 			&ExecuteInput{
-				Brain: func() *Brain {
-					b := NewBrain()
+				Store: func() *Store {
+					st := NewStore()
 					d, err := dep.NewHealthServiceQuery("webapp")
 					if err != nil {
 						t.Fatal(err)
 					}
-					b.Remember(d, []*dep.HealthService{
+					st.Save(d, []*dep.HealthService{
 						&dep.HealthService{
 							Address: "1.2.3.4",
 							Tags:    []string{"prod", "v1"},
@@ -957,7 +957,7 @@ func TestTemplate_Execute(t *testing.T) {
 							Tags:    []string{"prod", "v2"},
 						},
 					})
-					return b
+					return st
 				}(),
 			},
 			"5.6.7.8",
@@ -969,13 +969,13 @@ func TestTemplate_Execute(t *testing.T) {
 				Contents: `{{ $acceptableTags := parseJSON "[]" }}{{ range service "webapp" }}{{ if .Tags | containsAny $acceptableTags }}{{ .Address }}{{ end }}{{ end }}`,
 			},
 			&ExecuteInput{
-				Brain: func() *Brain {
-					b := NewBrain()
+				Store: func() *Store {
+					st := NewStore()
 					d, err := dep.NewHealthServiceQuery("webapp")
 					if err != nil {
 						t.Fatal(err)
 					}
-					b.Remember(d, []*dep.HealthService{
+					st.Save(d, []*dep.HealthService{
 						&dep.HealthService{
 							Address: "1.2.3.4",
 							Tags:    []string{"prod", "v1"},
@@ -985,7 +985,7 @@ func TestTemplate_Execute(t *testing.T) {
 							Tags:    []string{"prod", "v2"},
 						},
 					})
-					return b
+					return st
 				}(),
 			},
 			"",
@@ -997,13 +997,13 @@ func TestTemplate_Execute(t *testing.T) {
 				Contents: `{{ $forbiddenTags := parseJSON "[\"devel\",\"staging\"]" }}{{ range service "webapp" }}{{ if .Tags | containsNone $forbiddenTags }}{{ .Address }}{{ end }}{{ end }}`,
 			},
 			&ExecuteInput{
-				Brain: func() *Brain {
-					b := NewBrain()
+				Store: func() *Store {
+					st := NewStore()
 					d, err := dep.NewHealthServiceQuery("webapp")
 					if err != nil {
 						t.Fatal(err)
 					}
-					b.Remember(d, []*dep.HealthService{
+					st.Save(d, []*dep.HealthService{
 						&dep.HealthService{
 							Address: "1.2.3.4",
 							Tags:    []string{"prod", "v1"},
@@ -1013,7 +1013,7 @@ func TestTemplate_Execute(t *testing.T) {
 							Tags:    []string{"devel", "v2"},
 						},
 					})
-					return b
+					return st
 				}(),
 			},
 			"1.2.3.4",
@@ -1025,13 +1025,13 @@ func TestTemplate_Execute(t *testing.T) {
 				Contents: `{{ $forbiddenTags := parseJSON "[]" }}{{ range service "webapp" }}{{ if .Tags | containsNone $forbiddenTags }}{{ .Address }}{{ end }}{{ end }}`,
 			},
 			&ExecuteInput{
-				Brain: func() *Brain {
-					b := NewBrain()
+				Store: func() *Store {
+					st := NewStore()
 					d, err := dep.NewHealthServiceQuery("webapp")
 					if err != nil {
 						t.Fatal(err)
 					}
-					b.Remember(d, []*dep.HealthService{
+					st.Save(d, []*dep.HealthService{
 						&dep.HealthService{
 							Address: "1.2.3.4",
 							Tags:    []string{"staging", "v1"},
@@ -1041,7 +1041,7 @@ func TestTemplate_Execute(t *testing.T) {
 							Tags:    []string{"devel", "v2"},
 						},
 					})
-					return b
+					return st
 				}(),
 			},
 			"1.2.3.45.6.7.8",
@@ -1053,13 +1053,13 @@ func TestTemplate_Execute(t *testing.T) {
 				Contents: `{{ $excludingTags := parseJSON "[\"es-v1\",\"es-v2\"]" }}{{ range service "webapp" }}{{ if .Tags | containsNotAll $excludingTags }}{{ .Address }}{{ end }}{{ end }}`,
 			},
 			&ExecuteInput{
-				Brain: func() *Brain {
-					b := NewBrain()
+				Store: func() *Store {
+					st := NewStore()
 					d, err := dep.NewHealthServiceQuery("webapp")
 					if err != nil {
 						t.Fatal(err)
 					}
-					b.Remember(d, []*dep.HealthService{
+					st.Save(d, []*dep.HealthService{
 						&dep.HealthService{
 							Address: "1.2.3.4",
 							Tags:    []string{"prod", "es-v1"},
@@ -1069,7 +1069,7 @@ func TestTemplate_Execute(t *testing.T) {
 							Tags:    []string{"prod", "hybrid", "es-v1", "es-v2"},
 						},
 					})
-					return b
+					return st
 				}(),
 			},
 			"1.2.3.4",
@@ -1081,13 +1081,13 @@ func TestTemplate_Execute(t *testing.T) {
 				Contents: `{{ $excludingTags := parseJSON "[]" }}{{ range service "webapp" }}{{ if .Tags | containsNotAll $excludingTags }}{{ .Address }}{{ end }}{{ end }}`,
 			},
 			&ExecuteInput{
-				Brain: func() *Brain {
-					b := NewBrain()
+				Store: func() *Store {
+					st := NewStore()
 					d, err := dep.NewHealthServiceQuery("webapp")
 					if err != nil {
 						t.Fatal(err)
 					}
-					b.Remember(d, []*dep.HealthService{
+					st.Save(d, []*dep.HealthService{
 						&dep.HealthService{
 							Address: "1.2.3.4",
 							Tags:    []string{"prod", "es-v1"},
@@ -1097,7 +1097,7 @@ func TestTemplate_Execute(t *testing.T) {
 							Tags:    []string{"prod", "hybrid", "es-v1", "es-v2"},
 						},
 					})
-					return b
+					return st
 				}(),
 			},
 			"",
@@ -1109,12 +1109,12 @@ func TestTemplate_Execute(t *testing.T) {
 				Contents: `{{ env "CT_TEST" }}`,
 			},
 			&ExecuteInput{
-				Brain: func() *Brain {
-					// Cheat and use the brain callback here to set the env.
+				Store: func() *Store {
+					// Cheat and use the Store callback here to set the env.
 					if err := os.Setenv("CT_TEST", "1"); err != nil {
 						t.Fatal(err)
 					}
-					return NewBrain()
+					return NewStore()
 				}(),
 			},
 			"1",
@@ -1129,7 +1129,7 @@ func TestTemplate_Execute(t *testing.T) {
 				Env: []string{
 					"CT_TEST=2",
 				},
-				Brain: NewBrain(),
+				Store: NewStore(),
 			},
 			"2",
 			false,
@@ -1140,15 +1140,15 @@ func TestTemplate_Execute(t *testing.T) {
 				Contents: `{{ define "custom" }}{{ key "foo" }}{{ end }}{{ executeTemplate "custom" }}`,
 			},
 			&ExecuteInput{
-				Brain: func() *Brain {
-					b := NewBrain()
+				Store: func() *Store {
+					st := NewStore()
 					d, err := dep.NewKVGetQuery("foo")
 					if err != nil {
 						t.Fatal(err)
 					}
 					d.EnableBlocking()
-					b.Remember(d, "bar")
-					return b
+					st.Save(d, "bar")
+					return st
 				}(),
 			},
 			"bar",
@@ -1160,15 +1160,15 @@ func TestTemplate_Execute(t *testing.T) {
 				Contents: `{{ define "custom" }}{{ key . }}{{ end }}{{ executeTemplate "custom" "foo" }}`,
 			},
 			&ExecuteInput{
-				Brain: func() *Brain {
-					b := NewBrain()
+				Store: func() *Store {
+					st := NewStore()
 					d, err := dep.NewKVGetQuery("foo")
 					if err != nil {
 						t.Fatal(err)
 					}
 					d.EnableBlocking()
-					b.Remember(d, "bar")
-					return b
+					st.Save(d, "bar")
+					return st
 				}(),
 			},
 			"bar",
@@ -1180,18 +1180,18 @@ func TestTemplate_Execute(t *testing.T) {
 				Contents: `{{ range $k, $v := tree "list" | explode }}{{ $k }}{{ $v }}{{ end }}`,
 			},
 			&ExecuteInput{
-				Brain: func() *Brain {
-					b := NewBrain()
+				Store: func() *Store {
+					st := NewStore()
 					d, err := dep.NewKVListQuery("list")
 					if err != nil {
 						t.Fatal(err)
 					}
-					b.Remember(d, []*dep.KeyPair{
+					st.Save(d, []*dep.KeyPair{
 						&dep.KeyPair{Key: "", Value: ""},
 						&dep.KeyPair{Key: "foo/bar", Value: "a"},
 						&dep.KeyPair{Key: "zip/zap", Value: "b"},
 					})
-					return b
+					return st
 				}(),
 			},
 			"foomap[bar:a]zipmap[zap:b]",
@@ -1203,7 +1203,7 @@ func TestTemplate_Execute(t *testing.T) {
 				Contents: `{{ scratch.MapSet "explode-test" "foo/bar" "a"}}{{ scratch.MapSet "explode-test" "qux" "c"}}{{ scratch.MapSet "explode-test" "zip/zap" "d"}}{{ scratch.Get "explode-test" | explodeMap }}`,
 			},
 			&ExecuteInput{
-				Brain: NewBrain(),
+				Store: NewStore(),
 			},
 			"map[foo:map[bar:a] qux:c zip:map[zap:d]]",
 			false,
@@ -1214,13 +1214,13 @@ func TestTemplate_Execute(t *testing.T) {
 				Contents: `{{ range service "webapp" }}{{ if "prod" | in .Tags }}{{ .Address }}{{ end }}{{ end }}`,
 			},
 			&ExecuteInput{
-				Brain: func() *Brain {
-					b := NewBrain()
+				Store: func() *Store {
+					st := NewStore()
 					d, err := dep.NewHealthServiceQuery("webapp")
 					if err != nil {
 						t.Fatal(err)
 					}
-					b.Remember(d, []*dep.HealthService{
+					st.Save(d, []*dep.HealthService{
 						&dep.HealthService{
 							Address: "1.2.3.4",
 							Tags:    []string{"prod", "staging"},
@@ -1230,7 +1230,7 @@ func TestTemplate_Execute(t *testing.T) {
 							Tags:    []string{"staging"},
 						},
 					})
-					return b
+					return st
 				}(),
 			},
 			"1.2.3.4",
@@ -1242,7 +1242,7 @@ func TestTemplate_Execute(t *testing.T) {
 				Contents: `{{ "hello\nhello\r\nHELLO\r\nhello\nHELLO" | indent 4 }}`,
 			},
 			&ExecuteInput{
-				Brain: NewBrain(),
+				Store: NewStore(),
 			},
 			"    hello\n    hello\r\n    HELLO\r\n    hello\n    HELLO",
 			false,
@@ -1253,7 +1253,7 @@ func TestTemplate_Execute(t *testing.T) {
 				Contents: `{{ "hello\nhello\r\nHELLO\r\nhello\nHELLO" | indent -4 }}`,
 			},
 			&ExecuteInput{
-				Brain: NewBrain(),
+				Store: NewStore(),
 			},
 			"    hello\n    hello\r\n    HELLO\r\n    hello\n    HELLO",
 			true,
@@ -1264,7 +1264,7 @@ func TestTemplate_Execute(t *testing.T) {
 				Contents: `{{ "hello\nhello\r\nHELLO\r\nhello\nHELLO" | indent 0 }}`,
 			},
 			&ExecuteInput{
-				Brain: NewBrain(),
+				Store: NewStore(),
 			},
 			"hello\nhello\r\nHELLO\r\nhello\nHELLO",
 			false,
@@ -1275,7 +1275,7 @@ func TestTemplate_Execute(t *testing.T) {
 				Contents: `{{ range loop 3 }}1{{ end }}`,
 			},
 			&ExecuteInput{
-				Brain: NewBrain(),
+				Store: NewStore(),
 			},
 			"111",
 			false,
@@ -1286,7 +1286,7 @@ func TestTemplate_Execute(t *testing.T) {
 				Contents: `{{ range $i := loop 3 }}{{ $i }}{{ end }}`,
 			},
 			&ExecuteInput{
-				Brain: NewBrain(),
+				Store: NewStore(),
 			},
 			"012",
 			false,
@@ -1297,7 +1297,7 @@ func TestTemplate_Execute(t *testing.T) {
 				Contents: `{{ range loop 1 3 }}1{{ end }}`,
 			},
 			&ExecuteInput{
-				Brain: NewBrain(),
+				Store: NewStore(),
 			},
 			"11",
 			false,
@@ -1308,7 +1308,7 @@ func TestTemplate_Execute(t *testing.T) {
 				Contents: `{{ range loop 1 "3" }}1{{ end }}`,
 			},
 			&ExecuteInput{
-				Brain: NewBrain(),
+				Store: NewStore(),
 			},
 			"11",
 			false,
@@ -1319,7 +1319,7 @@ func TestTemplate_Execute(t *testing.T) {
 				Contents: `{{ $i := print "3" | parseInt }}{{ range loop 1 $i }}1{{ end }}`,
 			},
 			&ExecuteInput{
-				Brain: NewBrain(),
+				Store: NewStore(),
 			},
 			"11",
 			false,
@@ -1332,7 +1332,7 @@ func TestTemplate_Execute(t *testing.T) {
 					`{{ range $i := loop $n }}{{ $i }}{{ end }}`,
 			},
 			&ExecuteInput{
-				Brain: NewBrain(),
+				Store: NewStore(),
 			},
 			"012",
 			false,
@@ -1343,7 +1343,7 @@ func TestTemplate_Execute(t *testing.T) {
 				Contents: `{{ "a,b,c" | split "," | join ";" }}`,
 			},
 			&ExecuteInput{
-				Brain: NewBrain(),
+				Store: NewStore(),
 			},
 			"a;b;c",
 			false,
@@ -1354,7 +1354,7 @@ func TestTemplate_Execute(t *testing.T) {
 				Contents: `{{ "true" | parseBool }}`,
 			},
 			&ExecuteInput{
-				Brain: NewBrain(),
+				Store: NewStore(),
 			},
 			"true",
 			false,
@@ -1365,7 +1365,7 @@ func TestTemplate_Execute(t *testing.T) {
 				Contents: `{{ "1.2" | parseFloat }}`,
 			},
 			&ExecuteInput{
-				Brain: NewBrain(),
+				Store: NewStore(),
 			},
 			"1.2",
 			false,
@@ -1376,7 +1376,7 @@ func TestTemplate_Execute(t *testing.T) {
 				Contents: `{{ "-1" | parseInt }}`,
 			},
 			&ExecuteInput{
-				Brain: NewBrain(),
+				Store: NewStore(),
 			},
 			"-1",
 			false,
@@ -1387,7 +1387,7 @@ func TestTemplate_Execute(t *testing.T) {
 				Contents: `{{ "{\"foo\": \"bar\"}" | parseJSON }}`,
 			},
 			&ExecuteInput{
-				Brain: NewBrain(),
+				Store: NewStore(),
 			},
 			"map[foo:bar]",
 			false,
@@ -1398,7 +1398,7 @@ func TestTemplate_Execute(t *testing.T) {
 				Contents: `{{ "1" | parseUint }}`,
 			},
 			&ExecuteInput{
-				Brain: NewBrain(),
+				Store: NewStore(),
 			},
 			"1",
 			false,
@@ -1409,7 +1409,7 @@ func TestTemplate_Execute(t *testing.T) {
 				Contents: `{{ "foo: bar" | parseYAML }}`,
 			},
 			&ExecuteInput{
-				Brain: NewBrain(),
+				Store: NewStore(),
 			},
 			"map[foo:bar]",
 			false,
@@ -1420,7 +1420,7 @@ func TestTemplate_Execute(t *testing.T) {
 				Contents: `{{ "foo: bar\nbaz: \"foo\"" | parseYAML }}`,
 			},
 			&ExecuteInput{
-				Brain: NewBrain(),
+				Store: NewStore(),
 			},
 			"map[baz:foo foo:bar]",
 			false,
@@ -1431,7 +1431,7 @@ func TestTemplate_Execute(t *testing.T) {
 				Contents: `{{ "foo:\n  bar: \"baz\"\n  baz: 7" | parseYAML }}`,
 			},
 			&ExecuteInput{
-				Brain: NewBrain(),
+				Store: NewStore(),
 			},
 			"map[foo:map[bar:baz baz:7]]",
 			false,
@@ -1442,7 +1442,7 @@ func TestTemplate_Execute(t *testing.T) {
 				Contents: `{{ "1" | plugin "echo" }}`,
 			},
 			&ExecuteInput{
-				Brain: NewBrain(),
+				Store: NewStore(),
 			},
 			"1",
 			false,
@@ -1454,7 +1454,7 @@ func TestTemplate_Execute(t *testing.T) {
 				FunctionBlacklist: []string{"plugin"},
 			},
 			&ExecuteInput{
-				Brain: NewBrain(),
+				Store: NewStore(),
 			},
 			"",
 			true,
@@ -1465,7 +1465,7 @@ func TestTemplate_Execute(t *testing.T) {
 				Contents: `{{ "foo" | regexMatch "[a-z]+" }}`,
 			},
 			&ExecuteInput{
-				Brain: NewBrain(),
+				Store: NewStore(),
 			},
 			"true",
 			false,
@@ -1476,7 +1476,7 @@ func TestTemplate_Execute(t *testing.T) {
 				Contents: `{{ "foo" | regexReplaceAll "\\w" "x" }}`,
 			},
 			&ExecuteInput{
-				Brain: NewBrain(),
+				Store: NewStore(),
 			},
 			"xxx",
 			false,
@@ -1487,7 +1487,7 @@ func TestTemplate_Execute(t *testing.T) {
 				Contents: `{{ "hello my hello" | regexReplaceAll "hello" "bye" }}`,
 			},
 			&ExecuteInput{
-				Brain: NewBrain(),
+				Store: NewStore(),
 			},
 			"bye my bye",
 			false,
@@ -1498,7 +1498,7 @@ func TestTemplate_Execute(t *testing.T) {
 				Contents: `{{ "a,b,c" | split "," }}`,
 			},
 			&ExecuteInput{
-				Brain: NewBrain(),
+				Store: NewStore(),
 			},
 			"[a b c]",
 			false,
@@ -1509,7 +1509,7 @@ func TestTemplate_Execute(t *testing.T) {
 				Contents: `{{ timestamp }}`,
 			},
 			&ExecuteInput{
-				Brain: NewBrain(),
+				Store: NewStore(),
 			},
 			"1970-01-01T00:00:00Z",
 			false,
@@ -1520,7 +1520,7 @@ func TestTemplate_Execute(t *testing.T) {
 				Contents: `{{ timestamp "2006-01-02" }}`,
 			},
 			&ExecuteInput{
-				Brain: NewBrain(),
+				Store: NewStore(),
 			},
 			"1970-01-01",
 			false,
@@ -1531,7 +1531,7 @@ func TestTemplate_Execute(t *testing.T) {
 				Contents: `{{ "a,b,c" | split "," | toJSON }}`,
 			},
 			&ExecuteInput{
-				Brain: NewBrain(),
+				Store: NewStore(),
 			},
 			"[\"a\",\"b\",\"c\"]",
 			false,
@@ -1542,7 +1542,7 @@ func TestTemplate_Execute(t *testing.T) {
 				Contents: `{{ "HI" | toLower }}`,
 			},
 			&ExecuteInput{
-				Brain: NewBrain(),
+				Store: NewStore(),
 			},
 			"hi",
 			false,
@@ -1553,7 +1553,7 @@ func TestTemplate_Execute(t *testing.T) {
 				Contents: `{{ "this is a sentence" | toTitle }}`,
 			},
 			&ExecuteInput{
-				Brain: NewBrain(),
+				Store: NewStore(),
 			},
 			"This Is A Sentence",
 			false,
@@ -1564,7 +1564,7 @@ func TestTemplate_Execute(t *testing.T) {
 				Contents: `{{ "{\"foo\":\"bar\"}" | parseJSON | toTOML }}`,
 			},
 			&ExecuteInput{
-				Brain: NewBrain(),
+				Store: NewStore(),
 			},
 			"foo = \"bar\"",
 			false,
@@ -1575,7 +1575,7 @@ func TestTemplate_Execute(t *testing.T) {
 				Contents: `{{ "hi" | toUpper }}`,
 			},
 			&ExecuteInput{
-				Brain: NewBrain(),
+				Store: NewStore(),
 			},
 			"HI",
 			false,
@@ -1586,7 +1586,7 @@ func TestTemplate_Execute(t *testing.T) {
 				Contents: `{{ "{\"foo\":\"bar\"}" | parseJSON | toYAML }}`,
 			},
 			&ExecuteInput{
-				Brain: NewBrain(),
+				Store: NewStore(),
 			},
 			"foo: bar",
 			false,
@@ -1597,7 +1597,7 @@ func TestTemplate_Execute(t *testing.T) {
 				Contents: `{{ "\t hi\n " | trimSpace }}`,
 			},
 			&ExecuteInput{
-				Brain: NewBrain(),
+				Store: NewStore(),
 			},
 			"hi",
 			false,
@@ -1608,7 +1608,7 @@ func TestTemplate_Execute(t *testing.T) {
 				Contents: `{{ sockaddr "GetAllInterfaces | include \"flag\" \"loopback\" | include \"type\" \"IPv4\" | sort \"address\" | limit 1 | attr \"address\""}}`,
 			},
 			&ExecuteInput{
-				Brain: NewBrain(),
+				Store: NewStore(),
 			},
 			"127.0.0.1",
 			false,
@@ -1619,7 +1619,7 @@ func TestTemplate_Execute(t *testing.T) {
 				Contents: `{{ 2 | add 2 }}`,
 			},
 			&ExecuteInput{
-				Brain: NewBrain(),
+				Store: NewStore(),
 			},
 			"4",
 			false,
@@ -1630,7 +1630,7 @@ func TestTemplate_Execute(t *testing.T) {
 				Contents: `{{ 2 | subtract 2 }}`,
 			},
 			&ExecuteInput{
-				Brain: NewBrain(),
+				Store: NewStore(),
 			},
 			"0",
 			false,
@@ -1641,7 +1641,7 @@ func TestTemplate_Execute(t *testing.T) {
 				Contents: `{{ 2 | multiply 2 }}`,
 			},
 			&ExecuteInput{
-				Brain: NewBrain(),
+				Store: NewStore(),
 			},
 			"4",
 			false,
@@ -1652,7 +1652,7 @@ func TestTemplate_Execute(t *testing.T) {
 				Contents: `{{ 2 | divide 2 }}`,
 			},
 			&ExecuteInput{
-				Brain: NewBrain(),
+				Store: NewStore(),
 			},
 			"1",
 			false,
@@ -1663,7 +1663,7 @@ func TestTemplate_Execute(t *testing.T) {
 				Contents: `{{ 3 | modulo 2 }}`,
 			},
 			&ExecuteInput{
-				Brain: NewBrain(),
+				Store: NewStore(),
 			},
 			"1",
 			false,
@@ -1674,7 +1674,7 @@ func TestTemplate_Execute(t *testing.T) {
 				Contents: `{{ 3 | minimum 2 }}`,
 			},
 			&ExecuteInput{
-				Brain: NewBrain(),
+				Store: NewStore(),
 			},
 			"2",
 			false,
@@ -1685,7 +1685,7 @@ func TestTemplate_Execute(t *testing.T) {
 				Contents: `{{ 3 | maximum 2 }}`,
 			},
 			&ExecuteInput{
-				Brain: NewBrain(),
+				Store: NewStore(),
 			},
 			"3",
 			false,
@@ -1697,15 +1697,15 @@ func TestTemplate_Execute(t *testing.T) {
 					`{{.CertPEM}}{{.PrivateKeyPEM}}{{end}}`,
 			},
 			&ExecuteInput{
-				Brain: func() *Brain {
+				Store: func() *Store {
 					d := dep.NewConnectLeafQuery("foo")
-					b := NewBrain()
-					b.Remember(d, &api.LeafCert{
+					st := NewStore()
+					st.Save(d, &api.LeafCert{
 						Service:       "foo",
 						CertPEM:       "PEM",
 						PrivateKeyPEM: "KEY",
 					})
-					return b
+					return st
 				}(),
 			},
 			"PEMKEY",
@@ -1717,17 +1717,17 @@ func TestTemplate_Execute(t *testing.T) {
 				Contents: `{{range caRoots}}{{.RootCertPEM}}{{end}}`,
 			},
 			&ExecuteInput{
-				Brain: func() *Brain {
+				Store: func() *Store {
 					d := dep.NewConnectCAQuery()
-					b := NewBrain()
-					b.Remember(d, []*api.CARoot{
+					st := NewStore()
+					st.Save(d, []*api.CARoot{
 						&api.CARoot{
 							Name:        "Consul CA Root Cert",
 							RootCertPEM: "PEM",
 							Active:      true,
 						},
 					})
-					return b
+					return st
 				}(),
 			},
 			"PEM",
@@ -1739,13 +1739,13 @@ func TestTemplate_Execute(t *testing.T) {
 				Contents: `{{ range connect "webapp" }}{{ .Address }}{{ end }}`,
 			},
 			&ExecuteInput{
-				Brain: func() *Brain {
-					b := NewBrain()
+				Store: func() *Store {
+					st := NewStore()
 					d, err := dep.NewHealthConnectQuery("webapp")
 					if err != nil {
 						t.Fatal(err)
 					}
-					b.Remember(d, []*dep.HealthService{
+					st.Save(d, []*dep.HealthService{
 						&dep.HealthService{
 							Node:    "node1",
 							Address: "1.2.3.4",
@@ -1755,7 +1755,7 @@ func TestTemplate_Execute(t *testing.T) {
 							Address: "5.6.7.8",
 						},
 					})
-					return b
+					return st
 				}(),
 			},
 			"1.2.3.45.6.7.8",

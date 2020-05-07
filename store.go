@@ -6,33 +6,33 @@ import (
 	dep "github.com/hashicorp/hat/internal/dependency"
 )
 
-// Brain is what Template uses to determine the values that are
+// Store is what Template uses to determine the values that are
 // available for template parsing.
-type Brain struct {
+type Store struct {
 	sync.RWMutex
 
 	// data is the map of individual dependencies and the most recent data for
 	// that dependency.
 	data map[string]interface{}
 
-	// receivedData is an internal tracker of which dependencies have stored data
-	// in the brain.
+	// receivedData is an internal tracker of which dependencies have stored
+	// data in the Store.
 	receivedData map[string]struct{}
 }
 
-// NewBrain creates a new Brain with empty values for each
+// NewStore creates a new Store with empty values for each
 // of the key structs.
-func NewBrain() *Brain {
-	return &Brain{
+func NewStore() *Store {
+	return &Store{
 		data:         make(map[string]interface{}),
 		receivedData: make(map[string]struct{}),
 	}
 }
 
-// Remember accepts a dependency and the data to store associated with that
+// Save accepts a dependency and the data to store associated with that
 // dep. This function converts the given data to a proper type and stores
 // it interally.
-func (b *Brain) Remember(d dep.Dependency, data interface{}) {
+func (b *Store) Save(d dep.Dependency, data interface{}) {
 	b.Lock()
 	defer b.Unlock()
 
@@ -40,8 +40,8 @@ func (b *Brain) Remember(d dep.Dependency, data interface{}) {
 	b.receivedData[d.String()] = struct{}{}
 }
 
-// Recall gets the current value for the given dependency in the Brain.
-func (b *Brain) Recall(d dep.Dependency) (interface{}, bool) {
+// Recall gets the current value for the given dependency in the Store.
+func (b *Store) Recall(d dep.Dependency) (interface{}, bool) {
 	b.RLock()
 	defer b.RUnlock()
 
@@ -55,7 +55,7 @@ func (b *Brain) Recall(d dep.Dependency) (interface{}, bool) {
 
 // ForceSet is used to force set the value of a dependency
 // for a given hash code
-func (b *Brain) ForceSet(hashCode string, data interface{}) {
+func (b *Store) ForceSet(hashCode string, data interface{}) {
 	b.Lock()
 	defer b.Unlock()
 
@@ -65,7 +65,7 @@ func (b *Brain) ForceSet(hashCode string, data interface{}) {
 
 // Forget accepts a dependency and removes all associated data with this
 // dependency. It also resets the "receivedData" internal map.
-func (b *Brain) Forget(d dep.Dependency) {
+func (b *Store) Delete(d dep.Dependency) {
 	b.Lock()
 	defer b.Unlock()
 
