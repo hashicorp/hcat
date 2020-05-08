@@ -58,9 +58,10 @@ func TestFileSandbox(t *testing.T) {
 		{
 			"relative_path_escaping_sandbox",
 			sandboxDir,
-			filepath.Join(sandboxDir, "path/../../../funcs_test.go"),
+			filepath.Join(sandboxDir, "path/../../../template_funcs_test.go"),
 			fmt.Errorf("'%s' is outside of sandbox",
-				filepath.Join(sandboxDir, "path/../../../funcs_test.go")),
+				filepath.Join(sandboxDir,
+					"path/../../../template_funcs_test.go")),
 		},
 		{
 			"symlink_escaping_sandbox",
