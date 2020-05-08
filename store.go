@@ -32,43 +32,43 @@ func NewStore() *Store {
 // Save accepts a dependency and the data to store associated with that
 // dep. This function converts the given data to a proper type and stores
 // it interally.
-func (b *Store) Save(d dep.Dependency, data interface{}) {
-	b.Lock()
-	defer b.Unlock()
+func (s *Store) Save(d dep.Dependency, data interface{}) {
+	s.Lock()
+	defer s.Unlock()
 
-	b.data[d.String()] = data
-	b.receivedData[d.String()] = struct{}{}
+	s.data[d.String()] = data
+	s.receivedData[d.String()] = struct{}{}
 }
 
 // Recall gets the current value for the given dependency in the Store.
-func (b *Store) Recall(d dep.Dependency) (interface{}, bool) {
-	b.RLock()
-	defer b.RUnlock()
+func (s *Store) Recall(d dep.Dependency) (interface{}, bool) {
+	s.RLock()
+	defer s.RUnlock()
 
 	// If we have not received data for this dependency, return now.
-	if _, ok := b.receivedData[d.String()]; !ok {
+	if _, ok := s.receivedData[d.String()]; !ok {
 		return nil, false
 	}
 
-	return b.data[d.String()], true
+	return s.data[d.String()], true
 }
 
 // ForceSet is used to force set the value of a dependency
 // for a given hash code
-func (b *Store) forceSet(hashCode string, data interface{}) {
-	b.Lock()
-	defer b.Unlock()
+func (s *Store) forceSet(hashCode string, data interface{}) {
+	s.Lock()
+	defer s.Unlock()
 
-	b.data[hashCode] = data
-	b.receivedData[hashCode] = struct{}{}
+	s.data[hashCode] = data
+	s.receivedData[hashCode] = struct{}{}
 }
 
 // Forget accepts a dependency and removes all associated data with this
 // dependency. It also resets the "receivedData" internal map.
-func (b *Store) Delete(d dep.Dependency) {
-	b.Lock()
-	defer b.Unlock()
+func (s *Store) Delete(d dep.Dependency) {
+	s.Lock()
+	defer s.Unlock()
 
-	delete(b.data, d.String())
-	delete(b.receivedData, d.String())
+	delete(s.data, d.String())
+	delete(s.receivedData, d.String())
 }
