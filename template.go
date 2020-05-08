@@ -56,6 +56,12 @@ type Renderer interface {
 	Render([]byte) (RenderResult, error)
 }
 
+// Recaller is the read interface for the cache
+// Implemented by Store and Watcher (which wraps Store)
+type Recaller interface {
+	Recall(IDer) (interface{}, bool)
+}
+
 func BlacklistFunc(...interface{}) (string, error) {
 	return "", errors.New("function disabled")
 }
@@ -122,7 +128,7 @@ func (t *Template) ID() string {
 // ExecuteInput is used as input to the template's execute function.
 type ExecuteInput struct {
 	// Store is the cachewhere data for the template is stored.
-	Store *Store
+	Store Recaller
 
 	// Env is a custom environment provided to the template for envvar resolution.
 	// Values specified here will take precedence over any values in the
@@ -190,7 +196,7 @@ func (t *Template) Execute(i *ExecuteInput) (*ExecuteResult, error) {
 // funcMapInput is input to the funcMap, which builds the template functions.
 type funcMapInput struct {
 	t            *template.Template
-	store        *Store
+	store        Recaller
 	env          []string
 	funcMapMerge template.FuncMap
 	sandboxPath  string

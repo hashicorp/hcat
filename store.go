@@ -2,8 +2,6 @@ package hat
 
 import (
 	"sync"
-
-	dep "github.com/hashicorp/hat/internal/dependency"
 )
 
 // Store is what Template uses to determine the values that are
@@ -20,6 +18,11 @@ type Store struct {
 	receivedData map[string]struct{}
 }
 
+// Use String for IDs of the dependencies
+type IDer interface {
+	String() string
+}
+
 // NewStore creates a new Store with empty values for each
 // of the key structs.
 func NewStore() *Store {
@@ -32,7 +35,7 @@ func NewStore() *Store {
 // Save accepts a dependency and the data to store associated with that
 // dep. This function converts the given data to a proper type and stores
 // it interally.
-func (s *Store) Save(d dep.Dependency, data interface{}) {
+func (s *Store) Save(d IDer, data interface{}) {
 	s.Lock()
 	defer s.Unlock()
 
@@ -41,7 +44,7 @@ func (s *Store) Save(d dep.Dependency, data interface{}) {
 }
 
 // Recall gets the current value for the given dependency in the Store.
-func (s *Store) Recall(d dep.Dependency) (interface{}, bool) {
+func (s *Store) Recall(d IDer) (interface{}, bool) {
 	s.RLock()
 	defer s.RUnlock()
 
@@ -65,7 +68,7 @@ func (s *Store) forceSet(hashCode string, data interface{}) {
 
 // Forget accepts a dependency and removes all associated data with this
 // dependency. It also resets the "receivedData" internal map.
-func (s *Store) Delete(d dep.Dependency) {
+func (s *Store) Delete(d IDer) {
 	s.Lock()
 	defer s.Unlock()
 
