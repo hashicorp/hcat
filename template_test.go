@@ -7,6 +7,7 @@ import (
 	"os"
 	"reflect"
 	"testing"
+	"text/template"
 	"time"
 
 	"github.com/hashicorp/consul/api"
@@ -15,12 +16,6 @@ import (
 
 func TestNewTemplate(t *testing.T) {
 	t.Parallel()
-	f, err := ioutil.TempFile("", "")
-	if err != nil {
-		t.Fatal(err)
-	}
-	f.WriteString("test")
-	defer os.Remove(f.Name())
 
 	cases := []struct {
 		name string
@@ -35,39 +30,10 @@ func TestNewTemplate(t *testing.T) {
 			true,
 		},
 		{
-			"source_and_contents",
-			&NewTemplateInput{
-				Source:   "source",
-				Contents: "contents",
-			},
-			nil,
-			true,
-		},
-		{
-			"no_source_and_no_contents",
+			"no_contents",
 			&NewTemplateInput{},
 			nil,
 			true,
-		},
-		{
-			"non_existent",
-			&NewTemplateInput{
-				Source: "/path/to/nope/not/once/not/never",
-			},
-			nil,
-			true,
-		},
-		{
-			"sets_contents_from_source",
-			&NewTemplateInput{
-				Source: f.Name(),
-			},
-			&Template{
-				contents: "test",
-				source:   f.Name(),
-				hexMD5:   "098f6bcd4621d373cade4e832627b4f6",
-			},
-			false,
 		},
 		{
 			"contents",
@@ -1450,8 +1416,8 @@ func TestTemplate_Execute(t *testing.T) {
 		{
 			"helper_plugin_disabled",
 			&NewTemplateInput{
-				Contents:          `{{ "1" | plugin "echo" }}`,
-				FunctionBlacklist: []string{"plugin"},
+				Contents:     `{{ "1" | plugin "echo" }}`,
+				FuncMapMerge: template.FuncMap{"plugin": BlacklistFunc},
 			},
 			&ExecuteInput{
 				Store: NewStore(),

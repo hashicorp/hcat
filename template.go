@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"crypto/md5"
 	"encoding/hex"
-	"io/ioutil"
 	"text/template"
 
 	"github.com/pkg/errors"
@@ -12,18 +11,9 @@ import (
 	dep "github.com/hashicorp/hat/internal/dependency"
 )
 
-var (
-	// ErrTemplateContentsAndSource is the error returned when a template
-	// specifies both a "source" and "content" argument, which is not valid.
-	errTemplateContentsAndSource = errors.New(
-		"template: cannot specify both 'source' and 'contents'")
-
-	// ErrTemplateMissingContentsAndSource is the error returned when a
-	// template does not specify either a "source" or "content" argument, which
-	// is not valid.
-	errTemplateMissingContentsAndSource = errors.New(
-		"template: must specify exactly one of 'source' or 'contents'")
-)
+// ErrTemplateMissingContents is the error returned when a template does
+// not specify "content" argument, which is not valid.
+var errTemplateMissingContents = errors.New("template: missing 'contents'")
 
 // Template is the internal representation of an individual template to process.
 // The template retains the relationship between it's contents and is
@@ -48,40 +38,52 @@ type Template struct {
 	// is indexed with a key that does not exist.
 	errMissingKey bool
 
-	// functionBlacklist are functions not permitted to be executed
-	// when we render this template
-	functionBlacklist []string
+	// FuncMapMerge a map of functions that add-to or override
+	// those used when executing the template. (text/template)
+	funcMapMerge template.FuncMap
 
 	// sandboxPath adds a prefix to any path provided to the `file` function
 	// and causes an error if a relative path tries to traverse outside that
 	// prefix.
 	sandboxPath string
+
+	// Renderer is the default renderer used for this template
+	renderer Renderer
+}
+
+// Implemented by FileRenderer
+type Renderer interface {
+	Render([]byte) (RenderResult, error)
+}
+
+func BlacklistFunc(...interface{}) (string, error) {
+	return "", errors.New("function disabled")
 }
 
 // NewTemplateInput is used as input when creating the template.
 type NewTemplateInput struct {
-	// Source is the location on disk to the file.
-	Source string
-
 	// Contents are the raw template contents.
 	Contents string
 
-	// ErrMissingKey causes the template parser to exit immediately with an error
-	// when a map is indexed with a key that does not exist.
+	// ErrMissingKey causes the template parser to exit immediately with an
+	// error when a map is indexed with a key that does not exist.
 	ErrMissingKey bool
 
 	// LeftDelim and RightDelim are the template delimiters.
 	LeftDelim  string
 	RightDelim string
 
-	// FunctionBlacklist are functions not permitted to be executed
-	// when we render this template
-	FunctionBlacklist []string
+	// FuncMapMerge a map of functions that add-to or override those used when
+	// executing the template. (text/template)
+	FuncMapMerge template.FuncMap
 
 	// SandboxPath adds a prefix to any path provided to the `file` function
 	// and causes an error if a relative path tries to traverse outside that
 	// prefix.
 	SandboxPath string
+
+	// Renderer is the default renderer used for this template
+	Renderer Renderer
 }
 
 // NewTemplate creates and parses a new Consul Template template at the given
@@ -93,29 +95,17 @@ func NewTemplate(i *NewTemplateInput) (*Template, error) {
 		i = &NewTemplateInput{}
 	}
 
-	// Validate that we are either given the path or the explicit contents
-	if i.Source != "" && i.Contents != "" {
-		return nil, errTemplateContentsAndSource
-	} else if i.Source == "" && i.Contents == "" {
-		return nil, errTemplateMissingContentsAndSource
+	if i.Contents == "" {
+		return nil, errTemplateMissingContents
 	}
 
 	var t Template
-	t.source = i.Source
 	t.contents = i.Contents
 	t.leftDelim = i.LeftDelim
 	t.rightDelim = i.RightDelim
 	t.errMissingKey = i.ErrMissingKey
-	t.functionBlacklist = i.FunctionBlacklist
 	t.sandboxPath = i.SandboxPath
-
-	if i.Source != "" {
-		contents, err := ioutil.ReadFile(i.Source)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to read template")
-		}
-		t.contents = string(contents)
-	}
+	t.funcMapMerge = i.FuncMapMerge
 
 	// Compute the MD5, encode as hex
 	hash := md5.Sum([]byte(t.contents))
@@ -164,13 +154,13 @@ func (t *Template) Execute(i *ExecuteInput) (*ExecuteResult, error) {
 	tmpl.Delims(t.leftDelim, t.rightDelim)
 
 	tmpl.Funcs(funcMap(&funcMapInput{
-		t:                 tmpl,
-		store:             i.Store,
-		env:               i.Env,
-		used:              &used,
-		missing:           &missing,
-		functionBlacklist: t.functionBlacklist,
-		sandboxPath:       t.sandboxPath,
+		t:            tmpl,
+		store:        i.Store,
+		env:          i.Env,
+		used:         &used,
+		missing:      &missing,
+		funcMapMerge: t.funcMapMerge,
+		sandboxPath:  t.sandboxPath,
 	}))
 
 	if t.errMissingKey {
@@ -199,13 +189,13 @@ func (t *Template) Execute(i *ExecuteInput) (*ExecuteResult, error) {
 
 // funcMapInput is input to the funcMap, which builds the template functions.
 type funcMapInput struct {
-	t                 *template.Template
-	store             *Store
-	env               []string
-	functionBlacklist []string
-	sandboxPath       string
-	used              *dep.Set
-	missing           *dep.Set
+	t            *template.Template
+	store        *Store
+	env          []string
+	funcMapMerge template.FuncMap
+	sandboxPath  string
+	used         *dep.Set
+	missing      *dep.Set
 }
 
 // funcMap is the map of template functions to their respective functions.
@@ -289,10 +279,8 @@ func funcMap(i *funcMapInput) template.FuncMap {
 		"maximum":  maximum,
 	}
 
-	for _, bf := range i.functionBlacklist {
-		if _, ok := r[bf]; ok {
-			r[bf] = blacklisted
-		}
+	for k, v := range i.funcMapMerge {
+		r[k] = v
 	}
 
 	return r
