@@ -34,8 +34,8 @@ func (d *TestDep) Type() dep.Type {
 	return dep.TypeLocal
 }
 
-// TestDepStale is a special dependency that can be used to test what happens when
-// stale data is permitted.
+// TestDepStale is a special dependency that can be used to test what happens
+// when stale data is permitted.
 type TestDepStale struct {
 	name string
 }
