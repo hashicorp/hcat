@@ -62,10 +62,6 @@ type Recaller interface {
 	Recall(IDer) (interface{}, bool)
 }
 
-func BlacklistFunc(...interface{}) (string, error) {
-	return "", errors.New("function disabled")
-}
-
 // NewTemplateInput is used as input when creating the template.
 type NewTemplateInput struct {
 	// Contents are the raw template contents.

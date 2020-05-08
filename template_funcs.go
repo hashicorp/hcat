@@ -27,6 +27,12 @@ import (
 	yaml "gopkg.in/yaml.v2"
 )
 
+// BlacklistFunc always returns an error, to be used in place of blacklisted
+// template functions. For use with the FuncMapMerge.
+func BlacklistFunc(...interface{}) (string, error) {
+	return "", errors.New("function disabled")
+}
+
 // now is function that represents the current time in UTC. This is here
 // primarily for the tests to override times.
 var now = func() time.Time { return time.Now().UTC() }
@@ -1504,11 +1510,6 @@ func maximum(b, a interface{}) (interface{}, error) {
 	default:
 		return nil, fmt.Errorf("maximum: unknown type for %q (%T)", av, a)
 	}
-}
-
-// blacklisted always returns an error, to be used in place of blacklisted template functions
-func blacklisted(...string) (string, error) {
-	return "", errors.New("function is disabled")
 }
 
 // pathInSandbox returns an error if the provided path doesn't fall within the
