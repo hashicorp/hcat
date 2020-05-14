@@ -117,19 +117,8 @@ func NewTemplate(i *NewTemplateInput) (*Template, error) {
 }
 
 // ID returns the identifier for this template.
-func (t *Template) ID() string {
+func (t *Template) id() string {
 	return t.hexMD5
-}
-
-// ExecuteInput is used as input to the template's execute function.
-type ExecuteInput struct {
-	// Store is the cachewhere data for the template is stored.
-	Store Recaller
-
-	// Env is a custom environment provided to the template for envvar resolution.
-	// Values specified here will take precedence over any values in the
-	// environment when using the `env` function.
-	Env []string
 }
 
 // ExecuteResult is the result of the template execution.
@@ -145,11 +134,7 @@ type ExecuteResult struct {
 }
 
 // Execute evaluates this template in the provided context.
-func (t *Template) Execute(i *ExecuteInput) (*ExecuteResult, error) {
-	if i == nil {
-		i = &ExecuteInput{}
-	}
-
+func (t *Template) Execute(r Recaller) (*ExecuteResult, error) {
 	var used, missing dep.Set
 
 	tmpl := template.New("")
@@ -157,8 +142,7 @@ func (t *Template) Execute(i *ExecuteInput) (*ExecuteResult, error) {
 
 	tmpl.Funcs(funcMap(&funcMapInput{
 		t:            tmpl,
-		store:        i.Store,
-		env:          i.Env,
+		store:        r,
 		used:         &used,
 		missing:      &missing,
 		funcMapMerge: t.funcMapMerge,

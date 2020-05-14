@@ -93,6 +93,12 @@ func TestTemplate_Execute(t *testing.T) {
 	t.Parallel()
 	now = func() time.Time { return time.Unix(0, 0).UTC() }
 
+	// set an environment variable for the tests
+	if err := os.Setenv("CT_TEST", "1"); err != nil {
+		t.Fatal(err)
+	}
+	defer func() { os.Unsetenv("CT_TEST") }()
+
 	f, err := ioutil.TempFile("", "")
 	if err != nil {
 		t.Fatal(err)
@@ -103,7 +109,7 @@ func TestTemplate_Execute(t *testing.T) {
 	cases := []struct {
 		name string
 		ti   *NewTemplateInput
-		i    *ExecuteInput
+		i    Recaller
 		e    string
 		err  bool
 	}{
@@ -130,9 +136,7 @@ func TestTemplate_Execute(t *testing.T) {
 			&NewTemplateInput{
 				Contents: `{{ key "foo" }}`,
 			},
-			&ExecuteInput{
-				Store: NewStore(),
-			},
+			NewStore(),
 			"",
 			false,
 		},
@@ -219,17 +223,15 @@ func TestTemplate_Execute(t *testing.T) {
 			&NewTemplateInput{
 				Contents: `{{ datacenters }}`,
 			},
-			&ExecuteInput{
-				Store: func() *Store {
-					st := NewStore()
-					d, err := dep.NewCatalogDatacentersQuery(false)
-					if err != nil {
-						t.Fatal(err)
-					}
-					st.Save(d, []string{"dc1", "dc2"})
-					return st
-				}(),
-			},
+			func() *Store {
+				st := NewStore()
+				d, err := dep.NewCatalogDatacentersQuery(false)
+				if err != nil {
+					t.Fatal(err)
+				}
+				st.Save(d, []string{"dc1", "dc2"})
+				return st
+			}(),
 			"[dc1 dc2]",
 			false,
 		},
@@ -238,17 +240,15 @@ func TestTemplate_Execute(t *testing.T) {
 			&NewTemplateInput{
 				Contents: `{{ datacenters true }}`,
 			},
-			&ExecuteInput{
-				Store: func() *Store {
-					st := NewStore()
-					d, err := dep.NewCatalogDatacentersQuery(true)
-					if err != nil {
-						t.Fatal(err)
-					}
-					st.Save(d, []string{"dc1", "dc2"})
-					return st
-				}(),
-			},
+			func() *Store {
+				st := NewStore()
+				d, err := dep.NewCatalogDatacentersQuery(true)
+				if err != nil {
+					t.Fatal(err)
+				}
+				st.Save(d, []string{"dc1", "dc2"})
+				return st
+			}(),
 			"[dc1 dc2]",
 			false,
 		},
@@ -257,17 +257,15 @@ func TestTemplate_Execute(t *testing.T) {
 			&NewTemplateInput{
 				Contents: `{{ file "/path/to/file" }}`,
 			},
-			&ExecuteInput{
-				Store: func() *Store {
-					st := NewStore()
-					d, err := dep.NewFileQuery("/path/to/file")
-					if err != nil {
-						t.Fatal(err)
-					}
-					st.Save(d, "content")
-					return st
-				}(),
-			},
+			func() *Store {
+				st := NewStore()
+				d, err := dep.NewFileQuery("/path/to/file")
+				if err != nil {
+					t.Fatal(err)
+				}
+				st.Save(d, "content")
+				return st
+			}(),
 			"content",
 			false,
 		},
@@ -276,18 +274,16 @@ func TestTemplate_Execute(t *testing.T) {
 			&NewTemplateInput{
 				Contents: `{{ key "key" }}`,
 			},
-			&ExecuteInput{
-				Store: func() *Store {
-					st := NewStore()
-					d, err := dep.NewKVGetQuery("key")
-					if err != nil {
-						t.Fatal(err)
-					}
-					d.EnableBlocking()
-					st.Save(d, "5")
-					return st
-				}(),
-			},
+			func() *Store {
+				st := NewStore()
+				d, err := dep.NewKVGetQuery("key")
+				if err != nil {
+					t.Fatal(err)
+				}
+				d.EnableBlocking()
+				st.Save(d, "5")
+				return st
+			}(),
 			"5",
 			false,
 		},
@@ -296,17 +292,15 @@ func TestTemplate_Execute(t *testing.T) {
 			&NewTemplateInput{
 				Contents: `{{ keyExists "key" }} {{ keyExists "no_key" }}`,
 			},
-			&ExecuteInput{
-				Store: func() *Store {
-					st := NewStore()
-					d, err := dep.NewKVGetQuery("key")
-					if err != nil {
-						t.Fatal(err)
-					}
-					st.Save(d, true)
-					return st
-				}(),
-			},
+			func() *Store {
+				st := NewStore()
+				d, err := dep.NewKVGetQuery("key")
+				if err != nil {
+					t.Fatal(err)
+				}
+				st.Save(d, true)
+				return st
+			}(),
 			"true false",
 			false,
 		},
@@ -315,17 +309,15 @@ func TestTemplate_Execute(t *testing.T) {
 			&NewTemplateInput{
 				Contents: `{{ keyOrDefault "key" "100" }} {{ keyOrDefault "no_key" "200" }}`,
 			},
-			&ExecuteInput{
-				Store: func() *Store {
-					st := NewStore()
-					d, err := dep.NewKVGetQuery("key")
-					if err != nil {
-						t.Fatal(err)
-					}
-					st.Save(d, "150")
-					return st
-				}(),
-			},
+			func() *Store {
+				st := NewStore()
+				d, err := dep.NewKVGetQuery("key")
+				if err != nil {
+					t.Fatal(err)
+				}
+				st.Save(d, "150")
+				return st
+			}(),
 			"150 200",
 			false,
 		},
@@ -334,21 +326,19 @@ func TestTemplate_Execute(t *testing.T) {
 			&NewTemplateInput{
 				Contents: `{{ range ls "list" }}{{ .Key }}={{ .Value }}{{ end }}`,
 			},
-			&ExecuteInput{
-				Store: func() *Store {
-					st := NewStore()
-					d, err := dep.NewKVListQuery("list")
-					if err != nil {
-						t.Fatal(err)
-					}
-					st.Save(d, []*dep.KeyPair{
-						&dep.KeyPair{Key: "", Value: ""},
-						&dep.KeyPair{Key: "foo", Value: "bar"},
-						&dep.KeyPair{Key: "foo/zip", Value: "zap"},
-					})
-					return st
-				}(),
-			},
+			func() *Store {
+				st := NewStore()
+				d, err := dep.NewKVListQuery("list")
+				if err != nil {
+					t.Fatal(err)
+				}
+				st.Save(d, []*dep.KeyPair{
+					&dep.KeyPair{Key: "", Value: ""},
+					&dep.KeyPair{Key: "foo", Value: "bar"},
+					&dep.KeyPair{Key: "foo/zip", Value: "zap"},
+				})
+				return st
+			}(),
 			"foo=bar",
 			false,
 		},
@@ -357,24 +347,22 @@ func TestTemplate_Execute(t *testing.T) {
 			&NewTemplateInput{
 				Contents: `{{ with node }}{{ .Node.Node }}{{ range .Services }}{{ .Service }}{{ end }}{{ end }}`,
 			},
-			&ExecuteInput{
-				Store: func() *Store {
-					st := NewStore()
-					d, err := dep.NewCatalogNodeQuery("")
-					if err != nil {
-						t.Fatal(err)
-					}
-					st.Save(d, &dep.CatalogNode{
-						Node: &dep.Node{Node: "node1"},
-						Services: []*dep.CatalogNodeService{
-							&dep.CatalogNodeService{
-								Service: "service1",
-							},
+			func() *Store {
+				st := NewStore()
+				d, err := dep.NewCatalogNodeQuery("")
+				if err != nil {
+					t.Fatal(err)
+				}
+				st.Save(d, &dep.CatalogNode{
+					Node: &dep.Node{Node: "node1"},
+					Services: []*dep.CatalogNodeService{
+						&dep.CatalogNodeService{
+							Service: "service1",
 						},
-					})
-					return st
-				}(),
-			},
+					},
+				})
+				return st
+			}(),
 			"node1service1",
 			false,
 		},
@@ -383,20 +371,18 @@ func TestTemplate_Execute(t *testing.T) {
 			&NewTemplateInput{
 				Contents: `{{ range nodes }}{{ .Node }}{{ end }}`,
 			},
-			&ExecuteInput{
-				Store: func() *Store {
-					st := NewStore()
-					d, err := dep.NewCatalogNodesQuery("")
-					if err != nil {
-						t.Fatal(err)
-					}
-					st.Save(d, []*dep.Node{
-						&dep.Node{Node: "node1"},
-						&dep.Node{Node: "node2"},
-					})
-					return st
-				}(),
-			},
+			func() *Store {
+				st := NewStore()
+				d, err := dep.NewCatalogNodesQuery("")
+				if err != nil {
+					t.Fatal(err)
+				}
+				st.Save(d, []*dep.Node{
+					&dep.Node{Node: "node1"},
+					&dep.Node{Node: "node2"},
+				})
+				return st
+			}(),
 			"node1node2",
 			false,
 		},
@@ -405,22 +391,20 @@ func TestTemplate_Execute(t *testing.T) {
 			&NewTemplateInput{
 				Contents: `{{ with secret "secret/foo" }}{{ .Data.zip }}{{ end }}`,
 			},
-			&ExecuteInput{
-				Store: func() *Store {
-					st := NewStore()
-					d, err := dep.NewVaultReadQuery("secret/foo")
-					if err != nil {
-						t.Fatal(err)
-					}
-					st.Save(d, &dep.Secret{
-						LeaseID:       "abcd1234",
-						LeaseDuration: 120,
-						Renewable:     true,
-						Data:          map[string]interface{}{"zip": "zap"},
-					})
-					return st
-				}(),
-			},
+			func() *Store {
+				st := NewStore()
+				d, err := dep.NewVaultReadQuery("secret/foo")
+				if err != nil {
+					t.Fatal(err)
+				}
+				st.Save(d, &dep.Secret{
+					LeaseID:       "abcd1234",
+					LeaseDuration: 120,
+					Renewable:     true,
+					Data:          map[string]interface{}{"zip": "zap"},
+				})
+				return st
+			}(),
 			"zap",
 			false,
 		},
@@ -429,26 +413,24 @@ func TestTemplate_Execute(t *testing.T) {
 			&NewTemplateInput{
 				Contents: `{{with secret "secret/foo"}}{{.Data.zip}}{{end}}:{{with secret "secret/foo?version=1"}}{{.Data.zip}}{{end}}`,
 			},
-			&ExecuteInput{
-				Store: func() *Store {
-					st := NewStore()
-					d, err := dep.NewVaultReadQuery("secret/foo")
-					if err != nil {
-						t.Fatal(err)
-					}
-					st.Save(d, &dep.Secret{
-						Data: map[string]interface{}{"zip": "zap"},
-					})
-					d1, err := dep.NewVaultReadQuery("secret/foo?version=1")
-					if err != nil {
-						t.Fatal(err)
-					}
-					st.Save(d1, &dep.Secret{
-						Data: map[string]interface{}{"zip": "zed"},
-					})
-					return st
-				}(),
-			},
+			func() *Store {
+				st := NewStore()
+				d, err := dep.NewVaultReadQuery("secret/foo")
+				if err != nil {
+					t.Fatal(err)
+				}
+				st.Save(d, &dep.Secret{
+					Data: map[string]interface{}{"zip": "zap"},
+				})
+				d1, err := dep.NewVaultReadQuery("secret/foo?version=1")
+				if err != nil {
+					t.Fatal(err)
+				}
+				st.Save(d1, &dep.Secret{
+					Data: map[string]interface{}{"zip": "zed"},
+				})
+				return st
+			}(),
 			"zap:zed",
 			false,
 		},
@@ -457,11 +439,9 @@ func TestTemplate_Execute(t *testing.T) {
 			&NewTemplateInput{
 				Contents: `{{ with secret "secret/nope" }}{{ .Data.zip }}{{ end }}`,
 			},
-			&ExecuteInput{
-				Store: func() *Store {
-					return NewStore()
-				}(),
-			},
+			func() *Store {
+				return NewStore()
+			}(),
 			"",
 			false,
 		},
@@ -470,11 +450,9 @@ func TestTemplate_Execute(t *testing.T) {
 			&NewTemplateInput{
 				Contents: `{{ if secret "secret/nope" }}yes{{ else }}no{{ end }}`,
 			},
-			&ExecuteInput{
-				Store: func() *Store {
-					return NewStore()
-				}(),
-			},
+			func() *Store {
+				return NewStore()
+			}(),
 			"no",
 			false,
 		},
@@ -483,24 +461,22 @@ func TestTemplate_Execute(t *testing.T) {
 			&NewTemplateInput{
 				Contents: `{{ with secret "transit/encrypt/foo" "plaintext=a" }}{{ .Data.ciphertext }}{{ end }}`,
 			},
-			&ExecuteInput{
-				Store: func() *Store {
-					st := NewStore()
-					d, err := dep.NewVaultWriteQuery("transit/encrypt/foo", map[string]interface{}{
-						"plaintext": "a",
-					})
-					if err != nil {
-						t.Fatal(err)
-					}
-					st.Save(d, &dep.Secret{
-						LeaseID:       "abcd1234",
-						LeaseDuration: 120,
-						Renewable:     true,
-						Data:          map[string]interface{}{"ciphertext": "encrypted"},
-					})
-					return st
-				}(),
-			},
+			func() *Store {
+				st := NewStore()
+				d, err := dep.NewVaultWriteQuery("transit/encrypt/foo", map[string]interface{}{
+					"plaintext": "a",
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+				st.Save(d, &dep.Secret{
+					LeaseID:       "abcd1234",
+					LeaseDuration: 120,
+					Renewable:     true,
+					Data:          map[string]interface{}{"ciphertext": "encrypted"},
+				})
+				return st
+			}(),
 			"encrypted",
 			false,
 		},
@@ -509,11 +485,9 @@ func TestTemplate_Execute(t *testing.T) {
 			&NewTemplateInput{
 				Contents: `{{ with secret "secret/nope" "a=b" }}{{ .Data.zip }}{{ end }}`,
 			},
-			&ExecuteInput{
-				Store: func() *Store {
-					return NewStore()
-				}(),
-			},
+			func() *Store {
+				return NewStore()
+			}(),
 			"",
 			false,
 		},
@@ -522,11 +496,9 @@ func TestTemplate_Execute(t *testing.T) {
 			&NewTemplateInput{
 				Contents: `{{ if secret "secret/nope" "a=b" }}yes{{ else }}no{{ end }}`,
 			},
-			&ExecuteInput{
-				Store: func() *Store {
-					return NewStore()
-				}(),
-			},
+			func() *Store {
+				return NewStore()
+			}(),
 			"no",
 			false,
 		},
@@ -535,11 +507,9 @@ func TestTemplate_Execute(t *testing.T) {
 			&NewTemplateInput{
 				Contents: `{{ with secret "secret/nope" }}{{ .Data.foo.bar }}{{ end }}`,
 			},
-			&ExecuteInput{
-				Store: func() *Store {
-					return NewStore()
-				}(),
-			},
+			func() *Store {
+				return NewStore()
+			}(),
 			"",
 			false,
 		},
@@ -548,17 +518,15 @@ func TestTemplate_Execute(t *testing.T) {
 			&NewTemplateInput{
 				Contents: `{{ secrets "secret/" }}`,
 			},
-			&ExecuteInput{
-				Store: func() *Store {
-					st := NewStore()
-					d, err := dep.NewVaultListQuery("secret/")
-					if err != nil {
-						t.Fatal(err)
-					}
-					st.Save(d, []string{"bar", "foo"})
-					return st
-				}(),
-			},
+			func() *Store {
+				st := NewStore()
+				d, err := dep.NewVaultListQuery("secret/")
+				if err != nil {
+					t.Fatal(err)
+				}
+				st.Save(d, []string{"bar", "foo"})
+				return st
+			}(),
 			"[bar foo]",
 			false,
 		},
@@ -567,11 +535,9 @@ func TestTemplate_Execute(t *testing.T) {
 			&NewTemplateInput{
 				Contents: `{{ secrets "secret/" }}`,
 			},
-			&ExecuteInput{
-				Store: func() *Store {
-					return NewStore()
-				}(),
-			},
+			func() *Store {
+				return NewStore()
+			}(),
 			"[]",
 			false,
 		},
@@ -580,11 +546,9 @@ func TestTemplate_Execute(t *testing.T) {
 			&NewTemplateInput{
 				Contents: `{{ if secrets "secret/" }}yes{{ else }}no{{ end }}`,
 			},
-			&ExecuteInput{
-				Store: func() *Store {
-					return NewStore()
-				}(),
-			},
+			func() *Store {
+				return NewStore()
+			}(),
 			"no",
 			false,
 		},
@@ -593,11 +557,9 @@ func TestTemplate_Execute(t *testing.T) {
 			&NewTemplateInput{
 				Contents: `{{ with secrets "secret/" }}{{ . }}{{ end }}`,
 			},
-			&ExecuteInput{
-				Store: func() *Store {
-					return NewStore()
-				}(),
-			},
+			func() *Store {
+				return NewStore()
+			}(),
 			"",
 			false,
 		},
@@ -606,26 +568,24 @@ func TestTemplate_Execute(t *testing.T) {
 			&NewTemplateInput{
 				Contents: `{{ range service "webapp" }}{{ .Address }}{{ end }}`,
 			},
-			&ExecuteInput{
-				Store: func() *Store {
-					st := NewStore()
-					d, err := dep.NewHealthServiceQuery("webapp")
-					if err != nil {
-						t.Fatal(err)
-					}
-					st.Save(d, []*dep.HealthService{
-						&dep.HealthService{
-							Node:    "node1",
-							Address: "1.2.3.4",
-						},
-						&dep.HealthService{
-							Node:    "node2",
-							Address: "5.6.7.8",
-						},
-					})
-					return st
-				}(),
-			},
+			func() *Store {
+				st := NewStore()
+				d, err := dep.NewHealthServiceQuery("webapp")
+				if err != nil {
+					t.Fatal(err)
+				}
+				st.Save(d, []*dep.HealthService{
+					&dep.HealthService{
+						Node:    "node1",
+						Address: "1.2.3.4",
+					},
+					&dep.HealthService{
+						Node:    "node2",
+						Address: "5.6.7.8",
+					},
+				})
+				return st
+			}(),
 			"1.2.3.45.6.7.8",
 			false,
 		},
@@ -634,26 +594,24 @@ func TestTemplate_Execute(t *testing.T) {
 			&NewTemplateInput{
 				Contents: `{{ range service "webapp" "passing,any" }}{{ .Address }}{{ end }}`,
 			},
-			&ExecuteInput{
-				Store: func() *Store {
-					st := NewStore()
-					d, err := dep.NewHealthServiceQuery("webapp|passing,any")
-					if err != nil {
-						t.Fatal(err)
-					}
-					st.Save(d, []*dep.HealthService{
-						&dep.HealthService{
-							Node:    "node1",
-							Address: "1.2.3.4",
-						},
-						&dep.HealthService{
-							Node:    "node2",
-							Address: "5.6.7.8",
-						},
-					})
-					return st
-				}(),
-			},
+			func() *Store {
+				st := NewStore()
+				d, err := dep.NewHealthServiceQuery("webapp|passing,any")
+				if err != nil {
+					t.Fatal(err)
+				}
+				st.Save(d, []*dep.HealthService{
+					&dep.HealthService{
+						Node:    "node1",
+						Address: "1.2.3.4",
+					},
+					&dep.HealthService{
+						Node:    "node2",
+						Address: "5.6.7.8",
+					},
+				})
+				return st
+			}(),
 			"1.2.3.45.6.7.8",
 			false,
 		},
@@ -662,24 +620,22 @@ func TestTemplate_Execute(t *testing.T) {
 			&NewTemplateInput{
 				Contents: `{{ range services }}{{ .Name }}{{ end }}`,
 			},
-			&ExecuteInput{
-				Store: func() *Store {
-					st := NewStore()
-					d, err := dep.NewCatalogServicesQuery("")
-					if err != nil {
-						t.Fatal(err)
-					}
-					st.Save(d, []*dep.CatalogSnippet{
-						&dep.CatalogSnippet{
-							Name: "service1",
-						},
-						&dep.CatalogSnippet{
-							Name: "service2",
-						},
-					})
-					return st
-				}(),
-			},
+			func() *Store {
+				st := NewStore()
+				d, err := dep.NewCatalogServicesQuery("")
+				if err != nil {
+					t.Fatal(err)
+				}
+				st.Save(d, []*dep.CatalogSnippet{
+					&dep.CatalogSnippet{
+						Name: "service1",
+					},
+					&dep.CatalogSnippet{
+						Name: "service2",
+					},
+				})
+				return st
+			}(),
 			"service1service2",
 			false,
 		},
@@ -688,22 +644,20 @@ func TestTemplate_Execute(t *testing.T) {
 			&NewTemplateInput{
 				Contents: `{{ range tree "key" }}{{ .Key }}={{ .Value }}{{ end }}`,
 			},
-			&ExecuteInput{
-				Store: func() *Store {
-					st := NewStore()
-					d, err := dep.NewKVListQuery("key")
-					if err != nil {
-						t.Fatal(err)
-					}
-					st.Save(d, []*dep.KeyPair{
-						&dep.KeyPair{Key: "", Value: ""},
-						&dep.KeyPair{Key: "admin/port", Value: "1134"},
-						&dep.KeyPair{Key: "maxconns", Value: "5"},
-						&dep.KeyPair{Key: "minconns", Value: "2"},
-					})
-					return st
-				}(),
-			},
+			func() *Store {
+				st := NewStore()
+				d, err := dep.NewKVListQuery("key")
+				if err != nil {
+					t.Fatal(err)
+				}
+				st.Save(d, []*dep.KeyPair{
+					&dep.KeyPair{Key: "", Value: ""},
+					&dep.KeyPair{Key: "admin/port", Value: "1134"},
+					&dep.KeyPair{Key: "maxconns", Value: "5"},
+					&dep.KeyPair{Key: "minconns", Value: "2"},
+				})
+				return st
+			}(),
 			"admin/port=1134maxconns=5minconns=2",
 			false,
 		},
@@ -714,9 +668,7 @@ func TestTemplate_Execute(t *testing.T) {
 			&NewTemplateInput{
 				Contents: `{{ scratch.Set "a" "2" }}{{ scratch.Key "a" }}`,
 			},
-			&ExecuteInput{
-				Store: NewStore(),
-			},
+			NewStore(),
 			"true",
 			false,
 		},
@@ -725,9 +677,7 @@ func TestTemplate_Execute(t *testing.T) {
 			&NewTemplateInput{
 				Contents: `{{ scratch.Set "a" "2" }}{{ scratch.Get "a" }}`,
 			},
-			&ExecuteInput{
-				Store: NewStore(),
-			},
+			NewStore(),
 			"2",
 			false,
 		},
@@ -736,9 +686,7 @@ func TestTemplate_Execute(t *testing.T) {
 			&NewTemplateInput{
 				Contents: `{{ scratch.SetX "a" "2" }}{{ scratch.SetX "a" "1" }}{{ scratch.Get "a" }}`,
 			},
-			&ExecuteInput{
-				Store: NewStore(),
-			},
+			NewStore(),
 			"2",
 			false,
 		},
@@ -747,9 +695,7 @@ func TestTemplate_Execute(t *testing.T) {
 			&NewTemplateInput{
 				Contents: `{{ scratch.MapSet "a" "foo" "bar" }}{{ scratch.MapValues "a" }}`,
 			},
-			&ExecuteInput{
-				Store: NewStore(),
-			},
+			NewStore(),
 			"[bar]",
 			false,
 		},
@@ -758,9 +704,7 @@ func TestTemplate_Execute(t *testing.T) {
 			&NewTemplateInput{
 				Contents: `{{ scratch.MapSetX "a" "foo" "bar" }}{{ scratch.MapSetX "a" "foo" "baz" }}{{ scratch.MapValues "a" }}`,
 			},
-			&ExecuteInput{
-				Store: NewStore(),
-			},
+			NewStore(),
 			"[bar]",
 			false,
 		},
@@ -771,21 +715,19 @@ func TestTemplate_Execute(t *testing.T) {
 			&NewTemplateInput{
 				Contents: `{{ range $key, $pairs := tree "list" | byKey }}{{ $key }}:{{ range $pairs }}{{ .Key }}={{ .Value }}{{ end }}{{ end }}`,
 			},
-			&ExecuteInput{
-				Store: func() *Store {
-					st := NewStore()
-					d, err := dep.NewKVListQuery("list")
-					if err != nil {
-						t.Fatal(err)
-					}
-					st.Save(d, []*dep.KeyPair{
-						&dep.KeyPair{Key: "", Value: ""},
-						&dep.KeyPair{Key: "foo/bar", Value: "a"},
-						&dep.KeyPair{Key: "zip/zap", Value: "b"},
-					})
-					return st
-				}(),
-			},
+			func() *Store {
+				st := NewStore()
+				d, err := dep.NewKVListQuery("list")
+				if err != nil {
+					t.Fatal(err)
+				}
+				st.Save(d, []*dep.KeyPair{
+					&dep.KeyPair{Key: "", Value: ""},
+					&dep.KeyPair{Key: "foo/bar", Value: "a"},
+					&dep.KeyPair{Key: "zip/zap", Value: "b"},
+				})
+				return st
+			}(),
 			"foo:bar=azip:zap=b",
 			false,
 		},
@@ -794,26 +736,24 @@ func TestTemplate_Execute(t *testing.T) {
 			&NewTemplateInput{
 				Contents: `{{ range $tag, $services := service "webapp" | byTag }}{{ $tag }}:{{ range $services }}{{ .Address }}{{ end }}{{ end }}`,
 			},
-			&ExecuteInput{
-				Store: func() *Store {
-					st := NewStore()
-					d, err := dep.NewHealthServiceQuery("webapp")
-					if err != nil {
-						t.Fatal(err)
-					}
-					st.Save(d, []*dep.HealthService{
-						&dep.HealthService{
-							Address: "1.2.3.4",
-							Tags:    []string{"prod", "staging"},
-						},
-						&dep.HealthService{
-							Address: "5.6.7.8",
-							Tags:    []string{"staging"},
-						},
-					})
-					return st
-				}(),
-			},
+			func() *Store {
+				st := NewStore()
+				d, err := dep.NewHealthServiceQuery("webapp")
+				if err != nil {
+					t.Fatal(err)
+				}
+				st.Save(d, []*dep.HealthService{
+					&dep.HealthService{
+						Address: "1.2.3.4",
+						Tags:    []string{"prod", "staging"},
+					},
+					&dep.HealthService{
+						Address: "5.6.7.8",
+						Tags:    []string{"staging"},
+					},
+				})
+				return st
+			}(),
 			"prod:1.2.3.4staging:1.2.3.45.6.7.8",
 			false,
 		},
@@ -822,26 +762,24 @@ func TestTemplate_Execute(t *testing.T) {
 			&NewTemplateInput{
 				Contents: `{{ range service "webapp" }}{{ if .Tags | contains "prod" }}{{ .Address }}{{ end }}{{ end }}`,
 			},
-			&ExecuteInput{
-				Store: func() *Store {
-					st := NewStore()
-					d, err := dep.NewHealthServiceQuery("webapp")
-					if err != nil {
-						t.Fatal(err)
-					}
-					st.Save(d, []*dep.HealthService{
-						&dep.HealthService{
-							Address: "1.2.3.4",
-							Tags:    []string{"prod", "staging"},
-						},
-						&dep.HealthService{
-							Address: "5.6.7.8",
-							Tags:    []string{"staging"},
-						},
-					})
-					return st
-				}(),
-			},
+			func() *Store {
+				st := NewStore()
+				d, err := dep.NewHealthServiceQuery("webapp")
+				if err != nil {
+					t.Fatal(err)
+				}
+				st.Save(d, []*dep.HealthService{
+					&dep.HealthService{
+						Address: "1.2.3.4",
+						Tags:    []string{"prod", "staging"},
+					},
+					&dep.HealthService{
+						Address: "5.6.7.8",
+						Tags:    []string{"staging"},
+					},
+				})
+				return st
+			}(),
 			"1.2.3.4",
 			false,
 		},
@@ -850,26 +788,24 @@ func TestTemplate_Execute(t *testing.T) {
 			&NewTemplateInput{
 				Contents: `{{ $requiredTags := parseJSON "[\"prod\",\"us-realm\"]" }}{{ range service "webapp" }}{{ if .Tags | containsAll $requiredTags }}{{ .Address }}{{ end }}{{ end }}`,
 			},
-			&ExecuteInput{
-				Store: func() *Store {
-					st := NewStore()
-					d, err := dep.NewHealthServiceQuery("webapp")
-					if err != nil {
-						t.Fatal(err)
-					}
-					st.Save(d, []*dep.HealthService{
-						&dep.HealthService{
-							Address: "1.2.3.4",
-							Tags:    []string{"prod", "us-realm"},
-						},
-						&dep.HealthService{
-							Address: "5.6.7.8",
-							Tags:    []string{"prod", "ca-realm"},
-						},
-					})
-					return st
-				}(),
-			},
+			func() *Store {
+				st := NewStore()
+				d, err := dep.NewHealthServiceQuery("webapp")
+				if err != nil {
+					t.Fatal(err)
+				}
+				st.Save(d, []*dep.HealthService{
+					&dep.HealthService{
+						Address: "1.2.3.4",
+						Tags:    []string{"prod", "us-realm"},
+					},
+					&dep.HealthService{
+						Address: "5.6.7.8",
+						Tags:    []string{"prod", "ca-realm"},
+					},
+				})
+				return st
+			}(),
 			"1.2.3.4",
 			false,
 		},
@@ -878,26 +814,24 @@ func TestTemplate_Execute(t *testing.T) {
 			&NewTemplateInput{
 				Contents: `{{ $requiredTags := parseJSON "[]" }}{{ range service "webapp" }}{{ if .Tags | containsAll $requiredTags }}{{ .Address }}{{ end }}{{ end }}`,
 			},
-			&ExecuteInput{
-				Store: func() *Store {
-					st := NewStore()
-					d, err := dep.NewHealthServiceQuery("webapp")
-					if err != nil {
-						t.Fatal(err)
-					}
-					st.Save(d, []*dep.HealthService{
-						&dep.HealthService{
-							Address: "1.2.3.4",
-							Tags:    []string{"prod", "us-realm"},
-						},
-						&dep.HealthService{
-							Address: "5.6.7.8",
-							Tags:    []string{"prod", "ca-realm"},
-						},
-					})
-					return st
-				}(),
-			},
+			func() *Store {
+				st := NewStore()
+				d, err := dep.NewHealthServiceQuery("webapp")
+				if err != nil {
+					t.Fatal(err)
+				}
+				st.Save(d, []*dep.HealthService{
+					&dep.HealthService{
+						Address: "1.2.3.4",
+						Tags:    []string{"prod", "us-realm"},
+					},
+					&dep.HealthService{
+						Address: "5.6.7.8",
+						Tags:    []string{"prod", "ca-realm"},
+					},
+				})
+				return st
+			}(),
 			"1.2.3.45.6.7.8",
 			false,
 		},
@@ -906,26 +840,24 @@ func TestTemplate_Execute(t *testing.T) {
 			&NewTemplateInput{
 				Contents: `{{ $acceptableTags := parseJSON "[\"v2\",\"v3\"]" }}{{ range service "webapp" }}{{ if .Tags | containsAny $acceptableTags }}{{ .Address }}{{ end }}{{ end }}`,
 			},
-			&ExecuteInput{
-				Store: func() *Store {
-					st := NewStore()
-					d, err := dep.NewHealthServiceQuery("webapp")
-					if err != nil {
-						t.Fatal(err)
-					}
-					st.Save(d, []*dep.HealthService{
-						&dep.HealthService{
-							Address: "1.2.3.4",
-							Tags:    []string{"prod", "v1"},
-						},
-						&dep.HealthService{
-							Address: "5.6.7.8",
-							Tags:    []string{"prod", "v2"},
-						},
-					})
-					return st
-				}(),
-			},
+			func() *Store {
+				st := NewStore()
+				d, err := dep.NewHealthServiceQuery("webapp")
+				if err != nil {
+					t.Fatal(err)
+				}
+				st.Save(d, []*dep.HealthService{
+					&dep.HealthService{
+						Address: "1.2.3.4",
+						Tags:    []string{"prod", "v1"},
+					},
+					&dep.HealthService{
+						Address: "5.6.7.8",
+						Tags:    []string{"prod", "v2"},
+					},
+				})
+				return st
+			}(),
 			"5.6.7.8",
 			false,
 		},
@@ -934,26 +866,24 @@ func TestTemplate_Execute(t *testing.T) {
 			&NewTemplateInput{
 				Contents: `{{ $acceptableTags := parseJSON "[]" }}{{ range service "webapp" }}{{ if .Tags | containsAny $acceptableTags }}{{ .Address }}{{ end }}{{ end }}`,
 			},
-			&ExecuteInput{
-				Store: func() *Store {
-					st := NewStore()
-					d, err := dep.NewHealthServiceQuery("webapp")
-					if err != nil {
-						t.Fatal(err)
-					}
-					st.Save(d, []*dep.HealthService{
-						&dep.HealthService{
-							Address: "1.2.3.4",
-							Tags:    []string{"prod", "v1"},
-						},
-						&dep.HealthService{
-							Address: "5.6.7.8",
-							Tags:    []string{"prod", "v2"},
-						},
-					})
-					return st
-				}(),
-			},
+			func() *Store {
+				st := NewStore()
+				d, err := dep.NewHealthServiceQuery("webapp")
+				if err != nil {
+					t.Fatal(err)
+				}
+				st.Save(d, []*dep.HealthService{
+					&dep.HealthService{
+						Address: "1.2.3.4",
+						Tags:    []string{"prod", "v1"},
+					},
+					&dep.HealthService{
+						Address: "5.6.7.8",
+						Tags:    []string{"prod", "v2"},
+					},
+				})
+				return st
+			}(),
 			"",
 			false,
 		},
@@ -962,26 +892,24 @@ func TestTemplate_Execute(t *testing.T) {
 			&NewTemplateInput{
 				Contents: `{{ $forbiddenTags := parseJSON "[\"devel\",\"staging\"]" }}{{ range service "webapp" }}{{ if .Tags | containsNone $forbiddenTags }}{{ .Address }}{{ end }}{{ end }}`,
 			},
-			&ExecuteInput{
-				Store: func() *Store {
-					st := NewStore()
-					d, err := dep.NewHealthServiceQuery("webapp")
-					if err != nil {
-						t.Fatal(err)
-					}
-					st.Save(d, []*dep.HealthService{
-						&dep.HealthService{
-							Address: "1.2.3.4",
-							Tags:    []string{"prod", "v1"},
-						},
-						&dep.HealthService{
-							Address: "5.6.7.8",
-							Tags:    []string{"devel", "v2"},
-						},
-					})
-					return st
-				}(),
-			},
+			func() *Store {
+				st := NewStore()
+				d, err := dep.NewHealthServiceQuery("webapp")
+				if err != nil {
+					t.Fatal(err)
+				}
+				st.Save(d, []*dep.HealthService{
+					&dep.HealthService{
+						Address: "1.2.3.4",
+						Tags:    []string{"prod", "v1"},
+					},
+					&dep.HealthService{
+						Address: "5.6.7.8",
+						Tags:    []string{"devel", "v2"},
+					},
+				})
+				return st
+			}(),
 			"1.2.3.4",
 			false,
 		},
@@ -990,26 +918,24 @@ func TestTemplate_Execute(t *testing.T) {
 			&NewTemplateInput{
 				Contents: `{{ $forbiddenTags := parseJSON "[]" }}{{ range service "webapp" }}{{ if .Tags | containsNone $forbiddenTags }}{{ .Address }}{{ end }}{{ end }}`,
 			},
-			&ExecuteInput{
-				Store: func() *Store {
-					st := NewStore()
-					d, err := dep.NewHealthServiceQuery("webapp")
-					if err != nil {
-						t.Fatal(err)
-					}
-					st.Save(d, []*dep.HealthService{
-						&dep.HealthService{
-							Address: "1.2.3.4",
-							Tags:    []string{"staging", "v1"},
-						},
-						&dep.HealthService{
-							Address: "5.6.7.8",
-							Tags:    []string{"devel", "v2"},
-						},
-					})
-					return st
-				}(),
-			},
+			func() *Store {
+				st := NewStore()
+				d, err := dep.NewHealthServiceQuery("webapp")
+				if err != nil {
+					t.Fatal(err)
+				}
+				st.Save(d, []*dep.HealthService{
+					&dep.HealthService{
+						Address: "1.2.3.4",
+						Tags:    []string{"staging", "v1"},
+					},
+					&dep.HealthService{
+						Address: "5.6.7.8",
+						Tags:    []string{"devel", "v2"},
+					},
+				})
+				return st
+			}(),
 			"1.2.3.45.6.7.8",
 			false,
 		},
@@ -1018,26 +944,24 @@ func TestTemplate_Execute(t *testing.T) {
 			&NewTemplateInput{
 				Contents: `{{ $excludingTags := parseJSON "[\"es-v1\",\"es-v2\"]" }}{{ range service "webapp" }}{{ if .Tags | containsNotAll $excludingTags }}{{ .Address }}{{ end }}{{ end }}`,
 			},
-			&ExecuteInput{
-				Store: func() *Store {
-					st := NewStore()
-					d, err := dep.NewHealthServiceQuery("webapp")
-					if err != nil {
-						t.Fatal(err)
-					}
-					st.Save(d, []*dep.HealthService{
-						&dep.HealthService{
-							Address: "1.2.3.4",
-							Tags:    []string{"prod", "es-v1"},
-						},
-						&dep.HealthService{
-							Address: "5.6.7.8",
-							Tags:    []string{"prod", "hybrid", "es-v1", "es-v2"},
-						},
-					})
-					return st
-				}(),
-			},
+			func() *Store {
+				st := NewStore()
+				d, err := dep.NewHealthServiceQuery("webapp")
+				if err != nil {
+					t.Fatal(err)
+				}
+				st.Save(d, []*dep.HealthService{
+					&dep.HealthService{
+						Address: "1.2.3.4",
+						Tags:    []string{"prod", "es-v1"},
+					},
+					&dep.HealthService{
+						Address: "5.6.7.8",
+						Tags:    []string{"prod", "hybrid", "es-v1", "es-v2"},
+					},
+				})
+				return st
+			}(),
 			"1.2.3.4",
 			false,
 		},
@@ -1046,58 +970,35 @@ func TestTemplate_Execute(t *testing.T) {
 			&NewTemplateInput{
 				Contents: `{{ $excludingTags := parseJSON "[]" }}{{ range service "webapp" }}{{ if .Tags | containsNotAll $excludingTags }}{{ .Address }}{{ end }}{{ end }}`,
 			},
-			&ExecuteInput{
-				Store: func() *Store {
-					st := NewStore()
-					d, err := dep.NewHealthServiceQuery("webapp")
-					if err != nil {
-						t.Fatal(err)
-					}
-					st.Save(d, []*dep.HealthService{
-						&dep.HealthService{
-							Address: "1.2.3.4",
-							Tags:    []string{"prod", "es-v1"},
-						},
-						&dep.HealthService{
-							Address: "5.6.7.8",
-							Tags:    []string{"prod", "hybrid", "es-v1", "es-v2"},
-						},
-					})
-					return st
-				}(),
-			},
+			func() *Store {
+				st := NewStore()
+				d, err := dep.NewHealthServiceQuery("webapp")
+				if err != nil {
+					t.Fatal(err)
+				}
+				st.Save(d, []*dep.HealthService{
+					&dep.HealthService{
+						Address: "1.2.3.4",
+						Tags:    []string{"prod", "es-v1"},
+					},
+					&dep.HealthService{
+						Address: "5.6.7.8",
+						Tags:    []string{"prod", "hybrid", "es-v1", "es-v2"},
+					},
+				})
+				return st
+			}(),
 			"",
 			false,
 		},
 		{
 			"helper_env",
 			&NewTemplateInput{
+				// CT_TEST set above
 				Contents: `{{ env "CT_TEST" }}`,
 			},
-			&ExecuteInput{
-				Store: func() *Store {
-					// Cheat and use the Store callback here to set the env.
-					if err := os.Setenv("CT_TEST", "1"); err != nil {
-						t.Fatal(err)
-					}
-					return NewStore()
-				}(),
-			},
+			NewStore(),
 			"1",
-			false,
-		},
-		{
-			"helper_env__override",
-			&NewTemplateInput{
-				Contents: `{{ env "CT_TEST" }}`,
-			},
-			&ExecuteInput{
-				Env: []string{
-					"CT_TEST=2",
-				},
-				Store: NewStore(),
-			},
-			"2",
 			false,
 		},
 		{
@@ -1105,18 +1006,16 @@ func TestTemplate_Execute(t *testing.T) {
 			&NewTemplateInput{
 				Contents: `{{ define "custom" }}{{ key "foo" }}{{ end }}{{ executeTemplate "custom" }}`,
 			},
-			&ExecuteInput{
-				Store: func() *Store {
-					st := NewStore()
-					d, err := dep.NewKVGetQuery("foo")
-					if err != nil {
-						t.Fatal(err)
-					}
-					d.EnableBlocking()
-					st.Save(d, "bar")
-					return st
-				}(),
-			},
+			func() *Store {
+				st := NewStore()
+				d, err := dep.NewKVGetQuery("foo")
+				if err != nil {
+					t.Fatal(err)
+				}
+				d.EnableBlocking()
+				st.Save(d, "bar")
+				return st
+			}(),
 			"bar",
 			false,
 		},
@@ -1125,18 +1024,16 @@ func TestTemplate_Execute(t *testing.T) {
 			&NewTemplateInput{
 				Contents: `{{ define "custom" }}{{ key . }}{{ end }}{{ executeTemplate "custom" "foo" }}`,
 			},
-			&ExecuteInput{
-				Store: func() *Store {
-					st := NewStore()
-					d, err := dep.NewKVGetQuery("foo")
-					if err != nil {
-						t.Fatal(err)
-					}
-					d.EnableBlocking()
-					st.Save(d, "bar")
-					return st
-				}(),
-			},
+			func() *Store {
+				st := NewStore()
+				d, err := dep.NewKVGetQuery("foo")
+				if err != nil {
+					t.Fatal(err)
+				}
+				d.EnableBlocking()
+				st.Save(d, "bar")
+				return st
+			}(),
 			"bar",
 			false,
 		},
@@ -1145,21 +1042,19 @@ func TestTemplate_Execute(t *testing.T) {
 			&NewTemplateInput{
 				Contents: `{{ range $k, $v := tree "list" | explode }}{{ $k }}{{ $v }}{{ end }}`,
 			},
-			&ExecuteInput{
-				Store: func() *Store {
-					st := NewStore()
-					d, err := dep.NewKVListQuery("list")
-					if err != nil {
-						t.Fatal(err)
-					}
-					st.Save(d, []*dep.KeyPair{
-						&dep.KeyPair{Key: "", Value: ""},
-						&dep.KeyPair{Key: "foo/bar", Value: "a"},
-						&dep.KeyPair{Key: "zip/zap", Value: "b"},
-					})
-					return st
-				}(),
-			},
+			func() *Store {
+				st := NewStore()
+				d, err := dep.NewKVListQuery("list")
+				if err != nil {
+					t.Fatal(err)
+				}
+				st.Save(d, []*dep.KeyPair{
+					&dep.KeyPair{Key: "", Value: ""},
+					&dep.KeyPair{Key: "foo/bar", Value: "a"},
+					&dep.KeyPair{Key: "zip/zap", Value: "b"},
+				})
+				return st
+			}(),
 			"foomap[bar:a]zipmap[zap:b]",
 			false,
 		},
@@ -1168,9 +1063,7 @@ func TestTemplate_Execute(t *testing.T) {
 			&NewTemplateInput{
 				Contents: `{{ scratch.MapSet "explode-test" "foo/bar" "a"}}{{ scratch.MapSet "explode-test" "qux" "c"}}{{ scratch.MapSet "explode-test" "zip/zap" "d"}}{{ scratch.Get "explode-test" | explodeMap }}`,
 			},
-			&ExecuteInput{
-				Store: NewStore(),
-			},
+			NewStore(),
 			"map[foo:map[bar:a] qux:c zip:map[zap:d]]",
 			false,
 		},
@@ -1179,26 +1072,24 @@ func TestTemplate_Execute(t *testing.T) {
 			&NewTemplateInput{
 				Contents: `{{ range service "webapp" }}{{ if "prod" | in .Tags }}{{ .Address }}{{ end }}{{ end }}`,
 			},
-			&ExecuteInput{
-				Store: func() *Store {
-					st := NewStore()
-					d, err := dep.NewHealthServiceQuery("webapp")
-					if err != nil {
-						t.Fatal(err)
-					}
-					st.Save(d, []*dep.HealthService{
-						&dep.HealthService{
-							Address: "1.2.3.4",
-							Tags:    []string{"prod", "staging"},
-						},
-						&dep.HealthService{
-							Address: "5.6.7.8",
-							Tags:    []string{"staging"},
-						},
-					})
-					return st
-				}(),
-			},
+			func() *Store {
+				st := NewStore()
+				d, err := dep.NewHealthServiceQuery("webapp")
+				if err != nil {
+					t.Fatal(err)
+				}
+				st.Save(d, []*dep.HealthService{
+					&dep.HealthService{
+						Address: "1.2.3.4",
+						Tags:    []string{"prod", "staging"},
+					},
+					&dep.HealthService{
+						Address: "5.6.7.8",
+						Tags:    []string{"staging"},
+					},
+				})
+				return st
+			}(),
 			"1.2.3.4",
 			false,
 		},
@@ -1207,9 +1098,7 @@ func TestTemplate_Execute(t *testing.T) {
 			&NewTemplateInput{
 				Contents: `{{ "hello\nhello\r\nHELLO\r\nhello\nHELLO" | indent 4 }}`,
 			},
-			&ExecuteInput{
-				Store: NewStore(),
-			},
+			NewStore(),
 			"    hello\n    hello\r\n    HELLO\r\n    hello\n    HELLO",
 			false,
 		},
@@ -1218,9 +1107,7 @@ func TestTemplate_Execute(t *testing.T) {
 			&NewTemplateInput{
 				Contents: `{{ "hello\nhello\r\nHELLO\r\nhello\nHELLO" | indent -4 }}`,
 			},
-			&ExecuteInput{
-				Store: NewStore(),
-			},
+			NewStore(),
 			"    hello\n    hello\r\n    HELLO\r\n    hello\n    HELLO",
 			true,
 		},
@@ -1229,9 +1116,7 @@ func TestTemplate_Execute(t *testing.T) {
 			&NewTemplateInput{
 				Contents: `{{ "hello\nhello\r\nHELLO\r\nhello\nHELLO" | indent 0 }}`,
 			},
-			&ExecuteInput{
-				Store: NewStore(),
-			},
+			NewStore(),
 			"hello\nhello\r\nHELLO\r\nhello\nHELLO",
 			false,
 		},
@@ -1240,9 +1125,7 @@ func TestTemplate_Execute(t *testing.T) {
 			&NewTemplateInput{
 				Contents: `{{ range loop 3 }}1{{ end }}`,
 			},
-			&ExecuteInput{
-				Store: NewStore(),
-			},
+			NewStore(),
 			"111",
 			false,
 		},
@@ -1251,9 +1134,7 @@ func TestTemplate_Execute(t *testing.T) {
 			&NewTemplateInput{
 				Contents: `{{ range $i := loop 3 }}{{ $i }}{{ end }}`,
 			},
-			&ExecuteInput{
-				Store: NewStore(),
-			},
+			NewStore(),
 			"012",
 			false,
 		},
@@ -1262,9 +1143,7 @@ func TestTemplate_Execute(t *testing.T) {
 			&NewTemplateInput{
 				Contents: `{{ range loop 1 3 }}1{{ end }}`,
 			},
-			&ExecuteInput{
-				Store: NewStore(),
-			},
+			NewStore(),
 			"11",
 			false,
 		},
@@ -1273,9 +1152,7 @@ func TestTemplate_Execute(t *testing.T) {
 			&NewTemplateInput{
 				Contents: `{{ range loop 1 "3" }}1{{ end }}`,
 			},
-			&ExecuteInput{
-				Store: NewStore(),
-			},
+			NewStore(),
 			"11",
 			false,
 		},
@@ -1284,9 +1161,7 @@ func TestTemplate_Execute(t *testing.T) {
 			&NewTemplateInput{
 				Contents: `{{ $i := print "3" | parseInt }}{{ range loop 1 $i }}1{{ end }}`,
 			},
-			&ExecuteInput{
-				Store: NewStore(),
-			},
+			NewStore(),
 			"11",
 			false,
 		},
@@ -1297,9 +1172,7 @@ func TestTemplate_Execute(t *testing.T) {
 				Contents: `{{$n := 3 }}` +
 					`{{ range $i := loop $n }}{{ $i }}{{ end }}`,
 			},
-			&ExecuteInput{
-				Store: NewStore(),
-			},
+			NewStore(),
 			"012",
 			false,
 		},
@@ -1308,9 +1181,7 @@ func TestTemplate_Execute(t *testing.T) {
 			&NewTemplateInput{
 				Contents: `{{ "a,b,c" | split "," | join ";" }}`,
 			},
-			&ExecuteInput{
-				Store: NewStore(),
-			},
+			NewStore(),
 			"a;b;c",
 			false,
 		},
@@ -1319,9 +1190,7 @@ func TestTemplate_Execute(t *testing.T) {
 			&NewTemplateInput{
 				Contents: `{{ "true" | parseBool }}`,
 			},
-			&ExecuteInput{
-				Store: NewStore(),
-			},
+			NewStore(),
 			"true",
 			false,
 		},
@@ -1330,9 +1199,7 @@ func TestTemplate_Execute(t *testing.T) {
 			&NewTemplateInput{
 				Contents: `{{ "1.2" | parseFloat }}`,
 			},
-			&ExecuteInput{
-				Store: NewStore(),
-			},
+			NewStore(),
 			"1.2",
 			false,
 		},
@@ -1341,9 +1208,7 @@ func TestTemplate_Execute(t *testing.T) {
 			&NewTemplateInput{
 				Contents: `{{ "-1" | parseInt }}`,
 			},
-			&ExecuteInput{
-				Store: NewStore(),
-			},
+			NewStore(),
 			"-1",
 			false,
 		},
@@ -1352,9 +1217,7 @@ func TestTemplate_Execute(t *testing.T) {
 			&NewTemplateInput{
 				Contents: `{{ "{\"foo\": \"bar\"}" | parseJSON }}`,
 			},
-			&ExecuteInput{
-				Store: NewStore(),
-			},
+			NewStore(),
 			"map[foo:bar]",
 			false,
 		},
@@ -1363,9 +1226,7 @@ func TestTemplate_Execute(t *testing.T) {
 			&NewTemplateInput{
 				Contents: `{{ "1" | parseUint }}`,
 			},
-			&ExecuteInput{
-				Store: NewStore(),
-			},
+			NewStore(),
 			"1",
 			false,
 		},
@@ -1374,9 +1235,7 @@ func TestTemplate_Execute(t *testing.T) {
 			&NewTemplateInput{
 				Contents: `{{ "foo: bar" | parseYAML }}`,
 			},
-			&ExecuteInput{
-				Store: NewStore(),
-			},
+			NewStore(),
 			"map[foo:bar]",
 			false,
 		},
@@ -1385,9 +1244,7 @@ func TestTemplate_Execute(t *testing.T) {
 			&NewTemplateInput{
 				Contents: `{{ "foo: bar\nbaz: \"foo\"" | parseYAML }}`,
 			},
-			&ExecuteInput{
-				Store: NewStore(),
-			},
+			NewStore(),
 			"map[baz:foo foo:bar]",
 			false,
 		},
@@ -1396,9 +1253,7 @@ func TestTemplate_Execute(t *testing.T) {
 			&NewTemplateInput{
 				Contents: `{{ "foo:\n  bar: \"baz\"\n  baz: 7" | parseYAML }}`,
 			},
-			&ExecuteInput{
-				Store: NewStore(),
-			},
+			NewStore(),
 			"map[foo:map[bar:baz baz:7]]",
 			false,
 		},
@@ -1407,9 +1262,7 @@ func TestTemplate_Execute(t *testing.T) {
 			&NewTemplateInput{
 				Contents: `{{ "1" | plugin "echo" }}`,
 			},
-			&ExecuteInput{
-				Store: NewStore(),
-			},
+			NewStore(),
 			"1",
 			false,
 		},
@@ -1419,9 +1272,7 @@ func TestTemplate_Execute(t *testing.T) {
 				Contents:     `{{ "1" | plugin "echo" }}`,
 				FuncMapMerge: template.FuncMap{"plugin": BlacklistFunc},
 			},
-			&ExecuteInput{
-				Store: NewStore(),
-			},
+			NewStore(),
 			"",
 			true,
 		},
@@ -1430,9 +1281,7 @@ func TestTemplate_Execute(t *testing.T) {
 			&NewTemplateInput{
 				Contents: `{{ "foo" | regexMatch "[a-z]+" }}`,
 			},
-			&ExecuteInput{
-				Store: NewStore(),
-			},
+			NewStore(),
 			"true",
 			false,
 		},
@@ -1441,9 +1290,7 @@ func TestTemplate_Execute(t *testing.T) {
 			&NewTemplateInput{
 				Contents: `{{ "foo" | regexReplaceAll "\\w" "x" }}`,
 			},
-			&ExecuteInput{
-				Store: NewStore(),
-			},
+			NewStore(),
 			"xxx",
 			false,
 		},
@@ -1452,9 +1299,7 @@ func TestTemplate_Execute(t *testing.T) {
 			&NewTemplateInput{
 				Contents: `{{ "hello my hello" | regexReplaceAll "hello" "bye" }}`,
 			},
-			&ExecuteInput{
-				Store: NewStore(),
-			},
+			NewStore(),
 			"bye my bye",
 			false,
 		},
@@ -1463,9 +1308,7 @@ func TestTemplate_Execute(t *testing.T) {
 			&NewTemplateInput{
 				Contents: `{{ "a,b,c" | split "," }}`,
 			},
-			&ExecuteInput{
-				Store: NewStore(),
-			},
+			NewStore(),
 			"[a b c]",
 			false,
 		},
@@ -1474,9 +1317,7 @@ func TestTemplate_Execute(t *testing.T) {
 			&NewTemplateInput{
 				Contents: `{{ timestamp }}`,
 			},
-			&ExecuteInput{
-				Store: NewStore(),
-			},
+			NewStore(),
 			"1970-01-01T00:00:00Z",
 			false,
 		},
@@ -1485,9 +1326,7 @@ func TestTemplate_Execute(t *testing.T) {
 			&NewTemplateInput{
 				Contents: `{{ timestamp "2006-01-02" }}`,
 			},
-			&ExecuteInput{
-				Store: NewStore(),
-			},
+			NewStore(),
 			"1970-01-01",
 			false,
 		},
@@ -1496,9 +1335,7 @@ func TestTemplate_Execute(t *testing.T) {
 			&NewTemplateInput{
 				Contents: `{{ "a,b,c" | split "," | toJSON }}`,
 			},
-			&ExecuteInput{
-				Store: NewStore(),
-			},
+			NewStore(),
 			"[\"a\",\"b\",\"c\"]",
 			false,
 		},
@@ -1507,9 +1344,7 @@ func TestTemplate_Execute(t *testing.T) {
 			&NewTemplateInput{
 				Contents: `{{ "HI" | toLower }}`,
 			},
-			&ExecuteInput{
-				Store: NewStore(),
-			},
+			NewStore(),
 			"hi",
 			false,
 		},
@@ -1518,9 +1353,7 @@ func TestTemplate_Execute(t *testing.T) {
 			&NewTemplateInput{
 				Contents: `{{ "this is a sentence" | toTitle }}`,
 			},
-			&ExecuteInput{
-				Store: NewStore(),
-			},
+			NewStore(),
 			"This Is A Sentence",
 			false,
 		},
@@ -1529,9 +1362,7 @@ func TestTemplate_Execute(t *testing.T) {
 			&NewTemplateInput{
 				Contents: `{{ "{\"foo\":\"bar\"}" | parseJSON | toTOML }}`,
 			},
-			&ExecuteInput{
-				Store: NewStore(),
-			},
+			NewStore(),
 			"foo = \"bar\"",
 			false,
 		},
@@ -1540,9 +1371,7 @@ func TestTemplate_Execute(t *testing.T) {
 			&NewTemplateInput{
 				Contents: `{{ "hi" | toUpper }}`,
 			},
-			&ExecuteInput{
-				Store: NewStore(),
-			},
+			NewStore(),
 			"HI",
 			false,
 		},
@@ -1551,9 +1380,7 @@ func TestTemplate_Execute(t *testing.T) {
 			&NewTemplateInput{
 				Contents: `{{ "{\"foo\":\"bar\"}" | parseJSON | toYAML }}`,
 			},
-			&ExecuteInput{
-				Store: NewStore(),
-			},
+			NewStore(),
 			"foo: bar",
 			false,
 		},
@@ -1562,9 +1389,7 @@ func TestTemplate_Execute(t *testing.T) {
 			&NewTemplateInput{
 				Contents: `{{ "\t hi\n " | trimSpace }}`,
 			},
-			&ExecuteInput{
-				Store: NewStore(),
-			},
+			NewStore(),
 			"hi",
 			false,
 		},
@@ -1573,9 +1398,7 @@ func TestTemplate_Execute(t *testing.T) {
 			&NewTemplateInput{
 				Contents: `{{ sockaddr "GetAllInterfaces | include \"flag\" \"loopback\" | include \"type\" \"IPv4\" | sort \"address\" | limit 1 | attr \"address\""}}`,
 			},
-			&ExecuteInput{
-				Store: NewStore(),
-			},
+			NewStore(),
 			"127.0.0.1",
 			false,
 		},
@@ -1584,9 +1407,7 @@ func TestTemplate_Execute(t *testing.T) {
 			&NewTemplateInput{
 				Contents: `{{ 2 | add 2 }}`,
 			},
-			&ExecuteInput{
-				Store: NewStore(),
-			},
+			NewStore(),
 			"4",
 			false,
 		},
@@ -1595,9 +1416,7 @@ func TestTemplate_Execute(t *testing.T) {
 			&NewTemplateInput{
 				Contents: `{{ 2 | subtract 2 }}`,
 			},
-			&ExecuteInput{
-				Store: NewStore(),
-			},
+			NewStore(),
 			"0",
 			false,
 		},
@@ -1606,9 +1425,7 @@ func TestTemplate_Execute(t *testing.T) {
 			&NewTemplateInput{
 				Contents: `{{ 2 | multiply 2 }}`,
 			},
-			&ExecuteInput{
-				Store: NewStore(),
-			},
+			NewStore(),
 			"4",
 			false,
 		},
@@ -1617,9 +1434,7 @@ func TestTemplate_Execute(t *testing.T) {
 			&NewTemplateInput{
 				Contents: `{{ 2 | divide 2 }}`,
 			},
-			&ExecuteInput{
-				Store: NewStore(),
-			},
+			NewStore(),
 			"1",
 			false,
 		},
@@ -1628,9 +1443,7 @@ func TestTemplate_Execute(t *testing.T) {
 			&NewTemplateInput{
 				Contents: `{{ 3 | modulo 2 }}`,
 			},
-			&ExecuteInput{
-				Store: NewStore(),
-			},
+			NewStore(),
 			"1",
 			false,
 		},
@@ -1639,9 +1452,7 @@ func TestTemplate_Execute(t *testing.T) {
 			&NewTemplateInput{
 				Contents: `{{ 3 | minimum 2 }}`,
 			},
-			&ExecuteInput{
-				Store: NewStore(),
-			},
+			NewStore(),
 			"2",
 			false,
 		},
@@ -1650,9 +1461,7 @@ func TestTemplate_Execute(t *testing.T) {
 			&NewTemplateInput{
 				Contents: `{{ 3 | maximum 2 }}`,
 			},
-			&ExecuteInput{
-				Store: NewStore(),
-			},
+			NewStore(),
 			"3",
 			false,
 		},
@@ -1662,18 +1471,16 @@ func TestTemplate_Execute(t *testing.T) {
 				Contents: `{{with caLeaf "foo"}}` +
 					`{{.CertPEM}}{{.PrivateKeyPEM}}{{end}}`,
 			},
-			&ExecuteInput{
-				Store: func() *Store {
-					d := dep.NewConnectLeafQuery("foo")
-					st := NewStore()
-					st.Save(d, &api.LeafCert{
-						Service:       "foo",
-						CertPEM:       "PEM",
-						PrivateKeyPEM: "KEY",
-					})
-					return st
-				}(),
-			},
+			func() *Store {
+				d := dep.NewConnectLeafQuery("foo")
+				st := NewStore()
+				st.Save(d, &api.LeafCert{
+					Service:       "foo",
+					CertPEM:       "PEM",
+					PrivateKeyPEM: "KEY",
+				})
+				return st
+			}(),
 			"PEMKEY",
 			false,
 		},
@@ -1682,20 +1489,18 @@ func TestTemplate_Execute(t *testing.T) {
 			&NewTemplateInput{
 				Contents: `{{range caRoots}}{{.RootCertPEM}}{{end}}`,
 			},
-			&ExecuteInput{
-				Store: func() *Store {
-					d := dep.NewConnectCAQuery()
-					st := NewStore()
-					st.Save(d, []*api.CARoot{
-						&api.CARoot{
-							Name:        "Consul CA Root Cert",
-							RootCertPEM: "PEM",
-							Active:      true,
-						},
-					})
-					return st
-				}(),
-			},
+			func() *Store {
+				d := dep.NewConnectCAQuery()
+				st := NewStore()
+				st.Save(d, []*api.CARoot{
+					&api.CARoot{
+						Name:        "Consul CA Root Cert",
+						RootCertPEM: "PEM",
+						Active:      true,
+					},
+				})
+				return st
+			}(),
 			"PEM",
 			false,
 		},
@@ -1704,26 +1509,24 @@ func TestTemplate_Execute(t *testing.T) {
 			&NewTemplateInput{
 				Contents: `{{ range connect "webapp" }}{{ .Address }}{{ end }}`,
 			},
-			&ExecuteInput{
-				Store: func() *Store {
-					st := NewStore()
-					d, err := dep.NewHealthConnectQuery("webapp")
-					if err != nil {
-						t.Fatal(err)
-					}
-					st.Save(d, []*dep.HealthService{
-						&dep.HealthService{
-							Node:    "node1",
-							Address: "1.2.3.4",
-						},
-						&dep.HealthService{
-							Node:    "node2",
-							Address: "5.6.7.8",
-						},
-					})
-					return st
-				}(),
-			},
+			func() *Store {
+				st := NewStore()
+				d, err := dep.NewHealthConnectQuery("webapp")
+				if err != nil {
+					t.Fatal(err)
+				}
+				st.Save(d, []*dep.HealthService{
+					&dep.HealthService{
+						Node:    "node1",
+						Address: "1.2.3.4",
+					},
+					&dep.HealthService{
+						Node:    "node2",
+						Address: "5.6.7.8",
+					},
+				})
+				return st
+			}(),
 			"1.2.3.45.6.7.8",
 			false,
 		},
@@ -1732,7 +1535,7 @@ func TestTemplate_Execute(t *testing.T) {
 	//	struct {
 	//		name string
 	//		ti   *NewTemplateInput
-	//		i    *ExecuteInput
+	//		i    Recaller
 	//		e    string
 	//		err  bool
 	//	}
