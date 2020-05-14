@@ -66,7 +66,7 @@ func NewCatalogNodeQuery(s string) (*CatalogNodeQuery, error) {
 
 // Fetch queries the Consul API defined by the given client and returns a
 // of CatalogNode object.
-func (d *CatalogNodeQuery) Fetch(clients *ClientSet, opts *QueryOptions) (interface{}, *ResponseMetadata, error) {
+func (d *CatalogNodeQuery) Fetch(clients Clients, opts *QueryOptions) (interface{}, *ResponseMetadata, error) {
 	select {
 	case <-d.stopCh:
 		return nil, nil, ErrStopped

@@ -60,7 +60,7 @@ func NewKVListQuery(s string) (*KVListQuery, error) {
 }
 
 // Fetch queries the Consul API defined by the given client.
-func (d *KVListQuery) Fetch(clients *ClientSet, opts *QueryOptions) (interface{}, *ResponseMetadata, error) {
+func (d *KVListQuery) Fetch(clients Clients, opts *QueryOptions) (interface{}, *ResponseMetadata, error) {
 	select {
 	case <-d.stopCh:
 		return nil, nil, ErrStopped

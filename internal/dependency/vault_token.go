@@ -34,7 +34,7 @@ func NewVaultTokenQuery(token string) (*VaultTokenQuery, error) {
 }
 
 // Fetch queries the Vault API
-func (d *VaultTokenQuery) Fetch(clients *ClientSet, opts *QueryOptions,
+func (d *VaultTokenQuery) Fetch(clients Clients, opts *QueryOptions,
 ) (interface{}, *ResponseMetadata, error) {
 	select {
 	case <-d.stopCh:

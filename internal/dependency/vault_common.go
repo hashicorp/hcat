@@ -75,7 +75,7 @@ type renewer interface {
 	secrets() (*Secret, *api.Secret)
 }
 
-func renewSecret(clients *ClientSet, d renewer) error {
+func renewSecret(clients Clients, d renewer) error {
 	log.Printf("[TRACE] %s: starting renewer", d)
 
 	secret, vaultSecret := d.secrets()

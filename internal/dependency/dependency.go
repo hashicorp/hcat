@@ -40,7 +40,7 @@ func (t Type) String() string {
 // Dependency is an interface for a dependency that Consul Template is capable
 // of watching.
 type Dependency interface {
-	Fetch(*ClientSet, *QueryOptions) (interface{}, *ResponseMetadata, error)
+	Fetch(Clients, *QueryOptions) (interface{}, *ResponseMetadata, error)
 	CanShare() bool
 	String() string
 	Stop()

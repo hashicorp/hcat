@@ -13,7 +13,7 @@ type TestDep struct {
 	name string
 }
 
-func (d *TestDep) Fetch(clients *dep.ClientSet, opts *dep.QueryOptions) (interface{}, *dep.ResponseMetadata, error) {
+func (d *TestDep) Fetch(clients dep.Clients, opts *dep.QueryOptions) (interface{}, *dep.ResponseMetadata, error) {
 	time.Sleep(time.Millisecond)
 	data := "this is some data"
 	rm := &dep.ResponseMetadata{LastIndex: 1}
@@ -41,7 +41,7 @@ type TestDepStale struct {
 }
 
 // Fetch is used to implement the dependency interface.
-func (d *TestDepStale) Fetch(clients *dep.ClientSet, opts *dep.QueryOptions) (interface{}, *dep.ResponseMetadata, error) {
+func (d *TestDepStale) Fetch(clients dep.Clients, opts *dep.QueryOptions) (interface{}, *dep.ResponseMetadata, error) {
 	time.Sleep(time.Millisecond)
 
 	if opts == nil {
@@ -78,7 +78,7 @@ type TestDepFetchError struct {
 	name string
 }
 
-func (d *TestDepFetchError) Fetch(clients *dep.ClientSet, opts *dep.QueryOptions) (interface{}, *dep.ResponseMetadata, error) {
+func (d *TestDepFetchError) Fetch(clients dep.Clients, opts *dep.QueryOptions) (interface{}, *dep.ResponseMetadata, error) {
 	time.Sleep(time.Millisecond)
 	return nil, nil, fmt.Errorf("failed to contact server")
 }
@@ -101,7 +101,7 @@ var _ dep.Dependency = (*TestDepSameIndex)(nil)
 
 type TestDepSameIndex struct{}
 
-func (d *TestDepSameIndex) Fetch(clients *dep.ClientSet, opts *dep.QueryOptions) (interface{}, *dep.ResponseMetadata, error) {
+func (d *TestDepSameIndex) Fetch(clients dep.Clients, opts *dep.QueryOptions) (interface{}, *dep.ResponseMetadata, error) {
 	meta := &dep.ResponseMetadata{LastIndex: 100}
 	return nil, meta, nil
 }
@@ -128,7 +128,7 @@ type TestDepRetry struct {
 	retried bool
 }
 
-func (d *TestDepRetry) Fetch(clients *dep.ClientSet, opts *dep.QueryOptions) (interface{}, *dep.ResponseMetadata, error) {
+func (d *TestDepRetry) Fetch(clients dep.Clients, opts *dep.QueryOptions) (interface{}, *dep.ResponseMetadata, error) {
 	time.Sleep(time.Millisecond)
 
 	d.Lock()

@@ -43,7 +43,7 @@ func NewFileQuery(s string) (*FileQuery, error) {
 
 // Fetch retrieves this dependency and returns the result or any errors that
 // occur in the process.
-func (d *FileQuery) Fetch(clients *ClientSet, opts *QueryOptions) (interface{}, *ResponseMetadata, error) {
+func (d *FileQuery) Fetch(clients Clients, opts *QueryOptions) (interface{}, *ResponseMetadata, error) {
 	log.Printf("[TRACE] %s: READ %s", d, d.path)
 
 	select {

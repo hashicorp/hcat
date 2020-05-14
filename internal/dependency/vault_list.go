@@ -38,7 +38,7 @@ func NewVaultListQuery(s string) (*VaultListQuery, error) {
 }
 
 // Fetch queries the Vault API
-func (d *VaultListQuery) Fetch(clients *ClientSet, opts *QueryOptions) (interface{}, *ResponseMetadata, error) {
+func (d *VaultListQuery) Fetch(clients Clients, opts *QueryOptions) (interface{}, *ResponseMetadata, error) {
 	select {
 	case <-d.stopCh:
 		return nil, nil, ErrStopped

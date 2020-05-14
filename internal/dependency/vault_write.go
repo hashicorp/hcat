@@ -51,7 +51,7 @@ func NewVaultWriteQuery(s string, d map[string]interface{}) (*VaultWriteQuery, e
 }
 
 // Fetch queries the Vault API
-func (d *VaultWriteQuery) Fetch(clients *ClientSet, opts *QueryOptions,
+func (d *VaultWriteQuery) Fetch(clients Clients, opts *QueryOptions,
 ) (interface{}, *ResponseMetadata, error) {
 	select {
 	case <-d.stopCh:
@@ -151,7 +151,7 @@ func (d *VaultWriteQuery) printWarnings(warnings []string) {
 	}
 }
 
-func (d *VaultWriteQuery) writeSecret(clients *ClientSet, opts *QueryOptions) (*api.Secret, error) {
+func (d *VaultWriteQuery) writeSecret(clients Clients, opts *QueryOptions) (*api.Secret, error) {
 	log.Printf("[TRACE] %s: PUT %s", d, &url.URL{
 		Path:     "/v1/" + d.path,
 		RawQuery: opts.String(),

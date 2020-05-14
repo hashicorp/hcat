@@ -22,7 +22,7 @@ func NewConnectCAQuery() *ConnectCAQuery {
 	}
 }
 
-func (d *ConnectCAQuery) Fetch(clients *ClientSet, opts *QueryOptions) (
+func (d *ConnectCAQuery) Fetch(clients Clients, opts *QueryOptions) (
 	interface{}, *ResponseMetadata, error,
 ) {
 	select {

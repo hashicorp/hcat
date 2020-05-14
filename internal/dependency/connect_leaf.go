@@ -26,7 +26,7 @@ func NewConnectLeafQuery(service string) *ConnectLeafQuery {
 	}
 }
 
-func (d *ConnectLeafQuery) Fetch(clients *ClientSet, opts *QueryOptions) (
+func (d *ConnectLeafQuery) Fetch(clients Clients, opts *QueryOptions) (
 	interface{}, *ResponseMetadata, error,
 ) {
 	select {

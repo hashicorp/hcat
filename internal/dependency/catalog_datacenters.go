@@ -36,7 +36,7 @@ func NewCatalogDatacentersQuery(ignoreFailing bool) (*CatalogDatacentersQuery, e
 
 // Fetch queries the Consul API defined by the given client and returns a slice
 // of strings representing the datacenters
-func (d *CatalogDatacentersQuery) Fetch(clients *ClientSet, opts *QueryOptions) (interface{}, *ResponseMetadata, error) {
+func (d *CatalogDatacentersQuery) Fetch(clients Clients, opts *QueryOptions) (interface{}, *ResponseMetadata, error) {
 	opts = opts.Merge(&QueryOptions{})
 
 	log.Printf("[TRACE] %s: GET %s", d, &url.URL{

@@ -14,6 +14,11 @@ import (
 	vaultapi "github.com/hashicorp/vault/api"
 )
 
+type Clients interface {
+	Consul() *consulapi.Client
+	Vault() *vaultapi.Client
+}
+
 // ClientSet is a collection of clients that dependencies use to communicate
 // with remote services like Consul or Vault.
 type ClientSet struct {

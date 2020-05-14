@@ -52,7 +52,7 @@ func NewCatalogServicesQuery(s string) (*CatalogServicesQuery, error) {
 
 // Fetch queries the Consul API defined by the given client and returns a slice
 // of CatalogService objects.
-func (d *CatalogServicesQuery) Fetch(clients *ClientSet, opts *QueryOptions) (interface{}, *ResponseMetadata, error) {
+func (d *CatalogServicesQuery) Fetch(clients Clients, opts *QueryOptions) (interface{}, *ResponseMetadata, error) {
 	select {
 	case <-d.stopCh:
 		return nil, nil, ErrStopped

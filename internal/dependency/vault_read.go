@@ -53,7 +53,7 @@ func NewVaultReadQuery(s string) (*VaultReadQuery, error) {
 }
 
 // Fetch queries the Vault API
-func (d *VaultReadQuery) Fetch(clients *ClientSet, opts *QueryOptions,
+func (d *VaultReadQuery) Fetch(clients Clients, opts *QueryOptions,
 ) (interface{}, *ResponseMetadata, error) {
 	select {
 	case <-d.stopCh:
@@ -89,7 +89,7 @@ func (d *VaultReadQuery) Fetch(clients *ClientSet, opts *QueryOptions,
 	return respWithMetadata(d.secret)
 }
 
-func (d *VaultReadQuery) fetchSecret(clients *ClientSet, opts *QueryOptions,
+func (d *VaultReadQuery) fetchSecret(clients Clients, opts *QueryOptions,
 ) error {
 	opts = opts.Merge(&QueryOptions{})
 	vaultSecret, err := d.readSecret(clients, opts)
@@ -133,7 +133,7 @@ func (d *VaultReadQuery) Type() Type {
 	return TypeVault
 }
 
-func (d *VaultReadQuery) readSecret(clients *ClientSet, opts *QueryOptions) (*api.Secret, error) {
+func (d *VaultReadQuery) readSecret(clients Clients, opts *QueryOptions) (*api.Secret, error) {
 	vaultClient := clients.Vault()
 
 	// Check whether this secret refers to a KV v2 entry if we haven't yet.
