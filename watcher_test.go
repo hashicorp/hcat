@@ -3,13 +3,11 @@ package hat
 import (
 	"fmt"
 	"testing"
-
-	dep "github.com/hashicorp/hat/internal/dependency"
 )
 
 func TestAdd_updatesMap(t *testing.T) {
 	w, err := NewWatcher(&NewWatcherInput{
-		Clients: dep.NewClientSet(),
+		Clients: clientSet{},
 		Once:    true,
 	})
 	if err != nil {
@@ -29,7 +27,7 @@ func TestAdd_updatesMap(t *testing.T) {
 
 func TestAdd_exists(t *testing.T) {
 	w, err := NewWatcher(&NewWatcherInput{
-		Clients: dep.NewClientSet(),
+		Clients: clientSet{},
 		Once:    true,
 	})
 	if err != nil {
@@ -51,7 +49,7 @@ func TestAdd_exists(t *testing.T) {
 
 func TestAdd_startsViewPoll(t *testing.T) {
 	w, err := NewWatcher(&NewWatcherInput{
-		Clients: dep.NewClientSet(),
+		Clients: clientSet{},
 		Once:    true,
 	})
 	if err != nil {
@@ -77,7 +75,7 @@ func TestAdd_startsViewPoll(t *testing.T) {
 
 func TestWatching_notExists(t *testing.T) {
 	w, err := NewWatcher(&NewWatcherInput{
-		Clients: dep.NewClientSet(),
+		Clients: clientSet{},
 		Once:    true,
 	})
 	if err != nil {
@@ -92,7 +90,7 @@ func TestWatching_notExists(t *testing.T) {
 
 func TestWatching_exists(t *testing.T) {
 	w, err := NewWatcher(&NewWatcherInput{
-		Clients: dep.NewClientSet(),
+		Clients: clientSet{},
 		Once:    true,
 	})
 	if err != nil {
@@ -111,7 +109,7 @@ func TestWatching_exists(t *testing.T) {
 
 func TestRemove_exists(t *testing.T) {
 	w, err := NewWatcher(&NewWatcherInput{
-		Clients: dep.NewClientSet(),
+		Clients: clientSet{},
 		Once:    true,
 	})
 	if err != nil {
@@ -135,7 +133,7 @@ func TestRemove_exists(t *testing.T) {
 
 func TestRemove_doesNotExist(t *testing.T) {
 	w, err := NewWatcher(&NewWatcherInput{
-		Clients: dep.NewClientSet(),
+		Clients: clientSet{},
 		Once:    true,
 	})
 	if err != nil {
@@ -150,7 +148,7 @@ func TestRemove_doesNotExist(t *testing.T) {
 
 func TestSize_empty(t *testing.T) {
 	w, err := NewWatcher(&NewWatcherInput{
-		Clients: dep.NewClientSet(),
+		Clients: clientSet{},
 		Once:    true,
 	})
 	if err != nil {
@@ -164,7 +162,7 @@ func TestSize_empty(t *testing.T) {
 
 func TestSize_returnsNumViews(t *testing.T) {
 	w, err := NewWatcher(&NewWatcherInput{
-		Clients: dep.NewClientSet(),
+		Clients: clientSet{},
 		Once:    true,
 	})
 	if err != nil {
