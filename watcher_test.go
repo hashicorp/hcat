@@ -3,6 +3,8 @@ package hat
 import (
 	"fmt"
 	"testing"
+
+	dep "github.com/hashicorp/hat/internal/dependency"
 )
 
 func TestAdd_updatesMap(t *testing.T) {
@@ -14,7 +16,7 @@ func TestAdd_updatesMap(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	d := &FakeDep{}
+	d := &dep.FakeDep{}
 	if _, err := w.add(d); err != nil {
 		t.Fatal(err)
 	}
@@ -34,7 +36,7 @@ func TestAdd_exists(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	d := &FakeDep{}
+	d := &dep.FakeDep{}
 	w.depViewMap[d.String()] = &view{}
 
 	added, err := w.add(d)
@@ -56,7 +58,7 @@ func TestAdd_startsViewPoll(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	added, err := w.add(&FakeDep{})
+	added, err := w.add(&dep.FakeDep{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -82,7 +84,7 @@ func TestWatching_notExists(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	d := &FakeDep{}
+	d := &dep.FakeDep{}
 	if w.Watching(d) == true {
 		t.Errorf("expected to not be watching")
 	}
@@ -97,7 +99,7 @@ func TestWatching_exists(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	d := &FakeDep{}
+	d := &dep.FakeDep{}
 	if _, err := w.add(d); err != nil {
 		t.Fatal(err)
 	}
@@ -116,7 +118,7 @@ func TestRemove_exists(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	d := &FakeDep{}
+	d := &dep.FakeDep{}
 	if _, err := w.add(d); err != nil {
 		t.Fatal(err)
 	}
@@ -140,7 +142,7 @@ func TestRemove_doesNotExist(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	removed := w.remove(&FakeDep{})
+	removed := w.remove(&dep.FakeDep{})
 	if removed != false {
 		t.Fatal("expected Remove to return false")
 	}
@@ -170,7 +172,7 @@ func TestSize_returnsNumViews(t *testing.T) {
 	}
 
 	for i := 0; i < 10; i++ {
-		d := &FakeDep{name: fmt.Sprintf("%d", i)}
+		d := &dep.FakeDep{Name: fmt.Sprintf("%d", i)}
 		if _, err := w.add(d); err != nil {
 			t.Fatal(err)
 		}
