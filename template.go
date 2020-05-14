@@ -121,6 +121,11 @@ func (t *Template) id() string {
 	return t.hexMD5
 }
 
+// Render calls the stored Renderer with the passed content
+func (t *Template) Render(content []byte) (RenderResult, error) {
+	return t.renderer.Render(content)
+}
+
 // ExecuteResult is the result of the template execution.
 type ExecuteResult struct {
 	// Used is the set of dependencies that were used.
@@ -129,7 +134,7 @@ type ExecuteResult struct {
 	// Missing is the set of dependencies that were missing.
 	Missing *dep.Set
 
-	// Output is the rendered result.
+	// Output the (possibly partially) filled in template
 	Output []byte
 }
 
