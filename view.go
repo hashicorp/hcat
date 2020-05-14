@@ -19,7 +19,7 @@ type view struct {
 
 	// clients is the list of clients to communicate upstream. This is passed
 	// directly to the dependency.
-	clients *dep.ClientSet
+	clients Looker
 
 	// data is the most-recently-received data from Consul for this view. It is
 	// accompanied by a series of locks and booleans to ensure consistency.
@@ -52,7 +52,7 @@ type newViewInput struct {
 
 	// Clients is the list of clients to communicate upstream. This is passed
 	// directly to the dependency.
-	Clients *dep.ClientSet
+	Clients Looker
 
 	// BlockQueryWaitTime is amount of time in seconds to do a blocking query for
 	BlockQueryWaitTime time.Duration

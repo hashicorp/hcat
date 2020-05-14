@@ -19,7 +19,7 @@ type Watcher struct {
 	sync.Mutex
 
 	// clients is the collection of API clients to talk to upstreams.
-	clients *dep.ClientSet
+	clients Looker
 
 	// dataCh is the chan where Views will be published.
 	dataCh chan *view
@@ -49,7 +49,7 @@ type Watcher struct {
 
 type NewWatcherInput struct {
 	// Clients is the client set to communicate with upstreams.
-	Clients *dep.ClientSet
+	Clients Looker
 
 	// MaxStale is the maximum staleness of a query.
 	MaxStale time.Duration
