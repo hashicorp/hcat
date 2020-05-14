@@ -8,40 +8,40 @@ import (
 	dep "github.com/hashicorp/hat/internal/dependency"
 )
 
-// TestDep is a special dependency that does not actually speaks to a server.
-type TestDep struct {
+// FakeDep is a fake dependency that does not actually speaks to a server.
+type FakeDep struct {
 	name string
 }
 
-func (d *TestDep) Fetch(clients dep.Clients, opts *dep.QueryOptions) (interface{}, *dep.ResponseMetadata, error) {
+func (d *FakeDep) Fetch(clients dep.Clients, opts *dep.QueryOptions) (interface{}, *dep.ResponseMetadata, error) {
 	time.Sleep(time.Millisecond)
 	data := "this is some data"
 	rm := &dep.ResponseMetadata{LastIndex: 1}
 	return data, rm, nil
 }
 
-func (d *TestDep) CanShare() bool {
+func (d *FakeDep) CanShare() bool {
 	return true
 }
 
-func (d *TestDep) String() string {
+func (d *FakeDep) String() string {
 	return fmt.Sprintf("test_dep(%s)", d.name)
 }
 
-func (d *TestDep) Stop() {}
+func (d *FakeDep) Stop() {}
 
-func (d *TestDep) Type() dep.Type {
+func (d *FakeDep) Type() dep.Type {
 	return dep.TypeLocal
 }
 
-// TestDepStale is a special dependency that can be used to test what happens
+// FakeDepStale is a fake dependency that can be used to test what happens
 // when stale data is permitted.
-type TestDepStale struct {
+type FakeDepStale struct {
 	name string
 }
 
 // Fetch is used to implement the dependency interface.
-func (d *TestDepStale) Fetch(clients dep.Clients, opts *dep.QueryOptions) (interface{}, *dep.ResponseMetadata, error) {
+func (d *FakeDepStale) Fetch(clients dep.Clients, opts *dep.QueryOptions) (interface{}, *dep.ResponseMetadata, error) {
 	time.Sleep(time.Millisecond)
 
 	if opts == nil {
@@ -59,76 +59,76 @@ func (d *TestDepStale) Fetch(clients dep.Clients, opts *dep.QueryOptions) (inter
 	return data, rm, nil
 }
 
-func (d *TestDepStale) CanShare() bool {
+func (d *FakeDepStale) CanShare() bool {
 	return true
 }
 
-func (d *TestDepStale) String() string {
+func (d *FakeDepStale) String() string {
 	return fmt.Sprintf("test_dep_stale(%s)", d.name)
 }
 
-func (d *TestDepStale) Stop() {}
+func (d *FakeDepStale) Stop() {}
 
-func (d *TestDepStale) Type() dep.Type {
+func (d *FakeDepStale) Type() dep.Type {
 	return dep.TypeLocal
 }
 
-// TestDepFetchError is a special dependency that returns an error while fetching.
-type TestDepFetchError struct {
+// FakeDepFetchError is a fake dependency that returns an error while fetching.
+type FakeDepFetchError struct {
 	name string
 }
 
-func (d *TestDepFetchError) Fetch(clients dep.Clients, opts *dep.QueryOptions) (interface{}, *dep.ResponseMetadata, error) {
+func (d *FakeDepFetchError) Fetch(clients dep.Clients, opts *dep.QueryOptions) (interface{}, *dep.ResponseMetadata, error) {
 	time.Sleep(time.Millisecond)
 	return nil, nil, fmt.Errorf("failed to contact server")
 }
 
-func (d *TestDepFetchError) CanShare() bool {
+func (d *FakeDepFetchError) CanShare() bool {
 	return true
 }
 
-func (d *TestDepFetchError) String() string {
+func (d *FakeDepFetchError) String() string {
 	return fmt.Sprintf("test_dep_fetch_error(%s)", d.name)
 }
 
-func (d *TestDepFetchError) Stop() {}
+func (d *FakeDepFetchError) Stop() {}
 
-func (d *TestDepFetchError) Type() dep.Type {
+func (d *FakeDepFetchError) Type() dep.Type {
 	return dep.TypeLocal
 }
 
-var _ dep.Dependency = (*TestDepSameIndex)(nil)
+var _ dep.Dependency = (*FakeDepSameIndex)(nil)
 
-type TestDepSameIndex struct{}
+type FakeDepSameIndex struct{}
 
-func (d *TestDepSameIndex) Fetch(clients dep.Clients, opts *dep.QueryOptions) (interface{}, *dep.ResponseMetadata, error) {
+func (d *FakeDepSameIndex) Fetch(clients dep.Clients, opts *dep.QueryOptions) (interface{}, *dep.ResponseMetadata, error) {
 	meta := &dep.ResponseMetadata{LastIndex: 100}
 	return nil, meta, nil
 }
 
-func (d *TestDepSameIndex) CanShare() bool {
+func (d *FakeDepSameIndex) CanShare() bool {
 	return true
 }
 
-func (d *TestDepSameIndex) Stop() {}
+func (d *FakeDepSameIndex) Stop() {}
 
-func (d *TestDepSameIndex) String() string {
+func (d *FakeDepSameIndex) String() string {
 	return "test_dep_same_index"
 }
 
-func (d *TestDepSameIndex) Type() dep.Type {
+func (d *FakeDepSameIndex) Type() dep.Type {
 	return dep.TypeLocal
 }
 
-// TestDepRetry is a special dependency that errors on the first fetch and
+// FakeDepRetry is a fake dependency that errors on the first fetch and
 // succeeds on subsequent fetches.
-type TestDepRetry struct {
+type FakeDepRetry struct {
 	sync.Mutex
 	name    string
 	retried bool
 }
 
-func (d *TestDepRetry) Fetch(clients dep.Clients, opts *dep.QueryOptions) (interface{}, *dep.ResponseMetadata, error) {
+func (d *FakeDepRetry) Fetch(clients dep.Clients, opts *dep.QueryOptions) (interface{}, *dep.ResponseMetadata, error) {
 	time.Sleep(time.Millisecond)
 
 	d.Lock()
@@ -144,16 +144,16 @@ func (d *TestDepRetry) Fetch(clients dep.Clients, opts *dep.QueryOptions) (inter
 	return nil, nil, fmt.Errorf("failed to contact server (try again)")
 }
 
-func (d *TestDepRetry) CanShare() bool {
+func (d *FakeDepRetry) CanShare() bool {
 	return true
 }
 
-func (d *TestDepRetry) String() string {
+func (d *FakeDepRetry) String() string {
 	return fmt.Sprintf("test_dep_retry(%s)", d.name)
 }
 
-func (d *TestDepRetry) Stop() {}
+func (d *FakeDepRetry) Stop() {}
 
-func (d *TestDepRetry) Type() dep.Type {
+func (d *FakeDepRetry) Type() dep.Type {
 	return dep.TypeLocal
 }

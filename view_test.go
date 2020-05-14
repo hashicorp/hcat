@@ -8,7 +8,7 @@ import (
 
 func TestPoll_returnsViewCh(t *testing.T) {
 	vw, err := newView(&newViewInput{
-		Dependency: &TestDep{},
+		Dependency: &FakeDep{},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -32,7 +32,7 @@ func TestPoll_returnsViewCh(t *testing.T) {
 
 func TestPoll_returnsErrCh(t *testing.T) {
 	vw, err := newView(&newViewInput{
-		Dependency: &TestDepFetchError{},
+		Dependency: &FakeDepFetchError{},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -59,7 +59,7 @@ func TestPoll_returnsErrCh(t *testing.T) {
 
 func TestPoll_stopsViewStopCh(t *testing.T) {
 	vw, err := newView(&newViewInput{
-		Dependency: &TestDep{},
+		Dependency: &FakeDep{},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -83,7 +83,7 @@ func TestPoll_stopsViewStopCh(t *testing.T) {
 
 func TestPoll_once(t *testing.T) {
 	vw, err := newView(&newViewInput{
-		Dependency: &TestDep{},
+		Dependency: &FakeDep{},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -118,7 +118,7 @@ func TestPoll_once(t *testing.T) {
 
 func TestPoll_retries(t *testing.T) {
 	vw, err := newView(&newViewInput{
-		Dependency: &TestDepRetry{},
+		Dependency: &FakeDepRetry{},
 		RetryFunc: func(retry int) (bool, time.Duration) {
 			return retry < 1, 250 * time.Millisecond
 		},
@@ -153,7 +153,7 @@ func TestPoll_retries(t *testing.T) {
 
 func TestFetch_resetRetries(t *testing.T) {
 	view, err := newView(&newViewInput{
-		Dependency: &TestDepSameIndex{},
+		Dependency: &FakeDepSameIndex{},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -176,7 +176,7 @@ func TestFetch_resetRetries(t *testing.T) {
 
 func TestFetch_maxStale(t *testing.T) {
 	view, err := newView(&newViewInput{
-		Dependency: &TestDepStale{},
+		Dependency: &FakeDepStale{},
 		MaxStale:   10 * time.Millisecond,
 	})
 	if err != nil {
@@ -202,7 +202,7 @@ func TestFetch_maxStale(t *testing.T) {
 
 func TestFetch_savesView(t *testing.T) {
 	view, err := newView(&newViewInput{
-		Dependency: &TestDep{},
+		Dependency: &FakeDep{},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -227,7 +227,7 @@ func TestFetch_savesView(t *testing.T) {
 
 func TestFetch_returnsErrCh(t *testing.T) {
 	view, err := newView(&newViewInput{
-		Dependency: &TestDepFetchError{},
+		Dependency: &FakeDepFetchError{},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -252,7 +252,7 @@ func TestFetch_returnsErrCh(t *testing.T) {
 
 func TestStop_stopsPolling(t *testing.T) {
 	vw, err := newView(&newViewInput{
-		Dependency: &TestDep{},
+		Dependency: &FakeDep{},
 	})
 	if err != nil {
 		t.Fatal(err)
