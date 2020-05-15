@@ -50,10 +50,6 @@ type RenderResult struct {
 	// will return false in the event of an error, but will return true in dry
 	// mode or when the template on disk matches the new result.
 	WouldRender bool
-
-	// Contents are the actual contents of the resulting template from the render
-	// operation.
-	Contents []byte
 }
 
 // Render atomically renders a file contents to disk, returning a result of
@@ -68,7 +64,6 @@ func Render(i *RenderInput) (*RenderResult, error) {
 		return &RenderResult{
 			DidRender:   false,
 			WouldRender: true,
-			Contents:    existing,
 		}, nil
 	}
 
@@ -83,7 +78,6 @@ func Render(i *RenderInput) (*RenderResult, error) {
 	return &RenderResult{
 		DidRender:   true,
 		WouldRender: true,
-		Contents:    i.Contents,
 	}, nil
 }
 
