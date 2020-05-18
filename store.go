@@ -56,16 +56,6 @@ func (s *Store) Recall(d IDer) (interface{}, bool) {
 	return s.data[d.String()], true
 }
 
-// ForceSet is used to force set the value of a dependency
-// for a given hash code
-func (s *Store) forceSet(hashCode string, data interface{}) {
-	s.Lock()
-	defer s.Unlock()
-
-	s.data[hashCode] = data
-	s.receivedData[hashCode] = struct{}{}
-}
-
 // Forget accepts a dependency and removes all associated data with this
 // dependency. It also resets the "receivedData" internal map.
 func (s *Store) Delete(d IDer) {
@@ -74,4 +64,14 @@ func (s *Store) Delete(d IDer) {
 
 	delete(s.data, d.String())
 	delete(s.receivedData, d.String())
+}
+
+// forceSet is used to force set the value of a dependency for a given hash
+// code. Used in testing.
+func (s *Store) forceSet(hashCode string, data interface{}) {
+	s.Lock()
+	defer s.Unlock()
+
+	s.data[hashCode] = data
+	s.receivedData[hashCode] = struct{}{}
 }
