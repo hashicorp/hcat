@@ -27,9 +27,9 @@ import (
 	yaml "gopkg.in/yaml.v2"
 )
 
-// BlacklistFunc always returns an error, to be used in place of blacklisted
-// template functions. For use with the FuncMapMerge.
-func BlacklistFunc(...interface{}) (string, error) {
+// DenyFunc always returns an error, to be used in place of template functions
+// that you want denied. For use with the FuncMapMerge.
+func DenyFunc(...interface{}) (string, error) {
 	return "", errors.New("function disabled")
 }
 

@@ -1270,7 +1270,7 @@ func TestTemplate_Execute(t *testing.T) {
 			"helper_plugin_disabled",
 			&NewTemplateInput{
 				Contents:     `{{ "1" | plugin "echo" }}`,
-				FuncMapMerge: template.FuncMap{"plugin": BlacklistFunc},
+				FuncMapMerge: template.FuncMap{"plugin": DenyFunc},
 			},
 			NewStore(),
 			"",
