@@ -10,7 +10,6 @@ import (
 func TestAdd_updatesMap(t *testing.T) {
 	w, err := NewWatcher(&NewWatcherInput{
 		Clients: clientSet{},
-		Once:    true,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -30,7 +29,6 @@ func TestAdd_updatesMap(t *testing.T) {
 func TestAdd_exists(t *testing.T) {
 	w, err := NewWatcher(&NewWatcherInput{
 		Clients: clientSet{},
-		Once:    true,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -52,7 +50,6 @@ func TestAdd_exists(t *testing.T) {
 func TestAdd_startsViewPoll(t *testing.T) {
 	w, err := NewWatcher(&NewWatcherInput{
 		Clients: clientSet{},
-		Once:    true,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -78,7 +75,6 @@ func TestAdd_startsViewPoll(t *testing.T) {
 func TestWatching_notExists(t *testing.T) {
 	w, err := NewWatcher(&NewWatcherInput{
 		Clients: clientSet{},
-		Once:    true,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -93,7 +89,6 @@ func TestWatching_notExists(t *testing.T) {
 func TestWatching_exists(t *testing.T) {
 	w, err := NewWatcher(&NewWatcherInput{
 		Clients: clientSet{},
-		Once:    true,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -112,7 +107,6 @@ func TestWatching_exists(t *testing.T) {
 func TestRemove_exists(t *testing.T) {
 	w, err := NewWatcher(&NewWatcherInput{
 		Clients: clientSet{},
-		Once:    true,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -136,7 +130,6 @@ func TestRemove_exists(t *testing.T) {
 func TestRemove_doesNotExist(t *testing.T) {
 	w, err := NewWatcher(&NewWatcherInput{
 		Clients: clientSet{},
-		Once:    true,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -151,7 +144,6 @@ func TestRemove_doesNotExist(t *testing.T) {
 func TestSize_empty(t *testing.T) {
 	w, err := NewWatcher(&NewWatcherInput{
 		Clients: clientSet{},
-		Once:    true,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -165,7 +157,6 @@ func TestSize_empty(t *testing.T) {
 func TestSize_returnsNumViews(t *testing.T) {
 	w, err := NewWatcher(&NewWatcherInput{
 		Clients: clientSet{},
-		Once:    true,
 	})
 	if err != nil {
 		t.Fatal(err)

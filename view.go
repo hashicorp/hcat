@@ -28,8 +28,8 @@ type view struct {
 	receivedData bool
 	lastIndex    uint64
 
-	// blockQueryWaitTime is amount of time in seconds to do a blocking query for
-	blockQueryWaitTime time.Duration
+	// blockWaitTime is amount of time in seconds to do a blocking query for
+	blockWaitTime time.Duration
 
 	// maxStale is the maximum amount of time to allow a query to be stale.
 	maxStale time.Duration
@@ -54,8 +54,8 @@ type newViewInput struct {
 	// directly to the dependency.
 	Clients Looker
 
-	// BlockQueryWaitTime is amount of time in seconds to do a blocking query for
-	BlockQueryWaitTime time.Duration
+	// BlockWaitTime is amount of time in seconds to do a blocking query for
+	BlockWaitTime time.Duration
 
 	// MaxStale is the maximum amount a time a query response is allowed to be
 	// stale before forcing a read from the leader.
@@ -72,13 +72,13 @@ type newViewInput struct {
 // NewView constructs a new view with the given inputs.
 func newView(i *newViewInput) (*view, error) {
 	return &view{
-		dependency:         i.Dependency,
-		clients:            i.Clients,
-		blockQueryWaitTime: i.BlockQueryWaitTime,
-		maxStale:           i.MaxStale,
-		once:               i.Once,
-		retryFunc:          i.RetryFunc,
-		stopCh:             make(chan struct{}, 1),
+		dependency:    i.Dependency,
+		clients:       i.Clients,
+		blockWaitTime: i.BlockWaitTime,
+		maxStale:      i.MaxStale,
+		once:          i.Once,
+		retryFunc:     i.RetryFunc,
+		stopCh:        make(chan struct{}, 1),
 	}, nil
 }
 
@@ -203,7 +203,7 @@ func (v *view) fetch(doneCh, successCh chan<- struct{}, errCh chan<- error) {
 
 		data, rm, err := v.dependency.Fetch(v.clients, &dep.QueryOptions{
 			AllowStale: allowStale,
-			WaitTime:   v.blockQueryWaitTime,
+			WaitTime:   v.blockWaitTime,
 			WaitIndex:  v.lastIndex,
 		})
 		if err != nil {

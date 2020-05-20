@@ -14,99 +14,83 @@ const dataBufferSize = 2048
 
 type RetryFunc func(int) (bool, time.Duration)
 
+type Cacher interface {
+	Save(IDer, interface{})
+	Recall(IDer) (interface{}, bool)
+	Delete(IDer)
+}
+
 // Watcher is a top-level manager for views that poll Consul for data.
 type Watcher struct {
 	sync.Mutex
-
 	// clients is the collection of API clients to talk to upstreams.
 	clients Looker
-
 	// dataCh is the chan where Views will be published.
 	dataCh chan *view
-
 	// errCh is the chan where any errors will be published.
 	errCh chan error
-
-	// blockQueryWaitTime is amount of time in seconds to do a blocking query for
-	blockQueryWaitTime time.Duration
-
-	// depViewMap is a map of Templates to Views. Templates are keyed by
-	// their string.
+	// depViewMap is a map of Template-IDs to Views.
 	depViewMap map[string]*view
 
-	// maxStale specifies the maximum staleness of a query response.
+	// Consul related
+	retryFuncConsul RetryFunc
+	// blockWaitTime is how long to block on consul's blocking queries
+	blockWaitTime time.Duration
+	// maxStale passed to consul to control staleness
 	maxStale time.Duration
 
-	// once signals if this watcher should tell views to retrieve data exactly
-	// one time instead of polling infinitely.
-	once bool
-
-	// retryFuncs specifies the different ways to retry based on the upstream.
-	retryFuncConsul  RetryFunc
-	retryFuncDefault RetryFunc
-	retryFuncVault   RetryFunc
+	// Vault related
+	retryFuncVault RetryFunc
+	// defaultLease is used for non-renewable leases when secret has no lease
+	defaultLease time.Duration
 }
 
 type NewWatcherInput struct {
 	// Clients is the client set to communicate with upstreams.
 	Clients Looker
+	// Cache is the Cacher for caching watched values
+	Cache Cacher
 
-	// MaxStale is the maximum staleness of a query.
-	MaxStale time.Duration
-
-	// Once specifies this watcher should tell views to poll exactly once.
-	Once bool
-
-	// WaitTime is amount of time in seconds to do a blocking query for
-	BlockQueryWaitTime time.Duration
-
-	// RenewVault indicates if this watcher should renew Vault tokens.
-	RenewVault bool
-
-	// VaultToken is the vault token to renew.
+	// Optional Vault specific parameters
+	// VaultToken is a Vault token used to access Vault.
 	VaultToken string
+	// VaultRenewToken indicates if this watcher should renew VaultToken.
+	VaultRenewToken bool
+	// Default non-renewable secret duration
+	VaultDefaultLease time.Duration
+	// RetryFun for Vault
+	VaultRetryFunc RetryFunc
 
-	// VaultAgentTokenFile is the path to Vault Agent token file
-	VaultAgentTokenFile string
-
-	// RetryFuncs specify the different ways to retry based on the upstream.
-	RetryFuncConsul  RetryFunc
-	RetryFuncDefault RetryFunc
-	RetryFuncVault   RetryFunc
+	// Optional Consul specific parameters
+	// MaxStale is the max time Consul will return a stale value.
+	ConsulMaxStale time.Duration
+	// BlockWait is amount of time Consul will block on a query.
+	ConsulBlockWait time.Duration
+	// RetryFun for Consul
+	ConsulRetryFunc RetryFunc
 }
 
 // NewWatcher creates a new watcher using the given API client.
 func NewWatcher(i *NewWatcherInput) (*Watcher, error) {
 	w := &Watcher{
-		clients:            i.Clients,
-		depViewMap:         make(map[string]*view),
-		dataCh:             make(chan *view, dataBufferSize),
-		errCh:              make(chan error),
-		maxStale:           i.MaxStale,
-		once:               i.Once,
-		blockQueryWaitTime: i.BlockQueryWaitTime,
-		retryFuncConsul:    i.RetryFuncConsul,
-		retryFuncDefault:   i.RetryFuncDefault,
-		retryFuncVault:     i.RetryFuncVault,
+		clients:         i.Clients,
+		depViewMap:      make(map[string]*view),
+		dataCh:          make(chan *view, dataBufferSize),
+		errCh:           make(chan error),
+		retryFuncConsul: i.ConsulRetryFunc,
+		maxStale:        i.ConsulMaxStale,
+		blockWaitTime:   i.ConsulBlockWait,
+		retryFuncVault:  i.VaultRetryFunc,
+		defaultLease:    i.VaultDefaultLease,
 	}
 
 	// Start a watcher for the Vault renew if that config was specified
-	if i.RenewVault {
+	if i.VaultRenewToken && i.VaultToken != "" {
 		vt, err := dep.NewVaultTokenQuery(i.VaultToken)
 		if err != nil {
 			return nil, errors.Wrap(err, "watcher")
 		}
 		if _, err := w.add(vt); err != nil {
-			return nil, errors.Wrap(err, "watcher")
-		}
-	}
-
-	if len(i.VaultAgentTokenFile) > 0 {
-		vag, err := dep.NewVaultAgentTokenQuery(i.VaultAgentTokenFile)
-		if err != nil {
-			return nil, errors.Wrap(err, "watcher")
-		}
-		if _, err := w.add(vag); err != nil {
 			return nil, errors.Wrap(err, "watcher")
 		}
 	}
@@ -140,17 +124,14 @@ func (w *Watcher) add(d dep.Dependency) (bool, error) {
 		retryFunc = w.retryFuncConsul
 	case dep.TypeVault:
 		retryFunc = w.retryFuncVault
-	default:
-		retryFunc = w.retryFuncDefault
 	}
 
 	v, err := newView(&newViewInput{
-		Dependency:         d,
-		Clients:            w.clients,
-		MaxStale:           w.maxStale,
-		BlockQueryWaitTime: w.blockQueryWaitTime,
-		Once:               w.once,
-		RetryFunc:          retryFunc,
+		Dependency:    d,
+		Clients:       w.clients,
+		MaxStale:      w.maxStale,
+		BlockWaitTime: w.blockWaitTime,
+		RetryFunc:     retryFunc,
 	})
 	if err != nil {
 		return false, errors.Wrap(err, "watcher")
