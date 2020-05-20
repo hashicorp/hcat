@@ -83,41 +83,6 @@ func TestPoll_stopsViewStopCh(t *testing.T) {
 	}
 }
 
-func TestPoll_once(t *testing.T) {
-	vw, err := newView(&newViewInput{
-		Dependency: &dep.FakeDep{},
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	viewCh := make(chan *view)
-	errCh := make(chan error)
-
-	go vw.poll(viewCh, errCh)
-	defer vw.stop()
-
-	select {
-	case <-viewCh:
-		// Got this far, so the test passes
-	case err := <-errCh:
-		t.Errorf("error while polling: %s", err)
-	case <-vw.stopCh:
-		t.Errorf("poll received premature stop")
-	}
-
-	select {
-	case <-viewCh:
-		t.Errorf("expected no data (should have stopped), but received view data")
-	case err := <-errCh:
-		t.Errorf("error while polling: %s", err)
-	case <-vw.stopCh:
-		t.Errorf("poll received premature stop")
-	case <-time.After(20 * time.Millisecond):
-		// No data in 0.2s, so the test passes
-	}
-}
-
 func TestPoll_retries(t *testing.T) {
 	vw, err := newView(&newViewInput{
 		Dependency: &dep.FakeDepRetry{},

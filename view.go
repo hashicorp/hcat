@@ -34,8 +34,6 @@ type view struct {
 	// maxStale is the maximum amount of time to allow a query to be stale.
 	maxStale time.Duration
 
-	// once determines if this view should receive data exactly once.
-	once bool
 
 	// retryFunc is the function to invoke on failure to determine if a retry
 	// should be attempted.
@@ -61,9 +59,6 @@ type newViewInput struct {
 	// stale before forcing a read from the leader.
 	MaxStale time.Duration
 
-	// Once indicates this view should poll for data exactly one time.
-	Once bool
-
 	// RetryFunc is a function which dictates how this view should retry on
 	// upstream errors.
 	RetryFunc RetryFunc
@@ -76,7 +71,6 @@ func newView(i *newViewInput) (*view, error) {
 		clients:       i.Clients,
 		blockWaitTime: i.BlockWaitTime,
 		maxStale:      i.MaxStale,
-		once:          i.Once,
 		retryFunc:     i.RetryFunc,
 		stopCh:        make(chan struct{}, 1),
 	}, nil
@@ -130,11 +124,6 @@ func (v *view) poll(viewCh chan<- *view, errCh chan<- error) {
 			case viewCh <- v:
 			}
 
-			// If we are operating in once mode, do not loop - we received data at
-			// least once which is the API promise here.
-			if v.once {
-				return
-			}
 		case <-successCh:
 			// We successfully received a non-error response from the server. This
 			// does not mean we have data (that's dataCh's job), but rather this
