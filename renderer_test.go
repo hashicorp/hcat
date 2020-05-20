@@ -25,7 +25,7 @@ func TestAtomicWrite(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if err := atomicWrite(outFile.Name(), true, nil, 0644, false); err != nil {
+		if err := atomicWrite(outFile.Name(), nil, 0644, true); err != nil {
 			t.Fatal(err)
 		}
 
@@ -46,7 +46,7 @@ func TestAtomicWrite(t *testing.T) {
 		}
 		os.Chmod(outFile.Name(), 0600)
 
-		if err := atomicWrite(outFile.Name(), true, nil, 0, false); err != nil {
+		if err := atomicWrite(outFile.Name(), nil, 0, true); err != nil {
 			t.Fatal(err)
 		}
 
@@ -71,7 +71,7 @@ func TestAtomicWrite(t *testing.T) {
 
 		// Try atomicWrite to a file that doesn't exist yet
 		file := filepath.Join(outDir, "nope/not/it/create")
-		if err := atomicWrite(file, true, nil, 0644, false); err != nil {
+		if err := atomicWrite(file, nil, 0644, true); err != nil {
 			t.Fatal(err)
 		}
 
@@ -90,11 +90,13 @@ func TestAtomicWrite(t *testing.T) {
 
 		// Try atomicWrite to a file that doesn't exist yet
 		file := filepath.Join(outDir, "nope/not/it/nope-no-create")
-		if err := atomicWrite(file, false, nil, 0644, false); err != errNoParentDir {
+		if err := atomicWrite(file, nil, 0644, false); err != errNoParentDir {
 			t.Fatalf("expected %q to be %q", err, errNoParentDir)
 		}
 	})
+}
 
+func TestSingleBackup(t *testing.T) {
 	t.Run("backup", func(t *testing.T) {
 		outDir, err := ioutil.TempDir("", "")
 		if err != nil {
@@ -112,9 +114,7 @@ func TestAtomicWrite(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if err := atomicWrite(outFile.Name(), true, []byte("after"), 0644, true); err != nil {
-			t.Fatal(err)
-		}
+		SingleBackup(outFile.Name())
 
 		f, err := ioutil.ReadFile(outFile.Name() + ".bak")
 		if err != nil {
@@ -147,9 +147,7 @@ func TestAtomicWrite(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if err := atomicWrite(outFile.Name(), true, nil, 0644, true); err != nil {
-			t.Fatal(err)
-		}
+		SingleBackup(outFile.Name())
 
 		// Shouldn't have a backup file, since the original file didn't exist
 		if _, err := os.Stat(outFile.Name() + ".bak"); err == nil {
@@ -185,16 +183,14 @@ func TestAtomicWrite(t *testing.T) {
 			}
 		}
 
-		err = atomicWrite(outFile.Name(), true, []byte("second"), 0644, true)
+		SingleBackup(outFile.Name())
+		err = atomicWrite(outFile.Name(), []byte("second"), 0644, true)
 		if err != nil {
 			t.Fatal(err)
 		}
 		contains(outFile.Name(), "first")
 
-		err = atomicWrite(outFile.Name(), true, []byte("third"), 0644, true)
-		if err != nil {
-			t.Fatal(err)
-		}
+		SingleBackup(outFile.Name())
 		contains(outFile.Name(), "second")
 	})
 }
