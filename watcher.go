@@ -98,6 +98,45 @@ func NewWatcher(i *NewWatcherInput) (*Watcher, error) {
 	return w, nil
 }
 
+// Stop halts this watcher and any currently polling views immediately. If a
+// view was in the middle of a poll, no data will be returned.
+func (w *Watcher) Stop() {
+	w.Lock()
+	defer w.Unlock()
+
+	log.Printf("[DEBUG] (watcher) stopping all views")
+
+	for _, view := range w.depViewMap {
+		if view == nil {
+			continue
+		}
+		log.Printf("[TRACE] (watcher) stopping %s", view.Dependency())
+		view.stop()
+	}
+
+	// Reset the map to have no views
+	w.depViewMap = make(map[string]*view)
+
+	// Close any idle TCP connections
+	w.clients.Stop()
+}
+
+// Watching determines if the given dependency is being watched.
+func (w *Watcher) Watching(d dep.Dependency) bool {
+	w.Lock()
+	defer w.Unlock()
+
+	_, ok := w.depViewMap[d.String()]
+	return ok
+}
+
+// Size returns the number of views this watcher is watching.
+func (w *Watcher) Size() int {
+	w.Lock()
+	defer w.Unlock()
+	return len(w.depViewMap)
+}
+
 // add adds the given dependency to the list of monitored dependencies
 // and start the associated view. If the dependency already exists, no action is
 // taken.
@@ -145,28 +184,6 @@ func (w *Watcher) add(d dep.Dependency) (bool, error) {
 	return true, nil
 }
 
-// Watching determines if the given dependency is being watched.
-func (w *Watcher) Watching(d dep.Dependency) bool {
-	w.Lock()
-	defer w.Unlock()
-
-	_, ok := w.depViewMap[d.String()]
-	return ok
-}
-
-// ForceWatching is used to force setting the internal state of watching
-// a dependency. This is only used for unit testing purposes.
-func (w *Watcher) forceWatching(d dep.Dependency, enabled bool) {
-	w.Lock()
-	defer w.Unlock()
-
-	if enabled {
-		w.depViewMap[d.String()] = nil
-	} else {
-		delete(w.depViewMap, d.String())
-	}
-}
-
 // Remove removes the given dependency from the list and stops the
 // associated view. If a view for the given dependency does not exist, this
 // function will return false. If the view does exist, this function will return
@@ -188,32 +205,15 @@ func (w *Watcher) remove(d dep.Dependency) bool {
 	return false
 }
 
-// Size returns the number of views this watcher is watching.
-func (w *Watcher) Size() int {
-	w.Lock()
-	defer w.Unlock()
-	return len(w.depViewMap)
-}
-
-// Stop halts this watcher and any currently polling views immediately. If a
-// view was in the middle of a poll, no data will be returned.
-func (w *Watcher) Stop() {
+// ForceWatching is used to force setting the internal state of watching
+// a dependency. This is only used for unit testing purposes.
+func (w *Watcher) forceWatching(d dep.Dependency, enabled bool) {
 	w.Lock()
 	defer w.Unlock()
 
-	log.Printf("[DEBUG] (watcher) stopping all views")
-
-	for _, view := range w.depViewMap {
-		if view == nil {
-			continue
-		}
-		log.Printf("[TRACE] (watcher) stopping %s", view.Dependency())
-		view.stop()
+	if enabled {
+		w.depViewMap[d.String()] = nil
+	} else {
+		delete(w.depViewMap, d.String())
 	}
-
-	// Reset the map to have no views
-	w.depViewMap = make(map[string]*view)
-
-	// Close any idle TCP connections
-	w.clients.Stop()
 }
