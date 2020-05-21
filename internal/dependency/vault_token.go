@@ -29,7 +29,7 @@ func NewVaultTokenQuery(token string) (*VaultTokenQuery, error) {
 	return &VaultTokenQuery{
 		stopCh:      make(chan struct{}, 1),
 		vaultSecret: vaultSecret,
-		secret:      transformSecret(vaultSecret),
+		secret:      transformSecret(vaultSecret, 0),
 	}, nil
 }
 

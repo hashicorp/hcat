@@ -97,7 +97,7 @@ func (d *VaultReadQuery) fetchSecret(clients Clients, opts *QueryOptions,
 		printVaultWarnings(d, vaultSecret.Warnings)
 		d.vaultSecret = vaultSecret
 		// the cloned secret which will be exposed to the template
-		d.secret = transformSecret(vaultSecret)
+		d.secret = transformSecret(vaultSecret, opts.DefaultLease)
 	}
 	return err
 }

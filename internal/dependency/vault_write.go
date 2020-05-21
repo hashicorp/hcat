@@ -87,7 +87,7 @@ func (d *VaultWriteQuery) Fetch(clients Clients, opts *QueryOptions,
 	printVaultWarnings(d, vaultSecret.Warnings)
 	d.vaultSecret = vaultSecret
 	// cloned secret which will be exposed to the template
-	d.secret = transformSecret(vaultSecret)
+	d.secret = transformSecret(vaultSecret, opts.DefaultLease)
 
 	if !vaultSecretRenewable(d.secret) {
 		dur := leaseCheckWait(d.secret)

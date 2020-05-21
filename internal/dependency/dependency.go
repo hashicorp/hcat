@@ -61,6 +61,7 @@ type QueryOptions struct {
 	VaultGrace        time.Duration
 	WaitIndex         uint64
 	WaitTime          time.Duration
+	DefaultLease      time.Duration
 }
 
 func (q *QueryOptions) Merge(o *QueryOptions) *QueryOptions {

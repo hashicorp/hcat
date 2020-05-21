@@ -125,8 +125,10 @@ func durationFromCert(certData string) int {
 // leaseCheckWait accepts a secret and returns the recommended amount of
 // time to sleep.
 func leaseCheckWait(s *Secret) time.Duration {
-	// Handle whether this is an auth or a regular secret.
+	// base should be set to the default already
+	// be sure not to set base to <=0 below
 	base := s.LeaseDuration
+	// Handle whether this is an auth or a regular secret.
 	if s.Auth != nil && s.Auth.LeaseDuration > 0 {
 		base = s.Auth.LeaseDuration
 	}
@@ -142,12 +144,14 @@ func leaseCheckWait(s *Secret) time.Duration {
 		}
 	}
 
-	// Handle if this is a secret with a rotation period.  If this is a rotating secret,
-	// the rotating secret's TTL will be the duration to sleep before rendering the new secret.
+	// Handle if this is a secret with a rotation period.  If this is a
+	// rotating secret, the rotating secret's TTL will be the duration to sleep
+	// before rendering the new secret.
 	var rotatingSecret bool
 	if _, ok := s.Data["rotation_period"]; ok && s.LeaseID == "" {
 		if ttlInterface, ok := s.Data["ttl"]; ok {
-			if ttlData, err := ttlInterface.(json.Number).Int64(); err == nil {
+			ttlData, err := ttlInterface.(json.Number).Int64()
+			if err == nil && ttlData > 0 {
 				log.Printf("[DEBUG] Found rotation_period and set lease duration to %d seconds", ttlData)
 				// Add a second for cushion
 				base = int(ttlData) + 1
@@ -156,27 +160,22 @@ func leaseCheckWait(s *Secret) time.Duration {
 		}
 	}
 
-	// Ensure we have a lease duration, since sometimes this can be zero.
-	if base <= 0 {
-		base = int(VaultDefaultLeaseDuration.Seconds())
-	}
-
 	// Convert to float seconds.
 	sleep := float64(time.Duration(base) * time.Second)
 
 	if vaultSecretRenewable(s) {
-		// Renew at 1/3 the remaining lease. This will give us an opportunity to retry
-		// at least one more time should the first renewal fail.
+		// Renew at 1/3 the remaining lease. This will give us an opportunity
+		// to retry at least one more time should the first renewal fail.
 		sleep = sleep / 3.0
 
 		// Use some randomness so many clients do not hit Vault simultaneously.
 		sleep = sleep * (rand.Float64() + 1) / 2.0
 	} else if !rotatingSecret {
-		// If the secret doesn't have a rotation period, this is a non-renewable leased
-		// secret.
-		// For non-renewable leases set the renew duration to use much of the secret
-		// lease as possible. Use a stagger over 85%-95% of the lease duration so that
-		// many clients do not hit Vault simultaneously.
+		// If the secret doesn't have a rotation period, this is a
+		// non-renewable leased secret.
+		// For non-renewable leases set the renew duration to use much of the
+		// secret lease as possible. Use a stagger over 85%-95% of the lease
+		// duration so that many clients do not hit Vault simultaneously.
 		sleep = sleep * (.85 + rand.Float64()*0.1)
 	}
 
@@ -201,10 +200,14 @@ func vaultSecretRenewable(s *Secret) bool {
 // transformSecret transforms an api secret into our secret. This does not deep
 // copy underlying deep data structures, so it's not safe to modify the vault
 // secret as that may modify the data in the transformed secret.
-func transformSecret(theirs *api.Secret) *Secret {
-	var ours Secret
-	updateSecret(&ours, theirs)
-	return &ours
+func transformSecret(theirs *api.Secret, defaultLease time.Duration) *Secret {
+	if defaultLease <= 0 {
+		// just in case 0 gets passed by mistake
+		defaultLease = VaultDefaultLeaseDuration
+	}
+	ours := &Secret{LeaseDuration: int(defaultLease.Seconds())}
+	updateSecret(ours, theirs)
+	return ours
 }
 
 // updateSecret updates our secret with the new data from the api, careful to

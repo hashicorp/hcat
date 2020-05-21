@@ -2,8 +2,11 @@ package dependency
 
 import (
 	"encoding/json"
+	"fmt"
 	"testing"
+	"time"
 
+	"github.com/hashicorp/vault/api"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -26,7 +29,7 @@ func TestVaultRenewDuration(t *testing.T) {
 
 	var data = map[string]interface{}{
 		"rotation_period": json.Number("60"),
-		"ttl": json.Number("30"),
+		"ttl":             json.Number("30"),
 	}
 
 	nonRenewableRotated := Secret{LeaseDuration: 100, Data: data}
@@ -39,7 +42,7 @@ func TestVaultRenewDuration(t *testing.T) {
 
 	data = map[string]interface{}{
 		"rotation_period": json.Number("30"),
-		"ttl": json.Number("5"),
+		"ttl":             json.Number("5"),
 	}
 
 	nonRenewableRotated = Secret{LeaseDuration: 100, Data: data}
@@ -48,6 +51,41 @@ func TestVaultRenewDuration(t *testing.T) {
 	// We expect a 1 second cushion
 	if nonRenewableRotatedDur != 6 {
 		t.Fatalf("renewable duration is not 6: %f", nonRenewableRotatedDur)
+	}
+}
+
+func TestDefaultLease(t *testing.T) {
+	cases := []struct {
+		name string
+		apiS *api.Secret
+		def  time.Duration
+		ourS *Secret
+	}{
+		{
+			name: "zero",
+			apiS: &api.Secret{},
+			def:  time.Duration(0),
+			ourS: &Secret{LeaseDuration: 0},
+		},
+		{
+			name: "default-used",
+			apiS: &api.Secret{},
+			def:  time.Second * 10,
+			ourS: &Secret{LeaseDuration: 10},
+		},
+		{
+			name: "default-overwritten",
+			apiS: &api.Secret{LeaseDuration: 11},
+			def:  time.Second * 2,
+			ourS: &Secret{LeaseDuration: 11},
+		},
+	}
+
+	for i, tc := range cases {
+		t.Run(fmt.Sprintf("%d_%s", i, tc.name), func(t *testing.T) {
+			result := transformSecret(tc.apiS, tc.def)
+			assert.Equal(t, tc.ourS, result)
+		})
 	}
 }
 

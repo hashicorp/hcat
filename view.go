@@ -34,6 +34,8 @@ type view struct {
 	// maxStale is the maximum amount of time to allow a query to be stale.
 	maxStale time.Duration
 
+	// defaultLease is used for non-renewable leases when secret has no lease
+	defaultLease time.Duration
 
 	// retryFunc is the function to invoke on failure to determine if a retry
 	// should be attempted.
@@ -191,9 +193,10 @@ func (v *view) fetch(doneCh, successCh chan<- struct{}, errCh chan<- error) {
 		start := time.Now() // for rateLimiter below
 
 		data, rm, err := v.dependency.Fetch(v.clients, &dep.QueryOptions{
-			AllowStale: allowStale,
-			WaitTime:   v.blockWaitTime,
-			WaitIndex:  v.lastIndex,
+			AllowStale:   allowStale,
+			WaitTime:     v.blockWaitTime,
+			WaitIndex:    v.lastIndex,
+			DefaultLease: v.defaultLease,
 		})
 		if err != nil {
 			if err == dep.ErrStopped {
