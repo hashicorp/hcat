@@ -17,11 +17,11 @@ type Looker interface {
 // at this point so we extend it here to include environment variables to meet
 // the looker interface.
 type clientSet struct {
-	*dep.ClientSet
+	dep.ClientSet
 }
 
 // You should do any messaging of the Environment variables during startup
 // As this will just use the raw Environment.
-func (cs clientSet) Env() []string {
+func (cs *clientSet) Env() []string {
 	return os.Environ()
 }
