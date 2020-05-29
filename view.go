@@ -67,7 +67,7 @@ type newViewInput struct {
 }
 
 // NewView constructs a new view with the given inputs.
-func newView(i *newViewInput) (*view, error) {
+func newView(i *newViewInput) *view {
 	return &view{
 		dependency:    i.Dependency,
 		clients:       i.Clients,
@@ -75,7 +75,7 @@ func newView(i *newViewInput) (*view, error) {
 		maxStale:      i.MaxStale,
 		retryFunc:     i.RetryFunc,
 		stopCh:        make(chan struct{}, 1),
-	}, nil
+	}
 }
 
 // Dependency returns the dependency attached to this view.

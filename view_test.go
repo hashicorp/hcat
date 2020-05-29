@@ -9,12 +9,9 @@ import (
 )
 
 func TestPoll_returnsViewCh(t *testing.T) {
-	vw, err := newView(&newViewInput{
+	vw := newView(&newViewInput{
 		Dependency: &dep.FakeDep{},
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
 
 	viewCh := make(chan *view)
 	errCh := make(chan error)
@@ -33,12 +30,9 @@ func TestPoll_returnsViewCh(t *testing.T) {
 }
 
 func TestPoll_returnsErrCh(t *testing.T) {
-	vw, err := newView(&newViewInput{
+	vw := newView(&newViewInput{
 		Dependency: &dep.FakeDepFetchError{},
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
 
 	viewCh := make(chan *view)
 	errCh := make(chan error)
@@ -60,12 +54,9 @@ func TestPoll_returnsErrCh(t *testing.T) {
 }
 
 func TestPoll_stopsViewStopCh(t *testing.T) {
-	vw, err := newView(&newViewInput{
+	vw := newView(&newViewInput{
 		Dependency: &dep.FakeDep{},
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
 
 	viewCh := make(chan *view)
 	errCh := make(chan error)
@@ -84,15 +75,12 @@ func TestPoll_stopsViewStopCh(t *testing.T) {
 }
 
 func TestPoll_retries(t *testing.T) {
-	vw, err := newView(&newViewInput{
+	vw := newView(&newViewInput{
 		Dependency: &dep.FakeDepRetry{},
 		RetryFunc: func(retry int) (bool, time.Duration) {
 			return retry < 1, 250 * time.Millisecond
 		},
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
 
 	viewCh := make(chan *view)
 	errCh := make(chan error)
@@ -119,12 +107,9 @@ func TestPoll_retries(t *testing.T) {
 }
 
 func TestFetch_resetRetries(t *testing.T) {
-	view, err := newView(&newViewInput{
+	view := newView(&newViewInput{
 		Dependency: &dep.FakeDepSameIndex{},
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
 
 	doneCh := make(chan struct{})
 	successCh := make(chan struct{})
@@ -142,13 +127,10 @@ func TestFetch_resetRetries(t *testing.T) {
 }
 
 func TestFetch_maxStale(t *testing.T) {
-	view, err := newView(&newViewInput{
+	view := newView(&newViewInput{
 		Dependency: &dep.FakeDepStale{},
 		MaxStale:   10 * time.Millisecond,
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
 
 	doneCh := make(chan struct{})
 	successCh := make(chan struct{})
@@ -168,12 +150,9 @@ func TestFetch_maxStale(t *testing.T) {
 }
 
 func TestFetch_savesView(t *testing.T) {
-	view, err := newView(&newViewInput{
+	view := newView(&newViewInput{
 		Dependency: &dep.FakeDep{},
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
 
 	doneCh := make(chan struct{})
 	successCh := make(chan struct{})
@@ -193,12 +172,9 @@ func TestFetch_savesView(t *testing.T) {
 }
 
 func TestFetch_returnsErrCh(t *testing.T) {
-	view, err := newView(&newViewInput{
+	view := newView(&newViewInput{
 		Dependency: &dep.FakeDepFetchError{},
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
 
 	doneCh := make(chan struct{})
 	successCh := make(chan struct{})
@@ -218,12 +194,9 @@ func TestFetch_returnsErrCh(t *testing.T) {
 }
 
 func TestStop_stopsPolling(t *testing.T) {
-	vw, err := newView(&newViewInput{
+	vw := newView(&newViewInput{
 		Dependency: &dep.FakeDep{},
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
 
 	viewCh := make(chan *view)
 	errCh := make(chan error)

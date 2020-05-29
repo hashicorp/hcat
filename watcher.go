@@ -166,16 +166,13 @@ func (w *Watcher) add(d dep.Dependency) (bool, error) {
 		retryFunc = w.retryFuncVault
 	}
 
-	v, err := newView(&newViewInput{
+	v := newView(&newViewInput{
 		Dependency:    d,
 		Clients:       w.clients,
 		MaxStale:      w.maxStale,
 		BlockWaitTime: w.blockWaitTime,
 		RetryFunc:     retryFunc,
 	})
-	if err != nil {
-		return false, errors.Wrap(err, "watcher")
-	}
 
 	log.Printf("[TRACE] (watcher) %s starting", d)
 
