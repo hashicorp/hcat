@@ -18,6 +18,7 @@ type Cacher interface {
 	Save(IDer, interface{})
 	Recall(IDer) (interface{}, bool)
 	Delete(IDer)
+	Reset()
 }
 
 // Watcher is a top-level manager for views that poll Consul for data.

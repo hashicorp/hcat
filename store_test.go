@@ -101,3 +101,27 @@ func TestForget(t *testing.T) {
 		t.Errorf("expected %#v to not be forgotten", d)
 	}
 }
+
+func TestReset(t *testing.T) {
+	t.Parallel()
+	st := NewStore()
+
+	d, err := dep.NewCatalogNodesQuery("")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	nodes := []*dep.Node{
+		&dep.Node{
+			Node:    "node",
+			Address: "address",
+		},
+	}
+
+	st.Save(d, nodes)
+	st.Reset()
+
+	if _, ok := st.Recall(d); ok {
+		t.Errorf("expected %#v to not be forgotten", d)
+	}
+}

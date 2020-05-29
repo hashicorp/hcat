@@ -66,6 +66,19 @@ func (s *Store) Delete(d IDer) {
 	delete(s.receivedData, d.String())
 }
 
+// Reset clears all stored data.
+func (s *Store) Reset() {
+	s.Lock()
+	defer s.Unlock()
+
+	for k := range s.data {
+		delete(s.data, k)
+	}
+	for k := range s.receivedData {
+		delete(s.receivedData, k)
+	}
+}
+
 // forceSet is used to force set the value of a dependency for a given hash
 // code. Used in testing.
 func (s *Store) forceSet(hashCode string, data interface{}) {
