@@ -2,9 +2,12 @@ package hat
 
 import (
 	"fmt"
+	"strconv"
 	"testing"
+	"time"
 
 	dep "github.com/hashicorp/hat/internal/dependency"
+	"github.com/pkg/errors"
 )
 
 func TestAdd_updatesMap(t *testing.T) {
@@ -172,4 +175,110 @@ func TestSize_returnsNumViews(t *testing.T) {
 	if w.Size() != 10 {
 		t.Errorf("expected %d to be %d", w.Size(), 10)
 	}
+}
+
+func TestWait(t *testing.T) {
+	newWatcher := func() *Watcher {
+		w, err := NewWatcher(&NewWatcherInput{
+			Clients: &clientSet{},
+			Cache:   NewStore(),
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return w
+	}
+	t.Run("timeout", func(t *testing.T) {
+		w := newWatcher()
+		defer w.Stop()
+		t1 := time.Now()
+		err := w.Wait(time.Millisecond)
+		if err != nil {
+			t.Fatal("Error not expected")
+		}
+		dur := time.Now().Sub(t1)
+		if dur < time.Millisecond || dur > time.Millisecond*2 {
+			t.Fatal("Wait call was off;", dur)
+		}
+	})
+	t.Run("0-timeout", func(t *testing.T) {
+		w := newWatcher()
+		defer w.Stop()
+		t1 := time.Now()
+		testerr := errors.New("test")
+		go func() {
+			time.Sleep(time.Millisecond)
+			w.errCh <- testerr
+		}()
+		w.Wait(0)
+		dur := time.Now().Sub(t1)
+		if dur < time.Millisecond || dur > time.Millisecond*2 {
+			t.Fatal("Wait call was off;", dur)
+		}
+	})
+	t.Run("error", func(t *testing.T) {
+		w := newWatcher()
+		defer w.Stop()
+		testerr := errors.New("test")
+		go func() {
+			w.errCh <- testerr
+		}()
+		err := w.Wait(0)
+		if err != testerr {
+			t.Fatal("None or Unexpected Error;", err)
+		}
+	})
+	t.Run("remove-old-dependency", func(t *testing.T) {
+		w := newWatcher()
+		defer w.Stop()
+		d := &dep.FakeDep{}
+		if _, err := w.add(d); err != nil {
+			t.Fatal(err)
+		}
+		w.olddepCh <- d
+		// use timeout to get it to return and give remove time to run
+		w.Wait(time.Millisecond)
+		if _, ok := w.depViewMap[d.String()]; ok {
+			t.Error("expected dependency to be removed")
+		}
+	})
+	t.Run("simple-update", func(t *testing.T) {
+		w := newWatcher()
+		defer w.Stop()
+		foodep := &dep.FakeDep{Name: "foo"}
+		view := newView(&newViewInput{
+			Dependency: foodep,
+		})
+		w.dataCh <- view
+		w.Wait(0)
+		store := w.cache.(*Store)
+		if _, ok := store.data[foodep.String()]; !ok {
+			t.Fatal("failed update")
+		}
+	})
+	t.Run("multi-update", func(t *testing.T) {
+		w := newWatcher()
+		defer w.Stop()
+		deps := make([]dep.Dependency, 5)
+		views := make([]*view, 5)
+		for i := 0; i < 5; i++ {
+			deps[i] = &dep.FakeDep{Name: strconv.Itoa(i)}
+			views[i] = newView(&newViewInput{
+				Dependency: deps[i],
+			})
+		}
+		go func() {
+			for _, v := range views {
+				w.dataCh <- v
+			}
+		}()
+		w.Wait(0)
+		store := w.cache.(*Store)
+		if len(store.data) != 5 {
+			t.Fatal("failed update")
+		}
+		if _, ok := store.data[deps[3].String()]; !ok {
+			t.Fatal("failed update")
+		}
+	})
 }

@@ -23,13 +23,19 @@ type Cacher interface {
 
 // Watcher is a top-level manager for views that poll Consul for data.
 type Watcher struct {
-	sync.Mutex
+	sync.Mutex // for depViewMap access
 	// clients is the collection of API clients to talk to upstreams.
 	clients Looker
+	// cache stores the data fetched from remote sources
+	cache Cacher
+
 	// dataCh is the chan where Views will be published.
 	dataCh chan *view
 	// errCh is the chan where any errors will be published.
 	errCh chan error
+	// olddepCh is the chan where no longer used dependencies are sent.
+	olddepCh chan IDer
+
 	// depViewMap is a map of Template-IDs to Views.
 	depViewMap map[string]*view
 
@@ -75,9 +81,11 @@ type NewWatcherInput struct {
 func NewWatcher(i *NewWatcherInput) (*Watcher, error) {
 	w := &Watcher{
 		clients:         i.Clients,
+		cache:           i.Cache,
 		depViewMap:      make(map[string]*view),
 		dataCh:          make(chan *view, dataBufferSize),
 		errCh:           make(chan error),
+		olddepCh:        make(chan IDer, dataBufferSize),
 		retryFuncConsul: i.ConsulRetryFunc,
 		maxStale:        i.ConsulMaxStale,
 		blockWaitTime:   i.ConsulBlockWait,
@@ -99,6 +107,44 @@ func NewWatcher(i *NewWatcherInput) (*Watcher, error) {
 	return w, nil
 }
 
+func (w *Watcher) Wait(timeout time.Duration) error {
+	var timer <-chan time.Time
+	if timeout > 0 {
+		timer = time.After(timeout)
+	}
+	for {
+		select {
+		case <-timer:
+			return nil
+		case view := <-w.dataCh:
+			w.cache.Save(view.Dependency(), view.Data())
+
+			// Drain all dependency data. Prevents re-rendering templates over
+			// and over when a large batch of dependencies are updated.
+			// See GH-168 for background.
+			for {
+				select {
+				case view := <-w.dataCh:
+					w.cache.Save(view.Dependency(), view.Data())
+				case <-time.After(time.Microsecond):
+					return nil
+				}
+			}
+
+		// XXX the resolver code will write to this
+		// olddepCh outputs deps that need to be removed
+		// should it drain, like above for dataCh?
+		case d := <-w.olddepCh:
+			w.remove(d)
+
+		case err := <-w.errCh:
+			// Push the error back up the stack
+			return err
+
+		}
+	}
+}
+
 // Stop halts this watcher and any currently polling views immediately. If a
 // view was in the middle of a poll, no data will be returned.
 func (w *Watcher) Stop() {
@@ -118,12 +164,15 @@ func (w *Watcher) Stop() {
 	// Reset the map to have no views
 	w.depViewMap = make(map[string]*view)
 
+	// Empty cache
+	w.cache.Reset()
+
 	// Close any idle TCP connections
 	w.clients.Stop()
 }
 
 // Watching determines if the given dependency is being watched.
-func (w *Watcher) Watching(d dep.Dependency) bool {
+func (w *Watcher) Watching(d IDer) bool {
 	w.Lock()
 	defer w.Unlock()
 
@@ -182,11 +231,11 @@ func (w *Watcher) add(d dep.Dependency) (bool, error) {
 	return true, nil
 }
 
-// Remove removes the given dependency from the list and stops the
+// Remove-s the given dependency from the list and stops the
 // associated view. If a view for the given dependency does not exist, this
 // function will return false. If the view does exist, this function will return
 // true upon successful deletion.
-func (w *Watcher) remove(d dep.Dependency) bool {
+func (w *Watcher) remove(d IDer) bool {
 	w.Lock()
 	defer w.Unlock()
 
@@ -198,6 +247,7 @@ func (w *Watcher) remove(d dep.Dependency) bool {
 		delete(w.depViewMap, d.String())
 		return true
 	}
+	w.cache.Delete(d)
 
 	log.Printf("[TRACE] (watcher) %s did not exist, skipping", d)
 	return false
