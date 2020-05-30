@@ -11,12 +11,7 @@ import (
 )
 
 func TestAdd_updatesMap(t *testing.T) {
-	w, err := NewWatcher(&NewWatcherInput{
-		Clients: &clientSet{},
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	w := newWatcher(t)
 
 	d := &dep.FakeDep{}
 	if _, err := w.add(d); err != nil {
@@ -30,12 +25,7 @@ func TestAdd_updatesMap(t *testing.T) {
 }
 
 func TestAdd_exists(t *testing.T) {
-	w, err := NewWatcher(&NewWatcherInput{
-		Clients: &clientSet{},
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	w := newWatcher(t)
 
 	d := &dep.FakeDep{}
 	w.depViewMap[d.String()] = &view{}
@@ -51,12 +41,7 @@ func TestAdd_exists(t *testing.T) {
 }
 
 func TestAdd_startsViewPoll(t *testing.T) {
-	w, err := NewWatcher(&NewWatcherInput{
-		Clients: &clientSet{},
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	w := newWatcher(t)
 
 	added, err := w.add(&dep.FakeDep{})
 	if err != nil {
@@ -76,12 +61,7 @@ func TestAdd_startsViewPoll(t *testing.T) {
 }
 
 func TestWatching_notExists(t *testing.T) {
-	w, err := NewWatcher(&NewWatcherInput{
-		Clients: &clientSet{},
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	w := newWatcher(t)
 
 	d := &dep.FakeDep{}
 	if w.Watching(d) == true {
@@ -90,12 +70,7 @@ func TestWatching_notExists(t *testing.T) {
 }
 
 func TestWatching_exists(t *testing.T) {
-	w, err := NewWatcher(&NewWatcherInput{
-		Clients: &clientSet{},
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	w := newWatcher(t)
 
 	d := &dep.FakeDep{}
 	if _, err := w.add(d); err != nil {
@@ -108,12 +83,7 @@ func TestWatching_exists(t *testing.T) {
 }
 
 func TestRemove_exists(t *testing.T) {
-	w, err := NewWatcher(&NewWatcherInput{
-		Clients: &clientSet{},
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	w := newWatcher(t)
 
 	d := &dep.FakeDep{}
 	if _, err := w.add(d); err != nil {
@@ -131,12 +101,7 @@ func TestRemove_exists(t *testing.T) {
 }
 
 func TestRemove_doesNotExist(t *testing.T) {
-	w, err := NewWatcher(&NewWatcherInput{
-		Clients: &clientSet{},
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	w := newWatcher(t)
 
 	removed := w.remove(&dep.FakeDep{})
 	if removed != false {
@@ -145,12 +110,7 @@ func TestRemove_doesNotExist(t *testing.T) {
 }
 
 func TestSize_empty(t *testing.T) {
-	w, err := NewWatcher(&NewWatcherInput{
-		Clients: &clientSet{},
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	w := newWatcher(t)
 
 	if w.Size() != 0 {
 		t.Errorf("expected %d to be %d", w.Size(), 0)
@@ -158,12 +118,7 @@ func TestSize_empty(t *testing.T) {
 }
 
 func TestSize_returnsNumViews(t *testing.T) {
-	w, err := NewWatcher(&NewWatcherInput{
-		Clients: &clientSet{},
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	w := newWatcher(t)
 
 	for i := 0; i < 10; i++ {
 		d := &dep.FakeDep{Name: fmt.Sprintf("%d", i)}
@@ -178,18 +133,8 @@ func TestSize_returnsNumViews(t *testing.T) {
 }
 
 func TestWait(t *testing.T) {
-	newWatcher := func() *Watcher {
-		w, err := NewWatcher(&NewWatcherInput{
-			Clients: &clientSet{},
-			Cache:   NewStore(),
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
-		return w
-	}
 	t.Run("timeout", func(t *testing.T) {
-		w := newWatcher()
+		w := newWatcher(t)
 		defer w.Stop()
 		t1 := time.Now()
 		err := w.Wait(time.Millisecond)
@@ -202,7 +147,7 @@ func TestWait(t *testing.T) {
 		}
 	})
 	t.Run("0-timeout", func(t *testing.T) {
-		w := newWatcher()
+		w := newWatcher(t)
 		defer w.Stop()
 		t1 := time.Now()
 		testerr := errors.New("test")
@@ -217,7 +162,7 @@ func TestWait(t *testing.T) {
 		}
 	})
 	t.Run("error", func(t *testing.T) {
-		w := newWatcher()
+		w := newWatcher(t)
 		defer w.Stop()
 		testerr := errors.New("test")
 		go func() {
@@ -229,7 +174,7 @@ func TestWait(t *testing.T) {
 		}
 	})
 	t.Run("remove-old-dependency", func(t *testing.T) {
-		w := newWatcher()
+		w := newWatcher(t)
 		defer w.Stop()
 		d := &dep.FakeDep{}
 		if _, err := w.add(d); err != nil {
@@ -243,7 +188,7 @@ func TestWait(t *testing.T) {
 		}
 	})
 	t.Run("simple-update", func(t *testing.T) {
-		w := newWatcher()
+		w := newWatcher(t)
 		defer w.Stop()
 		foodep := &dep.FakeDep{Name: "foo"}
 		view := newView(&newViewInput{
@@ -257,7 +202,7 @@ func TestWait(t *testing.T) {
 		}
 	})
 	t.Run("multi-update", func(t *testing.T) {
-		w := newWatcher()
+		w := newWatcher(t)
 		defer w.Stop()
 		deps := make([]dep.Dependency, 5)
 		views := make([]*view, 5)
@@ -281,4 +226,15 @@ func TestWait(t *testing.T) {
 			t.Fatal("failed update")
 		}
 	})
+}
+
+func newWatcher(t *testing.T) *Watcher {
+	w, err := NewWatcher(&NewWatcherInput{
+		Clients: &clientSet{},
+		Cache:   NewStore(),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return w
 }
