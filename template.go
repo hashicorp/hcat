@@ -23,10 +23,6 @@ type Template struct {
 	// during template creation or read from disk when initialized.
 	contents string
 
-	// source is the original location of the template. This may be undefined if
-	// the template was dynamically defined.
-	source string
-
 	// leftDelim and rightDelim are the template delimiters.
 	leftDelim  string
 	rightDelim string
