@@ -99,9 +99,7 @@ func NewWatcher(i *NewWatcherInput) (*Watcher, error) {
 		if err != nil {
 			return nil, errors.Wrap(err, "watcher")
 		}
-		if _, err := w.add(vt); err != nil {
-			return nil, errors.Wrap(err, "watcher")
-		}
+		w.add(vt)
 	}
 
 	return w, nil
@@ -192,10 +190,8 @@ func (w *Watcher) Size() int {
 // taken.
 //
 // If the Dependency already existed, it this function will return false. If the
-// view was successfully created, it will return true. If an error occurs while
-// creating the view, it will be returned here (but future errors returned by
-// the view will happen on the channel).
-func (w *Watcher) add(d dep.Dependency) (bool, error) {
+// view was successfully created, it will return true.
+func (w *Watcher) add(d dep.Dependency) bool {
 	w.Lock()
 	defer w.Unlock()
 
@@ -203,7 +199,7 @@ func (w *Watcher) add(d dep.Dependency) (bool, error) {
 
 	if _, ok := w.depViewMap[d.String()]; ok {
 		log.Printf("[TRACE] (watcher) %s already exists, skipping", d)
-		return false, nil
+		return false
 	}
 
 	// Choose the correct retry function based off of the dependency's type.
@@ -228,7 +224,7 @@ func (w *Watcher) add(d dep.Dependency) (bool, error) {
 	w.depViewMap[d.String()] = v
 	go v.poll(w.dataCh, w.errCh)
 
-	return true, nil
+	return true
 }
 
 // Remove-s the given dependency from the list and stops the

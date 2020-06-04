@@ -14,8 +14,8 @@ func TestAdd_updatesMap(t *testing.T) {
 	w := newWatcher(t)
 
 	d := &dep.FakeDep{}
-	if _, err := w.add(d); err != nil {
-		t.Fatal(err)
+	if added := w.add(d); !added {
+		t.Fatal("expected add to return true")
 	}
 
 	_, exists := w.depViewMap[d.String()]
@@ -30,12 +30,7 @@ func TestAdd_exists(t *testing.T) {
 	d := &dep.FakeDep{}
 	w.depViewMap[d.String()] = &view{}
 
-	added, err := w.add(d)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if added != false {
+	if added := w.add(d); added {
 		t.Errorf("expected add to return false")
 	}
 }
@@ -43,12 +38,7 @@ func TestAdd_exists(t *testing.T) {
 func TestAdd_startsViewPoll(t *testing.T) {
 	w := newWatcher(t)
 
-	added, err := w.add(&dep.FakeDep{})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if added != true {
+	if added := w.add(&dep.FakeDep{}); !added {
 		t.Errorf("expected add to return true")
 	}
 
@@ -73,9 +63,7 @@ func TestWatching_exists(t *testing.T) {
 	w := newWatcher(t)
 
 	d := &dep.FakeDep{}
-	if _, err := w.add(d); err != nil {
-		t.Fatal(err)
-	}
+	w.add(d)
 
 	if w.Watching(d) == false {
 		t.Errorf("expected to be watching")
@@ -86,9 +74,7 @@ func TestRemove_exists(t *testing.T) {
 	w := newWatcher(t)
 
 	d := &dep.FakeDep{}
-	if _, err := w.add(d); err != nil {
-		t.Fatal(err)
-	}
+	w.add(d)
 
 	removed := w.remove(d)
 	if removed != true {
@@ -122,9 +108,7 @@ func TestSize_returnsNumViews(t *testing.T) {
 
 	for i := 0; i < 10; i++ {
 		d := &dep.FakeDep{Name: fmt.Sprintf("%d", i)}
-		if _, err := w.add(d); err != nil {
-			t.Fatal(err)
-		}
+		w.add(d)
 	}
 
 	if w.Size() != 10 {
@@ -177,9 +161,7 @@ func TestWait(t *testing.T) {
 		w := newWatcher(t)
 		defer w.Stop()
 		d := &dep.FakeDep{}
-		if _, err := w.add(d); err != nil {
-			t.Fatal(err)
-		}
+		w.add(d)
 		w.olddepCh <- d
 		// use timeout to get it to return and give remove time to run
 		w.Wait(time.Millisecond)
