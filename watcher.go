@@ -169,6 +169,11 @@ func (w *Watcher) Stop() {
 	w.clients.Stop()
 }
 
+// Wrap embedded cache's Recaller interface
+func (w *Watcher) Recall(id IDer) (interface{}, bool) {
+	return w.cache.Recall(id)
+}
+
 // Watching determines if the given dependency is being watched.
 func (w *Watcher) Watching(d IDer) bool {
 	w.Lock()
