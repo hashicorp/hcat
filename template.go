@@ -7,8 +7,6 @@ import (
 	"text/template"
 
 	"github.com/pkg/errors"
-
-	dep "github.com/hashicorp/hat/internal/dependency"
 )
 
 // ErrTemplateMissingContents is the error returned when a template does
@@ -125,10 +123,12 @@ func (t *Template) Render(content []byte) (RenderResult, error) {
 // ExecuteResult is the result of the template execution.
 type ExecuteResult struct {
 	// Used is the set of dependencies that were used.
-	Used *dep.Set
+	// XXX convert to []dep.Dependency ???
+	Used depSet
 
 	// Missing is the set of dependencies that were missing.
-	Missing *dep.Set
+	// XXX convert to []dep.Dependency ???
+	Missing depSet
 
 	// Output the (possibly partially) filled in template
 	Output []byte
@@ -136,16 +136,16 @@ type ExecuteResult struct {
 
 // Execute evaluates this template in the provided context.
 func (t *Template) Execute(r Recaller) (*ExecuteResult, error) {
-	var used, missing dep.Set
+	var used, missing = newDepSet(), newDepSet()
 
-	tmpl := template.New("")
+	tmpl := template.New(t.id())
 	tmpl.Delims(t.leftDelim, t.rightDelim)
 
 	tmpl.Funcs(funcMap(&funcMapInput{
 		t:            tmpl,
 		store:        r,
-		used:         &used,
-		missing:      &missing,
+		used:         used,
+		missing:      missing,
 		funcMapMerge: t.funcMapMerge,
 		sandboxPath:  t.sandboxPath,
 	}))
@@ -168,8 +168,8 @@ func (t *Template) Execute(r Recaller) (*ExecuteResult, error) {
 	}
 
 	return &ExecuteResult{
-		Used:    &used,
-		Missing: &missing,
+		Used:    used,
+		Missing: missing,
 		Output:  b.Bytes(),
 	}, nil
 }
@@ -181,8 +181,8 @@ type funcMapInput struct {
 	env          []string
 	funcMapMerge template.FuncMap
 	sandboxPath  string
-	used         *dep.Set
-	missing      *dep.Set
+	used         depSet
+	missing      depSet
 }
 
 // funcMap is the map of template functions to their respective functions.
