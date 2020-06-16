@@ -18,11 +18,6 @@ type Store struct {
 	receivedData map[string]struct{}
 }
 
-// Use String for IDs of the dependencies
-type IDer interface {
-	String() string
-}
-
 // NewStore creates a new Store with empty values for each
 // of the key structs.
 func NewStore() *Store {
@@ -35,35 +30,35 @@ func NewStore() *Store {
 // Save accepts a dependency and the data to store associated with that
 // dep. This function converts the given data to a proper type and stores
 // it interally.
-func (s *Store) Save(d IDer, data interface{}) {
+func (s *Store) Save(id string, data interface{}) {
 	s.Lock()
 	defer s.Unlock()
 
-	s.data[d.String()] = data
-	s.receivedData[d.String()] = struct{}{}
+	s.data[id] = data
+	s.receivedData[id] = struct{}{}
 }
 
 // Recall gets the current value for the given dependency in the Store.
-func (s *Store) Recall(d IDer) (interface{}, bool) {
+func (s *Store) Recall(id string) (interface{}, bool) {
 	s.RLock()
 	defer s.RUnlock()
 
 	// If we have not received data for this dependency, return now.
-	if _, ok := s.receivedData[d.String()]; !ok {
+	if _, ok := s.receivedData[id]; !ok {
 		return nil, false
 	}
 
-	return s.data[d.String()], true
+	return s.data[id], true
 }
 
 // Forget accepts a dependency and removes all associated data with this
 // dependency. It also resets the "receivedData" internal map.
-func (s *Store) Delete(d IDer) {
+func (s *Store) Delete(id string) {
 	s.Lock()
 	defer s.Unlock()
 
-	delete(s.data, d.String())
-	delete(s.receivedData, d.String())
+	delete(s.data, id)
+	delete(s.receivedData, id)
 }
 
 // Reset clears all stored data.

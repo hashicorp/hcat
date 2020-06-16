@@ -15,9 +15,9 @@ const dataBufferSize = 2048
 type RetryFunc func(int) (bool, time.Duration)
 
 type Cacher interface {
-	Save(IDer, interface{})
-	Recall(IDer) (interface{}, bool)
-	Delete(IDer)
+	Save(string, interface{})
+	Recall(string) (interface{}, bool)
+	Delete(string)
 	Reset()
 }
 
@@ -34,7 +34,7 @@ type Watcher struct {
 	// errCh is the chan where any errors will be published.
 	errCh chan error
 	// olddepCh is the chan where no longer used dependencies are sent.
-	olddepCh chan IDer
+	olddepCh chan string
 
 	// depViewMap is a map of Template-IDs to Views.
 	depViewMap map[string]*view
@@ -85,7 +85,7 @@ func NewWatcher(i *NewWatcherInput) (*Watcher, error) {
 		depViewMap:      make(map[string]*view),
 		dataCh:          make(chan *view, dataBufferSize),
 		errCh:           make(chan error),
-		olddepCh:        make(chan IDer, dataBufferSize),
+		olddepCh:        make(chan string, dataBufferSize),
 		retryFuncConsul: i.ConsulRetryFunc,
 		maxStale:        i.ConsulMaxStale,
 		blockWaitTime:   i.ConsulBlockWait,
@@ -170,16 +170,16 @@ func (w *Watcher) Stop() {
 }
 
 // Wrap embedded cache's Recaller interface
-func (w *Watcher) Recall(id IDer) (interface{}, bool) {
+func (w *Watcher) Recall(id string) (interface{}, bool) {
 	return w.cache.Recall(id)
 }
 
 // Watching determines if the given dependency is being watched.
-func (w *Watcher) Watching(d IDer) bool {
+func (w *Watcher) Watching(id string) bool {
 	w.Lock()
 	defer w.Unlock()
 
-	_, ok := w.depViewMap[d.String()]
+	_, ok := w.depViewMap[id]
 	return ok
 }
 
@@ -236,21 +236,22 @@ func (w *Watcher) add(d dep.Dependency) bool {
 // associated view. If a view for the given dependency does not exist, this
 // function will return false. If the view does exist, this function will return
 // true upon successful deletion.
-func (w *Watcher) remove(d IDer) bool {
+func (w *Watcher) remove(id string) bool {
 	w.Lock()
 	defer w.Unlock()
 
-	log.Printf("[DEBUG] (watcher) removing %s", d)
+	log.Printf("[DEBUG] (watcher) removing %s", id)
 
-	if view, ok := w.depViewMap[d.String()]; ok {
-		log.Printf("[TRACE] (watcher) actually removing %s", d)
+	defer w.cache.Delete(id)
+
+	if view, ok := w.depViewMap[id]; ok {
+		log.Printf("[TRACE] (watcher) actually removing %s", id)
 		view.stop()
-		delete(w.depViewMap, d.String())
+		delete(w.depViewMap, id)
 		return true
 	}
-	w.cache.Delete(d)
 
-	log.Printf("[TRACE] (watcher) %s did not exist, skipping", d)
+	log.Printf("[TRACE] (watcher) %s did not exist, skipping", id)
 	return false
 }
 

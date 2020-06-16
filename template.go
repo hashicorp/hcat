@@ -55,7 +55,7 @@ type Renderer interface {
 // Recaller is the read interface for the cache
 // Implemented by Store and Watcher (which wraps Store)
 type Recaller interface {
-	Recall(IDer) (interface{}, bool)
+	Recall(string) (interface{}, bool)
 }
 
 // NewTemplateInput is used as input when creating the template.

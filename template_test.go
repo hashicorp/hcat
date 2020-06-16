@@ -229,7 +229,7 @@ func TestTemplate_Execute(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				st.Save(d, []string{"dc1", "dc2"})
+				st.Save(d.String(), []string{"dc1", "dc2"})
 				return st
 			}(),
 			"[dc1 dc2]",
@@ -246,7 +246,7 @@ func TestTemplate_Execute(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				st.Save(d, []string{"dc1", "dc2"})
+				st.Save(d.String(), []string{"dc1", "dc2"})
 				return st
 			}(),
 			"[dc1 dc2]",
@@ -263,7 +263,7 @@ func TestTemplate_Execute(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				st.Save(d, "content")
+				st.Save(d.String(), "content")
 				return st
 			}(),
 			"content",
@@ -281,7 +281,7 @@ func TestTemplate_Execute(t *testing.T) {
 					t.Fatal(err)
 				}
 				d.EnableBlocking()
-				st.Save(d, "5")
+				st.Save(d.String(), "5")
 				return st
 			}(),
 			"5",
@@ -298,7 +298,7 @@ func TestTemplate_Execute(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				st.Save(d, true)
+				st.Save(d.String(), true)
 				return st
 			}(),
 			"true false",
@@ -315,7 +315,7 @@ func TestTemplate_Execute(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				st.Save(d, "150")
+				st.Save(d.String(), "150")
 				return st
 			}(),
 			"150 200",
@@ -332,7 +332,7 @@ func TestTemplate_Execute(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				st.Save(d, []*dep.KeyPair{
+				st.Save(d.String(), []*dep.KeyPair{
 					&dep.KeyPair{Key: "", Value: ""},
 					&dep.KeyPair{Key: "foo", Value: "bar"},
 					&dep.KeyPair{Key: "foo/zip", Value: "zap"},
@@ -353,7 +353,7 @@ func TestTemplate_Execute(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				st.Save(d, &dep.CatalogNode{
+				st.Save(d.String(), &dep.CatalogNode{
 					Node: &dep.Node{Node: "node1"},
 					Services: []*dep.CatalogNodeService{
 						&dep.CatalogNodeService{
@@ -377,7 +377,7 @@ func TestTemplate_Execute(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				st.Save(d, []*dep.Node{
+				st.Save(d.String(), []*dep.Node{
 					&dep.Node{Node: "node1"},
 					&dep.Node{Node: "node2"},
 				})
@@ -397,7 +397,7 @@ func TestTemplate_Execute(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				st.Save(d, &dep.Secret{
+				st.Save(d.String(), &dep.Secret{
 					LeaseID:       "abcd1234",
 					LeaseDuration: 120,
 					Renewable:     true,
@@ -419,14 +419,14 @@ func TestTemplate_Execute(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				st.Save(d, &dep.Secret{
+				st.Save(d.String(), &dep.Secret{
 					Data: map[string]interface{}{"zip": "zap"},
 				})
 				d1, err := dep.NewVaultReadQuery("secret/foo?version=1")
 				if err != nil {
 					t.Fatal(err)
 				}
-				st.Save(d1, &dep.Secret{
+				st.Save(d1.String(), &dep.Secret{
 					Data: map[string]interface{}{"zip": "zed"},
 				})
 				return st
@@ -469,7 +469,7 @@ func TestTemplate_Execute(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				st.Save(d, &dep.Secret{
+				st.Save(d.String(), &dep.Secret{
 					LeaseID:       "abcd1234",
 					LeaseDuration: 120,
 					Renewable:     true,
@@ -524,7 +524,7 @@ func TestTemplate_Execute(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				st.Save(d, []string{"bar", "foo"})
+				st.Save(d.String(), []string{"bar", "foo"})
 				return st
 			}(),
 			"[bar foo]",
@@ -574,7 +574,7 @@ func TestTemplate_Execute(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				st.Save(d, []*dep.HealthService{
+				st.Save(d.String(), []*dep.HealthService{
 					&dep.HealthService{
 						Node:    "node1",
 						Address: "1.2.3.4",
@@ -600,7 +600,7 @@ func TestTemplate_Execute(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				st.Save(d, []*dep.HealthService{
+				st.Save(d.String(), []*dep.HealthService{
 					&dep.HealthService{
 						Node:    "node1",
 						Address: "1.2.3.4",
@@ -626,7 +626,7 @@ func TestTemplate_Execute(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				st.Save(d, []*dep.CatalogSnippet{
+				st.Save(d.String(), []*dep.CatalogSnippet{
 					&dep.CatalogSnippet{
 						Name: "service1",
 					},
@@ -650,7 +650,7 @@ func TestTemplate_Execute(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				st.Save(d, []*dep.KeyPair{
+				st.Save(d.String(), []*dep.KeyPair{
 					&dep.KeyPair{Key: "", Value: ""},
 					&dep.KeyPair{Key: "admin/port", Value: "1134"},
 					&dep.KeyPair{Key: "maxconns", Value: "5"},
@@ -721,7 +721,7 @@ func TestTemplate_Execute(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				st.Save(d, []*dep.KeyPair{
+				st.Save(d.String(), []*dep.KeyPair{
 					&dep.KeyPair{Key: "", Value: ""},
 					&dep.KeyPair{Key: "foo/bar", Value: "a"},
 					&dep.KeyPair{Key: "zip/zap", Value: "b"},
@@ -742,7 +742,7 @@ func TestTemplate_Execute(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				st.Save(d, []*dep.HealthService{
+				st.Save(d.String(), []*dep.HealthService{
 					&dep.HealthService{
 						Address: "1.2.3.4",
 						Tags:    []string{"prod", "staging"},
@@ -768,7 +768,7 @@ func TestTemplate_Execute(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				st.Save(d, []*dep.HealthService{
+				st.Save(d.String(), []*dep.HealthService{
 					&dep.HealthService{
 						Address: "1.2.3.4",
 						Tags:    []string{"prod", "staging"},
@@ -794,7 +794,7 @@ func TestTemplate_Execute(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				st.Save(d, []*dep.HealthService{
+				st.Save(d.String(), []*dep.HealthService{
 					&dep.HealthService{
 						Address: "1.2.3.4",
 						Tags:    []string{"prod", "us-realm"},
@@ -820,7 +820,7 @@ func TestTemplate_Execute(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				st.Save(d, []*dep.HealthService{
+				st.Save(d.String(), []*dep.HealthService{
 					&dep.HealthService{
 						Address: "1.2.3.4",
 						Tags:    []string{"prod", "us-realm"},
@@ -846,7 +846,7 @@ func TestTemplate_Execute(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				st.Save(d, []*dep.HealthService{
+				st.Save(d.String(), []*dep.HealthService{
 					&dep.HealthService{
 						Address: "1.2.3.4",
 						Tags:    []string{"prod", "v1"},
@@ -872,7 +872,7 @@ func TestTemplate_Execute(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				st.Save(d, []*dep.HealthService{
+				st.Save(d.String(), []*dep.HealthService{
 					&dep.HealthService{
 						Address: "1.2.3.4",
 						Tags:    []string{"prod", "v1"},
@@ -898,7 +898,7 @@ func TestTemplate_Execute(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				st.Save(d, []*dep.HealthService{
+				st.Save(d.String(), []*dep.HealthService{
 					&dep.HealthService{
 						Address: "1.2.3.4",
 						Tags:    []string{"prod", "v1"},
@@ -924,7 +924,7 @@ func TestTemplate_Execute(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				st.Save(d, []*dep.HealthService{
+				st.Save(d.String(), []*dep.HealthService{
 					&dep.HealthService{
 						Address: "1.2.3.4",
 						Tags:    []string{"staging", "v1"},
@@ -950,7 +950,7 @@ func TestTemplate_Execute(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				st.Save(d, []*dep.HealthService{
+				st.Save(d.String(), []*dep.HealthService{
 					&dep.HealthService{
 						Address: "1.2.3.4",
 						Tags:    []string{"prod", "es-v1"},
@@ -976,7 +976,7 @@ func TestTemplate_Execute(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				st.Save(d, []*dep.HealthService{
+				st.Save(d.String(), []*dep.HealthService{
 					&dep.HealthService{
 						Address: "1.2.3.4",
 						Tags:    []string{"prod", "es-v1"},
@@ -1013,7 +1013,7 @@ func TestTemplate_Execute(t *testing.T) {
 					t.Fatal(err)
 				}
 				d.EnableBlocking()
-				st.Save(d, "bar")
+				st.Save(d.String(), "bar")
 				return st
 			}(),
 			"bar",
@@ -1031,7 +1031,7 @@ func TestTemplate_Execute(t *testing.T) {
 					t.Fatal(err)
 				}
 				d.EnableBlocking()
-				st.Save(d, "bar")
+				st.Save(d.String(), "bar")
 				return st
 			}(),
 			"bar",
@@ -1048,7 +1048,7 @@ func TestTemplate_Execute(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				st.Save(d, []*dep.KeyPair{
+				st.Save(d.String(), []*dep.KeyPair{
 					&dep.KeyPair{Key: "", Value: ""},
 					&dep.KeyPair{Key: "foo/bar", Value: "a"},
 					&dep.KeyPair{Key: "zip/zap", Value: "b"},
@@ -1078,7 +1078,7 @@ func TestTemplate_Execute(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				st.Save(d, []*dep.HealthService{
+				st.Save(d.String(), []*dep.HealthService{
 					&dep.HealthService{
 						Address: "1.2.3.4",
 						Tags:    []string{"prod", "staging"},
@@ -1474,7 +1474,7 @@ func TestTemplate_Execute(t *testing.T) {
 			func() *Store {
 				d := dep.NewConnectLeafQuery("foo")
 				st := NewStore()
-				st.Save(d, &api.LeafCert{
+				st.Save(d.String(), &api.LeafCert{
 					Service:       "foo",
 					CertPEM:       "PEM",
 					PrivateKeyPEM: "KEY",
@@ -1492,7 +1492,7 @@ func TestTemplate_Execute(t *testing.T) {
 			func() *Store {
 				d := dep.NewConnectCAQuery()
 				st := NewStore()
-				st.Save(d, []*api.CARoot{
+				st.Save(d.String(), []*api.CARoot{
 					&api.CARoot{
 						Name:        "Consul CA Root Cert",
 						RootCertPEM: "PEM",
@@ -1515,7 +1515,7 @@ func TestTemplate_Execute(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				st.Save(d, []*dep.HealthService{
+				st.Save(d.String(), []*dep.HealthService{
 					&dep.HealthService{
 						Node:    "node1",
 						Address: "1.2.3.4",

@@ -54,7 +54,7 @@ func TestWatching_notExists(t *testing.T) {
 	w := newWatcher(t)
 
 	d := &dep.FakeDep{}
-	if w.Watching(d) == true {
+	if w.Watching(d.String()) == true {
 		t.Errorf("expected to not be watching")
 	}
 }
@@ -65,7 +65,7 @@ func TestWatching_exists(t *testing.T) {
 	d := &dep.FakeDep{}
 	w.add(d)
 
-	if w.Watching(d) == false {
+	if w.Watching(d.String()) == false {
 		t.Errorf("expected to be watching")
 	}
 }
@@ -76,7 +76,7 @@ func TestRemove_exists(t *testing.T) {
 	d := &dep.FakeDep{}
 	w.add(d)
 
-	removed := w.remove(d)
+	removed := w.remove(d.String())
 	if removed != true {
 		t.Error("expected Remove to return true")
 	}
@@ -89,7 +89,8 @@ func TestRemove_exists(t *testing.T) {
 func TestRemove_doesNotExist(t *testing.T) {
 	w := newWatcher(t)
 
-	removed := w.remove(&dep.FakeDep{})
+	var fd dep.FakeDep
+	removed := w.remove(fd.String())
 	if removed != false {
 		t.Fatal("expected Remove to return false")
 	}
@@ -162,13 +163,14 @@ func TestWait(t *testing.T) {
 		defer w.Stop()
 		d := &dep.FakeDep{}
 		w.add(d)
-		w.olddepCh <- d
+		w.olddepCh <- d.String()
 		// use timeout to get it to return and give remove time to run
 		w.Wait(time.Millisecond)
 		if _, ok := w.depViewMap[d.String()]; ok {
 			t.Error("expected dependency to be removed")
 		}
 	})
+	// Test cache updates
 	t.Run("simple-update", func(t *testing.T) {
 		w := newWatcher(t)
 		defer w.Stop()

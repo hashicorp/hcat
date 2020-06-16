@@ -60,7 +60,7 @@ func datacentersFunc(r Recaller, used, missing *dep.Set) func(ignore ...bool) ([
 
 		used.Add(d)
 
-		if value, ok := r.Recall(d); ok {
+		if value, ok := r.Recall(d.String()); ok {
 			return value.([]string), nil
 		}
 
@@ -126,7 +126,7 @@ func fileFunc(r Recaller, used, missing *dep.Set, sandboxPath string) func(strin
 
 		used.Add(d)
 
-		if value, ok := r.Recall(d); ok {
+		if value, ok := r.Recall(d.String()); ok {
 			if value == nil {
 				return "", nil
 			}
@@ -154,7 +154,7 @@ func keyFunc(r Recaller, used, missing *dep.Set) func(string) (string, error) {
 
 		used.Add(d)
 
-		if value, ok := r.Recall(d); ok {
+		if value, ok := r.Recall(d.String()); ok {
 			if value == nil {
 				return "", nil
 			}
@@ -181,7 +181,7 @@ func keyExistsFunc(r Recaller, used, missing *dep.Set) func(string) (bool, error
 
 		used.Add(d)
 
-		if value, ok := r.Recall(d); ok {
+		if value, ok := r.Recall(d.String()); ok {
 			return value != nil, nil
 		}
 
@@ -206,7 +206,7 @@ func keyWithDefaultFunc(r Recaller, used, missing *dep.Set) func(string, string)
 
 		used.Add(d)
 
-		if value, ok := r.Recall(d); ok {
+		if value, ok := r.Recall(d.String()); ok {
 			if value == nil || value.(string) == "" {
 				return def, nil
 			}
@@ -241,7 +241,7 @@ func lsFunc(r Recaller, used, missing *dep.Set, emptyIsSafe bool) func(string) (
 		used.Add(d)
 
 		// Only return non-empty top-level keys
-		if value, ok := r.Recall(d); ok {
+		if value, ok := r.Recall(d.String()); ok {
 			for _, pair := range value.([]*dep.KeyPair) {
 				if pair.Key != "" && !strings.Contains(pair.Key, "/") {
 					result = append(result, pair)
@@ -283,7 +283,7 @@ func nodeFunc(r Recaller, used, missing *dep.Set) func(...string) (*dep.CatalogN
 
 		used.Add(d)
 
-		if value, ok := r.Recall(d); ok {
+		if value, ok := r.Recall(d.String()); ok {
 			return value.(*dep.CatalogNode), nil
 		}
 
@@ -305,7 +305,7 @@ func nodesFunc(r Recaller, used, missing *dep.Set) func(...string) ([]*dep.Node,
 
 		used.Add(d)
 
-		if value, ok := r.Recall(d); ok {
+		if value, ok := r.Recall(d.String()); ok {
 			return value.([]*dep.Node), nil
 		}
 
@@ -352,7 +352,7 @@ func secretFunc(r Recaller, used, missing *dep.Set) func(...string) (*dep.Secret
 
 		used.Add(d)
 
-		if value, ok := r.Recall(d); ok {
+		if value, ok := r.Recall(d.String()); ok {
 			result = value.(*dep.Secret)
 			return result, nil
 		}
@@ -379,7 +379,7 @@ func secretsFunc(r Recaller, used, missing *dep.Set) func(string) ([]string, err
 
 		used.Add(d)
 
-		if value, ok := r.Recall(d); ok {
+		if value, ok := r.Recall(d.String()); ok {
 			result = value.([]string)
 			return result, nil
 		}
@@ -449,7 +449,7 @@ func serviceFunc(r Recaller, used, missing *dep.Set) func(...string) ([]*dep.Hea
 
 		used.Add(d)
 
-		if value, ok := r.Recall(d); ok {
+		if value, ok := r.Recall(d.String()); ok {
 			return value.([]*dep.HealthService), nil
 		}
 
@@ -471,7 +471,7 @@ func servicesFunc(r Recaller, used, missing *dep.Set) func(...string) ([]*dep.Ca
 
 		used.Add(d)
 
-		if value, ok := r.Recall(d); ok {
+		if value, ok := r.Recall(d.String()); ok {
 			return value.([]*dep.CatalogSnippet), nil
 		}
 
@@ -497,7 +497,7 @@ func connectFunc(r Recaller, used, missing *dep.Set) func(...string) ([]*dep.Hea
 
 		used.Add(d)
 
-		if value, ok := r.Recall(d); ok {
+		if value, ok := r.Recall(d.String()); ok {
 			return value.([]*dep.HealthService), nil
 		}
 
@@ -512,7 +512,7 @@ func connectCARootsFunc(r Recaller, used, missing *dep.Set,
 	return func(...string) ([]*api.CARoot, error) {
 		d := dep.NewConnectCAQuery()
 		used.Add(d)
-		if value, ok := r.Recall(d); ok {
+		if value, ok := r.Recall(d.String()); ok {
 			return value.([]*api.CARoot), nil
 		}
 		missing.Add(d)
@@ -528,7 +528,7 @@ func connectLeafFunc(r Recaller, used, missing *dep.Set,
 		}
 		d := dep.NewConnectLeafQuery(s[0])
 		used.Add(d)
-		if value, ok := r.Recall(d); ok {
+		if value, ok := r.Recall(d.String()); ok {
 			return value.(*api.LeafCert), nil
 		}
 		missing.Add(d)
@@ -560,7 +560,7 @@ func treeFunc(r Recaller, used, missing *dep.Set, emptyIsSafe bool) func(string)
 		used.Add(d)
 
 		// Only return non-empty top-level keys
-		if value, ok := r.Recall(d); ok {
+		if value, ok := r.Recall(d.String()); ok {
 			for _, pair := range value.([]*dep.KeyPair) {
 				parts := strings.Split(pair.Key, "/")
 				if parts[len(parts)-1] != "" {
