@@ -23,7 +23,6 @@ type Cacher interface {
 
 // Watcher is a top-level manager for views that poll Consul for data.
 type Watcher struct {
-	sync.Mutex // for depViewMap access
 	// clients is the collection of API clients to talk to upstreams.
 	clients Looker
 	// cache stores the data fetched from remote sources
@@ -36,8 +35,9 @@ type Watcher struct {
 	// olddepCh is the chan where no longer used dependencies are sent.
 	olddepCh chan string
 
-	// depViewMap is a map of Template-IDs to Views.
-	depViewMap map[string]*view
+	// depViewMap is a map of Dependency-IDs to Views.
+	depViewMap   map[string]*view
+	depViewMapMx sync.Mutex
 
 	// Consul related
 	retryFuncConsul RetryFunc
@@ -146,8 +146,8 @@ func (w *Watcher) Wait(timeout time.Duration) error {
 // Stop halts this watcher and any currently polling views immediately. If a
 // view was in the middle of a poll, no data will be returned.
 func (w *Watcher) Stop() {
-	w.Lock()
-	defer w.Unlock()
+	w.depViewMapMx.Lock()
+	defer w.depViewMapMx.Unlock()
 
 	log.Printf("[DEBUG] (watcher) stopping all views")
 
@@ -176,8 +176,8 @@ func (w *Watcher) Recall(id string) (interface{}, bool) {
 
 // Watching determines if the given dependency is being watched.
 func (w *Watcher) Watching(id string) bool {
-	w.Lock()
-	defer w.Unlock()
+	w.depViewMapMx.Lock()
+	defer w.depViewMapMx.Unlock()
 
 	_, ok := w.depViewMap[id]
 	return ok
@@ -185,8 +185,8 @@ func (w *Watcher) Watching(id string) bool {
 
 // Size returns the number of views this watcher is watching.
 func (w *Watcher) Size() int {
-	w.Lock()
-	defer w.Unlock()
+	w.depViewMapMx.Lock()
+	defer w.depViewMapMx.Unlock()
 	return len(w.depViewMap)
 }
 
@@ -197,8 +197,8 @@ func (w *Watcher) Size() int {
 // If the Dependency already existed, it this function will return false. If the
 // view was successfully created, it will return true.
 func (w *Watcher) add(d dep.Dependency) bool {
-	w.Lock()
-	defer w.Unlock()
+	w.depViewMapMx.Lock()
+	defer w.depViewMapMx.Unlock()
 
 	log.Printf("[DEBUG] (watcher) adding %s", d)
 
@@ -237,8 +237,8 @@ func (w *Watcher) add(d dep.Dependency) bool {
 // function will return false. If the view does exist, this function will return
 // true upon successful deletion.
 func (w *Watcher) remove(id string) bool {
-	w.Lock()
-	defer w.Unlock()
+	w.depViewMapMx.Lock()
+	defer w.depViewMapMx.Unlock()
 
 	log.Printf("[DEBUG] (watcher) removing %s", id)
 
@@ -258,8 +258,8 @@ func (w *Watcher) remove(id string) bool {
 // ForceWatching is used to force setting the internal state of watching
 // a dependency. This is only used for unit testing purposes.
 func (w *Watcher) forceWatching(d dep.Dependency, enabled bool) {
-	w.Lock()
-	defer w.Unlock()
+	w.depViewMapMx.Lock()
+	defer w.depViewMapMx.Unlock()
 
 	if enabled {
 		w.depViewMap[d.String()] = nil
