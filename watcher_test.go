@@ -210,6 +210,57 @@ func TestWait(t *testing.T) {
 			t.Fatal("failed update")
 		}
 	})
+	// test tracking of updated dependencies
+	t.Run("simple-updated-tracking", func(t *testing.T) {
+		w := newWatcher(t)
+		defer w.Stop()
+		foodep := &dep.FakeDep{Name: "foo"}
+		view := newView(&newViewInput{
+			Dependency: foodep,
+		})
+		w.dataCh <- view
+		w.Wait(0)
+		if w.changed.Len() != 1 {
+			t.Fatal("failed to track updated dependency")
+		}
+	})
+	t.Run("multi-updated-tracking", func(t *testing.T) {
+		w := newWatcher(t)
+		defer w.Stop()
+		deps := make([]dep.Dependency, 5)
+		views := make([]*view, 5)
+		for i := 0; i < 5; i++ {
+			deps[i] = &dep.FakeDep{Name: strconv.Itoa(i)}
+			views[i] = newView(&newViewInput{
+				Dependency: deps[i],
+			})
+		}
+		go func() {
+			for _, v := range views {
+				w.dataCh <- v
+			}
+		}()
+		w.Wait(0)
+		if w.changed.Len() != 5 {
+			t.Fatal("failed to track updated dependency")
+		}
+	})
+	t.Run("duplicate-updated-tracking", func(t *testing.T) {
+		w := newWatcher(t)
+		defer w.Stop()
+		for i := 0; i < 2; i++ {
+			foodep := &dep.FakeDep{Name: "foo"}
+			view := newView(&newViewInput{
+				Dependency: foodep,
+			})
+			w.dataCh <- view
+		}
+		w.Wait(0)
+		if w.changed.Len() != 1 {
+			t.Fatal("failed to track updated dependency")
+		}
+	})
+
 }
 
 func newWatcher(t *testing.T) *Watcher {

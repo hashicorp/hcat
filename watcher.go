@@ -35,6 +35,11 @@ type Watcher struct {
 	// olddepCh is the chan where no longer used dependencies are sent.
 	olddepCh chan string
 
+	// changed is a list of deps that have been changed since last check
+	changed stringSet
+	// tracker tracks template<->dependencies (see bottom of this file)
+	depTracker *tracker
+
 	// depViewMap is a map of Dependency-IDs to Views.
 	depViewMap   map[string]*view
 	depViewMapMx sync.Mutex
@@ -82,10 +87,12 @@ func NewWatcher(i *NewWatcherInput) (*Watcher, error) {
 	w := &Watcher{
 		clients:         i.Clients,
 		cache:           i.Cache,
-		depViewMap:      make(map[string]*view),
 		dataCh:          make(chan *view, dataBufferSize),
 		errCh:           make(chan error),
 		olddepCh:        make(chan string, dataBufferSize),
+		changed:         newStringSet(),
+		depTracker:      &tracker{},
+		depViewMap:      make(map[string]*view),
 		retryFuncConsul: i.ConsulRetryFunc,
 		maxStale:        i.ConsulMaxStale,
 		blockWaitTime:   i.ConsulBlockWait,
@@ -105,33 +112,51 @@ func NewWatcher(i *NewWatcherInput) (*Watcher, error) {
 	return w, nil
 }
 
+// Wait blocks until new a watched value changes
 func (w *Watcher) Wait(timeout time.Duration) error {
 	var timer <-chan time.Time
 	if timeout > 0 {
 		timer = time.After(timeout)
+	}
+	w.changed.Clear() // clear old updates before waiting on new ones
+
+	usedDone := make(chan struct{})
+	defer close(usedDone)
+	go func() {
+		for k := range w.depTracker.unused(w.depViewMap) {
+			select {
+			case w.olddepCh <- k:
+			case <-usedDone:
+				return
+			}
+		}
+	}()
+
+	// combine cache and changed updates so we don't forget one
+	dataUpdate := func(v *view) {
+		id := v.Dependency().String()
+		w.cache.Save(id, v.Data())
+		w.changed.Add(id)
 	}
 	for {
 		select {
 		case <-timer:
 			return nil
 		case view := <-w.dataCh:
-			w.cache.Save(view.Dependency(), view.Data())
-
+			dataUpdate(view)
 			// Drain all dependency data. Prevents re-rendering templates over
 			// and over when a large batch of dependencies are updated.
 			// See GH-168 for background.
 			for {
 				select {
 				case view := <-w.dataCh:
-					w.cache.Save(view.Dependency(), view.Data())
+					dataUpdate(view)
 				case <-time.After(time.Microsecond):
 					return nil
 				}
 			}
 
-		// XXX the resolver code will write to this
 		// olddepCh outputs deps that need to be removed
-		// should it drain, like above for dataCh?
 		case d := <-w.olddepCh:
 			w.remove(d)
 
@@ -266,4 +291,48 @@ func (w *Watcher) forceWatching(d dep.Dependency, enabled bool) {
 	} else {
 		delete(w.depViewMap, d.String())
 	}
+}
+
+// internal structure used to track template <-> dependencies relationships
+type tracker struct {
+	sync.RWMutex
+	deps map[string]map[string]struct{}
+	tpls map[string]map[string]struct{}
+}
+
+func (t *tracker) update(tmplID string, deps ...dep.Dependency) {
+	t.clear(tmplID)
+	t.Lock()
+	defer t.Unlock()
+	for _, dep := range deps {
+		t.deps[dep.String()][tmplID] = struct{}{}
+		t.tpls[tmplID][dep.String()] = struct{}{}
+	}
+}
+
+func (t *tracker) clear(tmplID string) {
+	t.Lock()
+	defer t.Unlock()
+	for d := range t.tpls[tmplID] {
+		delete(t.deps[d], tmplID)
+		delete(t.tpls[tmplID], d)
+	}
+}
+
+func (t *tracker) unused(depIDs map[string]*view) map[string]struct{} {
+	t.RLock()
+	defer t.RUnlock()
+	result := make(map[string]struct{})
+	for depID := range depIDs {
+		if len(t.deps[depID]) == 0 {
+			result[depID] = struct{}{}
+		}
+	}
+	return result
+}
+
+func (t *tracker) templateDeps(tmplID string) map[string]struct{} {
+	t.RLock()
+	defer t.RUnlock()
+	return t.tpls[tmplID]
 }
