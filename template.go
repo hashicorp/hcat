@@ -111,7 +111,7 @@ func NewTemplate(i *NewTemplateInput) (*Template, error) {
 }
 
 // ID returns the identifier for this template.
-func (t *Template) id() string {
+func (t *Template) ID() string {
 	return t.hexMD5
 }
 
@@ -138,7 +138,7 @@ type ExecuteResult struct {
 func (t *Template) Execute(r Recaller) (*ExecuteResult, error) {
 	var used, missing = newDepSet(), newDepSet()
 
-	tmpl := template.New(t.id())
+	tmpl := template.New(t.ID())
 	tmpl.Delims(t.leftDelim, t.rightDelim)
 
 	tmpl.Funcs(funcMap(&funcMapInput{

@@ -106,7 +106,7 @@ func NewWatcher(i *NewWatcherInput) (*Watcher, error) {
 		if err != nil {
 			return nil, errors.Wrap(err, "watcher")
 		}
-		w.add(vt)
+		w.Add(vt)
 	}
 
 	return w, nil
@@ -168,6 +168,30 @@ func (w *Watcher) Wait(timeout time.Duration) error {
 	}
 }
 
+// Changed is used to check a template to see if any of its dependencies
+// have beed updated (changed).
+func (w *Watcher) Changed(tmplID string) bool {
+	deps, initialized := w.depTracker.templateDeps(tmplID)
+	if !initialized { // first pass, always return true
+		return true
+	}
+	for depID := range w.changed.Map() {
+		if _, ok := deps[depID]; ok {
+			return false
+		}
+	}
+	return true
+}
+
+// TemplateDeps is used to tell the Watcher which dependencies are used by
+// which templates. This is used to enable a you to check to see if a template
+// needs to be udpated by checking if any of its dependencies have Changed().
+func (w *Watcher) TemplateDeps(tmplID string, deps ...Dependency) {
+	if len(deps) > 0 {
+		w.depTracker.update(tmplID, deps...)
+	}
+}
+
 // Stop halts this watcher and any currently polling views immediately. If a
 // view was in the middle of a poll, no data will be returned.
 func (w *Watcher) Stop() {
@@ -206,22 +230,13 @@ func (w *Watcher) Size() int {
 	return len(w.depViewMap)
 }
 
-// Watching determines if the given dependency is being watched.
-func (w *Watcher) watching(id string) bool {
-	w.depViewMapMx.Lock()
-	defer w.depViewMapMx.Unlock()
-
-	_, ok := w.depViewMap[id]
-	return ok
-}
-
 // add adds the given dependency to the list of monitored dependencies
 // and start the associated view. If the dependency already exists, no action is
 // taken.
 //
 // If the Dependency already existed, it this function will return false. If the
 // view was successfully created, it will return true.
-func (w *Watcher) add(d dep.Dependency) bool {
+func (w *Watcher) Add(d dep.Dependency) bool {
 	w.depViewMapMx.Lock()
 	defer w.depViewMapMx.Unlock()
 
@@ -278,6 +293,15 @@ func (w *Watcher) remove(id string) bool {
 
 	log.Printf("[TRACE] (watcher) %s did not exist, skipping", id)
 	return false
+}
+
+// Watching determines if the given dependency is being watched.
+func (w *Watcher) watching(id string) bool {
+	w.depViewMapMx.Lock()
+	defer w.depViewMapMx.Unlock()
+
+	_, ok := w.depViewMap[id]
+	return ok
 }
 
 // ForceWatching is used to force setting the internal state of watching
