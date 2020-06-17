@@ -91,7 +91,7 @@ func NewWatcher(i *NewWatcherInput) (*Watcher, error) {
 		errCh:           make(chan error),
 		olddepCh:        make(chan string, dataBufferSize),
 		changed:         newStringSet(),
-		depTracker:      &tracker{},
+		depTracker:      newTracker(),
 		depViewMap:      make(map[string]*view),
 		retryFuncConsul: i.ConsulRetryFunc,
 		maxStale:        i.ConsulMaxStale,
@@ -294,10 +294,26 @@ func (w *Watcher) forceWatching(d dep.Dependency, enabled bool) {
 }
 
 // internal structure used to track template <-> dependencies relationships
+type depmap map[string]map[string]struct{}
+
+func (dm depmap) add(k, k1 string) {
+	if _, ok := dm[k]; !ok {
+		dm[k] = make(map[string]struct{})
+	}
+	dm[k][k1] = struct{}{}
+}
+
 type tracker struct {
 	sync.RWMutex
-	deps map[string]map[string]struct{}
-	tpls map[string]map[string]struct{}
+	deps depmap
+	tpls depmap
+}
+
+func newTracker() *tracker {
+	return &tracker{
+		deps: make(depmap),
+		tpls: make(depmap),
+	}
 }
 
 func (t *tracker) update(tmplID string, deps ...dep.Dependency) {
@@ -305,8 +321,8 @@ func (t *tracker) update(tmplID string, deps ...dep.Dependency) {
 	t.Lock()
 	defer t.Unlock()
 	for _, dep := range deps {
-		t.deps[dep.String()][tmplID] = struct{}{}
-		t.tpls[tmplID][dep.String()] = struct{}{}
+		t.deps.add(dep.String(), tmplID)
+		t.tpls.add(tmplID, dep.String())
 	}
 }
 
@@ -331,8 +347,9 @@ func (t *tracker) unused(depIDs map[string]*view) map[string]struct{} {
 	return result
 }
 
-func (t *tracker) templateDeps(tmplID string) map[string]struct{} {
+func (t *tracker) templateDeps(tmplID string) (map[string]struct{}, bool) {
 	t.RLock()
 	defer t.RUnlock()
-	return t.tpls[tmplID]
+	deps, ok := t.tpls[tmplID]
+	return deps, ok
 }
