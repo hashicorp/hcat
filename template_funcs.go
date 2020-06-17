@@ -337,7 +337,7 @@ func secretFunc(r Recaller, used, missing depSet) func(...string) (*dep.Secret, 
 			data[k] = v
 		}
 
-		var d dep.Dependency
+		var d Dependency
 		var err error
 
 		if len(rest) == 0 {

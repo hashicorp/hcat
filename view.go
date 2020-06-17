@@ -15,7 +15,7 @@ import (
 // received from Consul.
 type view struct {
 	// dependency is the dependency that is associated with this view
-	dependency dep.Dependency
+	dependency Dependency
 
 	// clients is the list of clients to communicate upstream. This is passed
 	// directly to the dependency.
@@ -48,7 +48,7 @@ type view struct {
 // NewViewInput is used as input to the NewView function.
 type newViewInput struct {
 	// Dependency is the dependency to associate with the new view.
-	Dependency dep.Dependency
+	Dependency Dependency
 
 	// Clients is the list of clients to communicate upstream. This is passed
 	// directly to the dependency.
@@ -79,7 +79,7 @@ func newView(i *newViewInput) *view {
 }
 
 // Dependency returns the dependency attached to this view.
-func (v *view) Dependency() dep.Dependency {
+func (v *view) Dependency() Dependency {
 	return v.dependency
 }
 

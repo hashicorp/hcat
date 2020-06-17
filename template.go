@@ -123,11 +123,11 @@ func (t *Template) Render(content []byte) (RenderResult, error) {
 // ExecuteResult is the result of the template execution.
 type ExecuteResult struct {
 	// Used is the set of dependencies that were used.
-	// XXX convert to []dep.Dependency ???
+	// XXX convert to []Dependency ???
 	Used depSet
 
 	// Missing is the set of dependencies that were missing.
-	// XXX convert to []dep.Dependency ???
+	// XXX convert to []Dependency ???
 	Missing depSet
 
 	// Output the (possibly partially) filled in template

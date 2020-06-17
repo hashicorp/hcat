@@ -3,8 +3,6 @@ package hat
 import (
 	"fmt"
 	"sync"
-
-	dep "github.com/hashicorp/hat/internal/dependency"
 )
 
 // stringSet is a simple string set implementation used
@@ -59,18 +57,18 @@ func (s stringSet) Clear() {
 // Relative ordering is preserved.
 type depSet struct {
 	stringSet
-	list []dep.Dependency
+	list []Dependency
 }
 
 func newDepSet() depSet {
 	return depSet{
-		list:      make([]dep.Dependency, 0, 8),
+		list:      make([]Dependency, 0, 8),
 		stringSet: newStringSet(),
 	}
 }
 
 // Add adds a new element to the set if it does not already exist.
-func (s depSet) Add(d dep.Dependency) bool {
+func (s depSet) Add(d Dependency) bool {
 	s.Lock()
 	defer s.Unlock()
 	if _, ok := s.stringSet.set[d.String()]; !ok {
@@ -82,7 +80,7 @@ func (s depSet) Add(d dep.Dependency) bool {
 }
 
 // List returns the insertion-ordered list of dependencies.
-func (s depSet) List() []dep.Dependency {
+func (s depSet) List() []Dependency {
 	s.RLock()
 	defer s.RUnlock()
 	return s.list[:]

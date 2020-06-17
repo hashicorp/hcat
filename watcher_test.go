@@ -188,7 +188,7 @@ func TestWait(t *testing.T) {
 	t.Run("multi-update", func(t *testing.T) {
 		w := newWatcher(t)
 		defer w.Stop()
-		deps := make([]dep.Dependency, 5)
+		deps := make([]Dependency, 5)
 		views := make([]*view, 5)
 		for i := 0; i < 5; i++ {
 			deps[i] = &dep.FakeDep{Name: strconv.Itoa(i)}
@@ -227,7 +227,7 @@ func TestWait(t *testing.T) {
 	t.Run("multi-updated-tracking", func(t *testing.T) {
 		w := newWatcher(t)
 		defer w.Stop()
-		deps := make([]dep.Dependency, 5)
+		deps := make([]Dependency, 5)
 		views := make([]*view, 5)
 		for i := 0; i < 5; i++ {
 			deps[i] = &dep.FakeDep{Name: strconv.Itoa(i)}

@@ -21,7 +21,7 @@ type Cacher interface {
 	Reset()
 }
 
-// Watcher is a top-level manager for views that poll Consul for data.
+// Watcher is a manager for views that poll external sources for data.
 type Watcher struct {
 	// clients is the collection of API clients to talk to upstreams.
 	clients Looker
@@ -236,7 +236,7 @@ func (w *Watcher) Size() int {
 //
 // If the Dependency already existed, it this function will return false. If the
 // view was successfully created, it will return true.
-func (w *Watcher) Add(d dep.Dependency) bool {
+func (w *Watcher) Add(d Dependency) bool {
 	w.depViewMapMx.Lock()
 	defer w.depViewMapMx.Unlock()
 
@@ -306,7 +306,7 @@ func (w *Watcher) watching(id string) bool {
 
 // ForceWatching is used to force setting the internal state of watching
 // a dependency. This is only used for unit testing purposes.
-func (w *Watcher) forceWatching(d dep.Dependency, enabled bool) {
+func (w *Watcher) forceWatching(d Dependency, enabled bool) {
 	w.depViewMapMx.Lock()
 	defer w.depViewMapMx.Unlock()
 
@@ -340,7 +340,7 @@ func newTracker() *tracker {
 	}
 }
 
-func (t *tracker) update(tmplID string, deps ...dep.Dependency) {
+func (t *tracker) update(tmplID string, deps ...Dependency) {
 	t.clear(tmplID)
 	t.Lock()
 	defer t.Unlock()
