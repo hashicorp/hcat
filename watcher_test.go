@@ -54,7 +54,7 @@ func TestWatching_notExists(t *testing.T) {
 	w := newWatcher(t)
 
 	d := &dep.FakeDep{}
-	if w.Watching(d.String()) == true {
+	if w.watching(d.String()) == true {
 		t.Errorf("expected to not be watching")
 	}
 }
@@ -65,7 +65,7 @@ func TestWatching_exists(t *testing.T) {
 	d := &dep.FakeDep{}
 	w.add(d)
 
-	if w.Watching(d.String()) == false {
+	if w.watching(d.String()) == false {
 		t.Errorf("expected to be watching")
 	}
 }

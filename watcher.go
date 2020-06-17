@@ -199,20 +199,20 @@ func (w *Watcher) Recall(id string) (interface{}, bool) {
 	return w.cache.Recall(id)
 }
 
-// Watching determines if the given dependency is being watched.
-func (w *Watcher) Watching(id string) bool {
-	w.depViewMapMx.Lock()
-	defer w.depViewMapMx.Unlock()
-
-	_, ok := w.depViewMap[id]
-	return ok
-}
-
 // Size returns the number of views this watcher is watching.
 func (w *Watcher) Size() int {
 	w.depViewMapMx.Lock()
 	defer w.depViewMapMx.Unlock()
 	return len(w.depViewMap)
+}
+
+// Watching determines if the given dependency is being watched.
+func (w *Watcher) watching(id string) bool {
+	w.depViewMapMx.Lock()
+	defer w.depViewMapMx.Unlock()
+
+	_, ok := w.depViewMap[id]
+	return ok
 }
 
 // add adds the given dependency to the list of monitored dependencies
