@@ -10,114 +10,120 @@ import (
 	"github.com/pkg/errors"
 )
 
-func TestAdd_updatesMap(t *testing.T) {
-	w := newWatcher(t)
+func TestWatcherAdd(t *testing.T) {
+	t.Run("updates-map", func(t *testing.T) {
+		w := newWatcher(t)
 
-	d := &dep.FakeDep{}
-	if added := w.Add(d); !added {
-		t.Fatal("expected add to return true")
-	}
+		d := &dep.FakeDep{}
+		if added := w.Add(d); !added {
+			t.Fatal("expected add to return true")
+		}
 
-	_, exists := w.depViewMap[d.String()]
-	if !exists {
-		t.Errorf("expected add to append to map")
-	}
+		_, exists := w.depViewMap[d.String()]
+		if !exists {
+			t.Errorf("expected add to append to map")
+		}
+	})
+	t.Run("exists", func(t *testing.T) {
+		w := newWatcher(t)
+
+		d := &dep.FakeDep{}
+		w.depViewMap[d.String()] = &view{}
+
+		if added := w.Add(d); added {
+			t.Errorf("expected add to return false")
+		}
+	})
+	t.Run("startsViewPoll", func(t *testing.T) {
+		w := newWatcher(t)
+
+		if added := w.Add(&dep.FakeDep{}); !added {
+			t.Errorf("expected add to return true")
+		}
+
+		select {
+		case err := <-w.errCh:
+			t.Fatal(err)
+		case <-w.dataCh:
+			// Got data, which means the poll was started
+		}
+	})
 }
 
-func TestAdd_exists(t *testing.T) {
-	w := newWatcher(t)
+func TestWatcherWatching(t *testing.T) {
+	t.Run("not-exists", func(t *testing.T) {
+		w := newWatcher(t)
 
-	d := &dep.FakeDep{}
-	w.depViewMap[d.String()] = &view{}
+		d := &dep.FakeDep{}
+		if w.watching(d.String()) == true {
+			t.Errorf("expected to not be watching")
+		}
+	})
 
-	if added := w.Add(d); added {
-		t.Errorf("expected add to return false")
-	}
-}
+	t.Run("exists", func(t *testing.T) {
+		w := newWatcher(t)
 
-func TestAdd_startsViewPoll(t *testing.T) {
-	w := newWatcher(t)
-
-	if added := w.Add(&dep.FakeDep{}); !added {
-		t.Errorf("expected add to return true")
-	}
-
-	select {
-	case err := <-w.errCh:
-		t.Fatal(err)
-	case <-w.dataCh:
-		// Got data, which means the poll was started
-	}
-}
-
-func TestWatching_notExists(t *testing.T) {
-	w := newWatcher(t)
-
-	d := &dep.FakeDep{}
-	if w.watching(d.String()) == true {
-		t.Errorf("expected to not be watching")
-	}
-}
-
-func TestWatching_exists(t *testing.T) {
-	w := newWatcher(t)
-
-	d := &dep.FakeDep{}
-	w.Add(d)
-
-	if w.watching(d.String()) == false {
-		t.Errorf("expected to be watching")
-	}
-}
-
-func TestRemove_exists(t *testing.T) {
-	w := newWatcher(t)
-
-	d := &dep.FakeDep{}
-	w.Add(d)
-
-	removed := w.remove(d.String())
-	if removed != true {
-		t.Error("expected Remove to return true")
-	}
-
-	if _, ok := w.depViewMap[d.String()]; ok {
-		t.Error("expected dependency to be removed")
-	}
-}
-
-func TestRemove_doesNotExist(t *testing.T) {
-	w := newWatcher(t)
-
-	var fd dep.FakeDep
-	removed := w.remove(fd.String())
-	if removed != false {
-		t.Fatal("expected Remove to return false")
-	}
-}
-
-func TestSize_empty(t *testing.T) {
-	w := newWatcher(t)
-
-	if w.Size() != 0 {
-		t.Errorf("expected %d to be %d", w.Size(), 0)
-	}
-}
-
-func TestSize_returnsNumViews(t *testing.T) {
-	w := newWatcher(t)
-
-	for i := 0; i < 10; i++ {
-		d := &dep.FakeDep{Name: fmt.Sprintf("%d", i)}
+		d := &dep.FakeDep{}
 		w.Add(d)
-	}
 
-	if w.Size() != 10 {
-		t.Errorf("expected %d to be %d", w.Size(), 10)
-	}
+		if w.watching(d.String()) == false {
+			t.Errorf("expected to be watching")
+		}
+	})
 }
 
-func TestWait(t *testing.T) {
+func TestWatcherRemove(t *testing.T) {
+	t.Run("exists", func(t *testing.T) {
+		w := newWatcher(t)
+
+		d := &dep.FakeDep{}
+		w.Add(d)
+
+		removed := w.remove(d.String())
+		if removed != true {
+			t.Error("expected Remove to return true")
+		}
+
+		if _, ok := w.depViewMap[d.String()]; ok {
+			t.Error("expected dependency to be removed")
+		}
+	})
+
+	t.Run("does-not-exist", func(t *testing.T) {
+		w := newWatcher(t)
+
+		var fd dep.FakeDep
+		removed := w.remove(fd.String())
+		if removed != false {
+			t.Fatal("expected Remove to return false")
+		}
+	})
+}
+
+func TestWatcherSize(t *testing.T) {
+	t.Run("empty", func(t *testing.T) {
+		w := newWatcher(t)
+
+		if w.Size() != 0 {
+			t.Errorf("expected %d to be %d", w.Size(), 0)
+		}
+	})
+
+	t.Run("returns-num-views", func(t *testing.T) {
+		w := newWatcher(t)
+
+		for i := 0; i < 10; i++ {
+			d := &dep.FakeDep{Name: fmt.Sprintf("%d", i)}
+			w.Add(d)
+		}
+
+		if w.Size() != 10 {
+			t.Errorf("expected %d to be %d", w.Size(), 10)
+		}
+	})
+}
+
+func TestWatcherWait(t *testing.T) {
 	t.Run("timeout", func(t *testing.T) {
 		w := newWatcher(t)
 		defer w.Stop()
