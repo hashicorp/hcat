@@ -67,6 +67,9 @@ type CreateClientInput struct {
 	TransportMaxIdleConns        int
 	TransportMaxIdleConnsPerHost int
 	TransportTLSHandshakeTimeout time.Duration
+
+	// optionally, for testing, just pass in a finished transport
+	Transport *http.Transport
 }
 
 // NewClientSet creates a new client set that is ready to accept clients.
@@ -216,6 +219,9 @@ func (c *ClientSet) Stop() {
 }
 
 func newTransport(i *CreateClientInput) (*http.Transport, error) {
+	if i.Transport != nil {
+		return i.Transport, nil
+	}
 	// This transport will attempt to keep connections open to the server.
 	transport := &http.Transport{
 		Proxy: http.ProxyFromEnvironment,
