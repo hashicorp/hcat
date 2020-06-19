@@ -40,44 +40,25 @@ type vaultClient struct {
 	httpClient *http.Client
 }
 
-// CreateConsulClientInput is used as input to the CreateConsulClient function.
-type CreateConsulClientInput struct {
-	Address      string
-	Namespace    string
-	Token        string
+// CreateClientInput is used as input to the CreateClient functions.
+type CreateClientInput struct {
+	Address   string
+	Namespace string
+	Token     string
+	// vault only
+	UnwrapToken bool
+	// consul only
 	AuthEnabled  bool
 	AuthUsername string
 	AuthPassword string
-	SSLEnabled   bool
-	SSLVerify    bool
-	SSLCert      string
-	SSLKey       string
-	SSLCACert    string
-	SSLCAPath    string
-	ServerName   string
-
-	TransportDialKeepAlive       time.Duration
-	TransportDialTimeout         time.Duration
-	TransportDisableKeepAlives   bool
-	TransportIdleConnTimeout     time.Duration
-	TransportMaxIdleConns        int
-	TransportMaxIdleConnsPerHost int
-	TransportTLSHandshakeTimeout time.Duration
-}
-
-// CreateVaultClientInput is used as input to the CreateVaultClient function.
-type CreateVaultClientInput struct {
-	Address     string
-	Namespace   string
-	Token       string
-	UnwrapToken bool
-	SSLEnabled  bool
-	SSLVerify   bool
-	SSLCert     string
-	SSLKey      string
-	SSLCACert   string
-	SSLCAPath   string
-	ServerName  string
+	// Transport/TLS
+	SSLEnabled bool
+	SSLVerify  bool
+	SSLCert    string
+	SSLKey     string
+	SSLCACert  string
+	SSLCAPath  string
+	ServerName string
 
 	TransportDialKeepAlive       time.Duration
 	TransportDialTimeout         time.Duration
@@ -94,7 +75,7 @@ func NewClientSet() *ClientSet {
 }
 
 // CreateConsulClient creates a new Consul API client from the given input.
-func (c *ClientSet) CreateConsulClient(i *CreateConsulClientInput) error {
+func (c *ClientSet) CreateConsulClient(i *CreateClientInput) error {
 	consulConfig := consulapi.DefaultConfig()
 
 	if i.Address != "" {
@@ -116,70 +97,14 @@ func (c *ClientSet) CreateConsulClient(i *CreateConsulClientInput) error {
 		}
 	}
 
-	// This transport will attempt to keep connections open to the Consul server.
-	transport := &http.Transport{
-		Proxy: http.ProxyFromEnvironment,
-		Dial: (&net.Dialer{
-			Timeout:   i.TransportDialTimeout,
-			KeepAlive: i.TransportDialKeepAlive,
-		}).Dial,
-		DisableKeepAlives:   i.TransportDisableKeepAlives,
-		MaxIdleConns:        i.TransportMaxIdleConns,
-		IdleConnTimeout:     i.TransportIdleConnTimeout,
-		MaxIdleConnsPerHost: i.TransportMaxIdleConnsPerHost,
-		TLSHandshakeTimeout: i.TransportTLSHandshakeTimeout,
+	transport, err := newTransport(i)
+	if err != nil {
+		return err
 	}
-
-	// Configure SSL
+	// Setup the new transport
 	if i.SSLEnabled {
 		consulConfig.Scheme = "https"
-
-		var tlsConfig tls.Config
-
-		// Custom certificate or certificate and key
-		if i.SSLCert != "" && i.SSLKey != "" {
-			cert, err := tls.LoadX509KeyPair(i.SSLCert, i.SSLKey)
-			if err != nil {
-				return fmt.Errorf("client set: consul: %s", err)
-			}
-			tlsConfig.Certificates = []tls.Certificate{cert}
-		} else if i.SSLCert != "" {
-			cert, err := tls.LoadX509KeyPair(i.SSLCert, i.SSLCert)
-			if err != nil {
-				return fmt.Errorf("client set: consul: %s", err)
-			}
-			tlsConfig.Certificates = []tls.Certificate{cert}
-		}
-
-		// Custom CA certificate
-		if i.SSLCACert != "" || i.SSLCAPath != "" {
-			rootConfig := &rootcerts.Config{
-				CAFile: i.SSLCACert,
-				CAPath: i.SSLCAPath,
-			}
-			if err := rootcerts.ConfigureTLS(&tlsConfig, rootConfig); err != nil {
-				return fmt.Errorf("client set: consul configuring TLS failed: %s", err)
-			}
-		}
-
-		// Construct all the certificates now
-		tlsConfig.BuildNameToCertificate()
-
-		// SSL verification
-		if i.ServerName != "" {
-			tlsConfig.ServerName = i.ServerName
-			tlsConfig.InsecureSkipVerify = false
-		}
-		if !i.SSLVerify {
-			log.Printf("[WARN] (clients) disabling consul SSL verification")
-			tlsConfig.InsecureSkipVerify = true
-		}
-
-		// Save the TLS config on our transport
-		transport.TLSClientConfig = &tlsConfig
 	}
-
-	// Setup the new transport
 	consulConfig.Transport = transport
 
 	// Create the API client
@@ -199,74 +124,17 @@ func (c *ClientSet) CreateConsulClient(i *CreateConsulClientInput) error {
 	return nil
 }
 
-func (c *ClientSet) CreateVaultClient(i *CreateVaultClientInput) error {
+func (c *ClientSet) CreateVaultClient(i *CreateClientInput) error {
 	vaultConfig := vaultapi.DefaultConfig()
 
 	if i.Address != "" {
 		vaultConfig.Address = i.Address
 	}
 
-	// This transport will attempt to keep connections open to the Vault server.
-	transport := &http.Transport{
-		Proxy: http.ProxyFromEnvironment,
-		Dial: (&net.Dialer{
-			Timeout:   i.TransportDialTimeout,
-			KeepAlive: i.TransportDialKeepAlive,
-		}).Dial,
-		DisableKeepAlives:   i.TransportDisableKeepAlives,
-		MaxIdleConns:        i.TransportMaxIdleConns,
-		IdleConnTimeout:     i.TransportIdleConnTimeout,
-		MaxIdleConnsPerHost: i.TransportMaxIdleConnsPerHost,
-		TLSHandshakeTimeout: i.TransportTLSHandshakeTimeout,
+	transport, err := newTransport(i)
+	if err != nil {
+		return err
 	}
-
-	// Configure SSL
-	if i.SSLEnabled {
-		var tlsConfig tls.Config
-
-		// Custom certificate or certificate and key
-		if i.SSLCert != "" && i.SSLKey != "" {
-			cert, err := tls.LoadX509KeyPair(i.SSLCert, i.SSLKey)
-			if err != nil {
-				return fmt.Errorf("client set: vault: %s", err)
-			}
-			tlsConfig.Certificates = []tls.Certificate{cert}
-		} else if i.SSLCert != "" {
-			cert, err := tls.LoadX509KeyPair(i.SSLCert, i.SSLCert)
-			if err != nil {
-				return fmt.Errorf("client set: vault: %s", err)
-			}
-			tlsConfig.Certificates = []tls.Certificate{cert}
-		}
-
-		// Custom CA certificate
-		if i.SSLCACert != "" || i.SSLCAPath != "" {
-			rootConfig := &rootcerts.Config{
-				CAFile: i.SSLCACert,
-				CAPath: i.SSLCAPath,
-			}
-			if err := rootcerts.ConfigureTLS(&tlsConfig, rootConfig); err != nil {
-				return fmt.Errorf("client set: vault configuring TLS failed: %s", err)
-			}
-		}
-
-		// Construct all the certificates now
-		tlsConfig.BuildNameToCertificate()
-
-		// SSL verification
-		if i.ServerName != "" {
-			tlsConfig.ServerName = i.ServerName
-			tlsConfig.InsecureSkipVerify = false
-		}
-		if !i.SSLVerify {
-			log.Printf("[WARN] (clients) disabling vault SSL verification")
-			tlsConfig.InsecureSkipVerify = true
-		}
-
-		// Save the TLS config on our transport
-		transport.TLSClientConfig = &tlsConfig
-	}
-
 	// Setup the new transport
 	vaultConfig.HttpClient.Transport = transport
 
@@ -345,4 +213,69 @@ func (c *ClientSet) Stop() {
 	if c.vault != nil {
 		c.vault.httpClient.Transport.(*http.Transport).CloseIdleConnections()
 	}
+}
+
+func newTransport(i *CreateClientInput) (*http.Transport, error) {
+	// This transport will attempt to keep connections open to the server.
+	transport := &http.Transport{
+		Proxy: http.ProxyFromEnvironment,
+		Dial: (&net.Dialer{
+			Timeout:   i.TransportDialTimeout,
+			KeepAlive: i.TransportDialKeepAlive,
+		}).Dial,
+		DisableKeepAlives:   i.TransportDisableKeepAlives,
+		MaxIdleConns:        i.TransportMaxIdleConns,
+		IdleConnTimeout:     i.TransportIdleConnTimeout,
+		MaxIdleConnsPerHost: i.TransportMaxIdleConnsPerHost,
+		TLSHandshakeTimeout: i.TransportTLSHandshakeTimeout,
+	}
+
+	// Configure SSL
+	if i.SSLEnabled {
+
+		var tlsConfig tls.Config
+
+		// Custom certificate or certificate and key
+		if i.SSLCert != "" && i.SSLKey != "" {
+			cert, err := tls.LoadX509KeyPair(i.SSLCert, i.SSLKey)
+			if err != nil {
+				return nil, fmt.Errorf("client set: ssl: %s", err)
+			}
+			tlsConfig.Certificates = []tls.Certificate{cert}
+		} else if i.SSLCert != "" {
+			cert, err := tls.LoadX509KeyPair(i.SSLCert, i.SSLCert)
+			if err != nil {
+				return nil, fmt.Errorf("client set: ssl: %s", err)
+			}
+			tlsConfig.Certificates = []tls.Certificate{cert}
+		}
+
+		// Custom CA certificate
+		if i.SSLCACert != "" || i.SSLCAPath != "" {
+			rootConfig := &rootcerts.Config{
+				CAFile: i.SSLCACert,
+				CAPath: i.SSLCAPath,
+			}
+			if err := rootcerts.ConfigureTLS(&tlsConfig, rootConfig); err != nil {
+				return nil, fmt.Errorf("client set: configuring TLS failed: %s", err)
+			}
+		}
+
+		// Construct all the certificates now
+		tlsConfig.BuildNameToCertificate()
+
+		// SSL verification
+		if i.ServerName != "" {
+			tlsConfig.ServerName = i.ServerName
+			tlsConfig.InsecureSkipVerify = false
+		}
+		if !i.SSLVerify {
+			log.Printf("[WARN] (clients) disabling SSL verification")
+			tlsConfig.InsecureSkipVerify = true
+		}
+
+		// Save the TLS config on our transport
+		transport.TLSClientConfig = &tlsConfig
+	}
+	return transport, nil
 }

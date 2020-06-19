@@ -534,7 +534,7 @@ func TestVaultReadQuery_Fetch_PKI_Anonymous(t *testing.T) {
 		})
 
 	anonClient := NewClientSet()
-	anonClient.CreateVaultClient(&CreateVaultClientInput{
+	anonClient.CreateVaultClient(&CreateClientInput{
 		Address: vaultAddr,
 		Token:   "",
 	})
@@ -598,7 +598,7 @@ func TestVaultReadQuery_Fetch_NonSecrets(t *testing.T) {
 	}
 
 	anonClient := NewClientSet()
-	anonClient.CreateVaultClient(&CreateVaultClientInput{
+	anonClient.CreateVaultClient(&CreateClientInput{
 		Address: vaultAddr,
 		Token:   secret.Auth.ClientToken,
 	})

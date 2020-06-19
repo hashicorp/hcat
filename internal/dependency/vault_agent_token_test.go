@@ -60,7 +60,7 @@ func TestVaultAgentTokenQuery_Fetch_missingFile(t *testing.T) {
 	}
 
 	clientSet := NewClientSet()
-	clientSet.CreateVaultClient(&CreateVaultClientInput{
+	clientSet.CreateVaultClient(&CreateClientInput{
 		Token: "foo",
 	})
 	_, _, err = d.Fetch(clientSet, nil)

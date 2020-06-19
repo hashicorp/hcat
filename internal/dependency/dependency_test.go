@@ -27,13 +27,13 @@ func TestMain(m *testing.M) {
 	runTestVault()
 	runTestConsul()
 	clients := NewClientSet()
-	if err := clients.CreateConsulClient(&CreateConsulClientInput{
+	if err := clients.CreateConsulClient(&CreateClientInput{
 		Address: testConsul.HTTPAddr,
 	}); err != nil {
 		testConsul.Stop()
 		Fatalf("failed to create consul client: %v\n", err)
 	}
-	if err := clients.CreateVaultClient(&CreateVaultClientInput{
+	if err := clients.CreateVaultClient(&CreateClientInput{
 		Address: vaultAddr,
 		Token:   vaultToken,
 	}); err != nil {
