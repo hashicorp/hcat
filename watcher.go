@@ -170,6 +170,7 @@ func (w *Watcher) Wait(timeout time.Duration) error {
 
 // Changed is used to check a template to see if any of its dependencies
 // have beed updated (changed).
+// Returns True if template dependencies have changed.
 func (w *Watcher) Changed(tmplID string) bool {
 	deps, initialized := w.depTracker.templateDeps(tmplID)
 	if !initialized { // first pass, always return true
@@ -177,10 +178,10 @@ func (w *Watcher) Changed(tmplID string) bool {
 	}
 	for depID := range w.changed.Map() {
 		if _, ok := deps[depID]; ok {
-			return false
+			return true
 		}
 	}
-	return true
+	return false
 }
 
 // TemplateDeps is used to tell the Watcher which dependencies are used by
