@@ -168,8 +168,8 @@ func (t *Template) Execute(r Recaller) (*ExecuteResult, error) {
 	}
 
 	return &ExecuteResult{
-		Used:    used,
-		Missing: missing,
+		Used:    *used,
+		Missing: *missing,
 		Output:  b.Bytes(),
 	}, nil
 }
@@ -181,8 +181,8 @@ type funcMapInput struct {
 	env          []string
 	funcMapMerge template.FuncMap
 	sandboxPath  string
-	used         depSet
-	missing      depSet
+	used         *depSet
+	missing      *depSet
 }
 
 // funcMap is the map of template functions to their respective functions.

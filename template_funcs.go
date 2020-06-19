@@ -38,7 +38,7 @@ func DenyFunc(...interface{}) (string, error) {
 var now = func() time.Time { return time.Now().UTC() }
 
 // datacentersFunc returns or accumulates datacenter dependencies.
-func datacentersFunc(r Recaller, used, missing depSet) func(ignore ...bool) ([]string, error) {
+func datacentersFunc(r Recaller, used, missing *depSet) func(ignore ...bool) ([]string, error) {
 	return func(i ...bool) ([]string, error) {
 		result := []string{}
 
@@ -110,7 +110,7 @@ func executeTemplateFunc(t *template.Template) func(string, ...interface{}) (str
 }
 
 // fileFunc returns or accumulates file dependencies.
-func fileFunc(r Recaller, used, missing depSet, sandboxPath string) func(string) (string, error) {
+func fileFunc(r Recaller, used, missing *depSet, sandboxPath string) func(string) (string, error) {
 	return func(s string) (string, error) {
 		if len(s) == 0 {
 			return "", nil
@@ -140,7 +140,7 @@ func fileFunc(r Recaller, used, missing depSet, sandboxPath string) func(string)
 }
 
 // keyFunc returns or accumulates key dependencies.
-func keyFunc(r Recaller, used, missing depSet) func(string) (string, error) {
+func keyFunc(r Recaller, used, missing *depSet) func(string) (string, error) {
 	return func(s string) (string, error) {
 		if len(s) == 0 {
 			return "", nil
@@ -168,7 +168,7 @@ func keyFunc(r Recaller, used, missing depSet) func(string) (string, error) {
 }
 
 // keyExistsFunc returns true if a key exists, false otherwise.
-func keyExistsFunc(r Recaller, used, missing depSet) func(string) (bool, error) {
+func keyExistsFunc(r Recaller, used, missing *depSet) func(string) (bool, error) {
 	return func(s string) (bool, error) {
 		if len(s) == 0 {
 			return false, nil
@@ -193,7 +193,7 @@ func keyExistsFunc(r Recaller, used, missing depSet) func(string) (bool, error) 
 
 // keyWithDefaultFunc returns or accumulates key dependencies that have a
 // default value.
-func keyWithDefaultFunc(r Recaller, used, missing depSet) func(string, string) (string, error) {
+func keyWithDefaultFunc(r Recaller, used, missing *depSet) func(string, string) (string, error) {
 	return func(s, def string) (string, error) {
 		if len(s) == 0 {
 			return def, nil
@@ -219,13 +219,13 @@ func keyWithDefaultFunc(r Recaller, used, missing depSet) func(string, string) (
 	}
 }
 
-func safeLsFunc(r Recaller, used, missing depSet) func(string) ([]*dep.KeyPair, error) {
+func safeLsFunc(r Recaller, used, missing *depSet) func(string) ([]*dep.KeyPair, error) {
 	// call lsFunc but explicitly mark that empty data set returned on monitored KV prefix is NOT safe
 	return lsFunc(r, used, missing, false)
 }
 
 // lsFunc returns or accumulates keyPrefix dependencies.
-func lsFunc(r Recaller, used, missing depSet, emptyIsSafe bool) func(string) ([]*dep.KeyPair, error) {
+func lsFunc(r Recaller, used, missing *depSet, emptyIsSafe bool) func(string) ([]*dep.KeyPair, error) {
 	return func(s string) ([]*dep.KeyPair, error) {
 		result := []*dep.KeyPair{}
 
@@ -273,7 +273,7 @@ func lsFunc(r Recaller, used, missing depSet, emptyIsSafe bool) func(string) ([]
 }
 
 // nodeFunc returns or accumulates catalog node dependency.
-func nodeFunc(r Recaller, used, missing depSet) func(...string) (*dep.CatalogNode, error) {
+func nodeFunc(r Recaller, used, missing *depSet) func(...string) (*dep.CatalogNode, error) {
 	return func(s ...string) (*dep.CatalogNode, error) {
 
 		d, err := dep.NewCatalogNodeQuery(strings.Join(s, ""))
@@ -294,7 +294,7 @@ func nodeFunc(r Recaller, used, missing depSet) func(...string) (*dep.CatalogNod
 }
 
 // nodesFunc returns or accumulates catalog node dependencies.
-func nodesFunc(r Recaller, used, missing depSet) func(...string) ([]*dep.Node, error) {
+func nodesFunc(r Recaller, used, missing *depSet) func(...string) ([]*dep.Node, error) {
 	return func(s ...string) ([]*dep.Node, error) {
 		result := []*dep.Node{}
 
@@ -316,7 +316,7 @@ func nodesFunc(r Recaller, used, missing depSet) func(...string) ([]*dep.Node, e
 }
 
 // secretFunc returns or accumulates secret dependencies from Vault.
-func secretFunc(r Recaller, used, missing depSet) func(...string) (*dep.Secret, error) {
+func secretFunc(r Recaller, used, missing *depSet) func(...string) (*dep.Secret, error) {
 	return func(s ...string) (*dep.Secret, error) {
 		var result *dep.Secret
 
@@ -364,7 +364,7 @@ func secretFunc(r Recaller, used, missing depSet) func(...string) (*dep.Secret, 
 }
 
 // secretsFunc returns or accumulates a list of secret dependencies from Vault.
-func secretsFunc(r Recaller, used, missing depSet) func(string) ([]string, error) {
+func secretsFunc(r Recaller, used, missing *depSet) func(string) ([]string, error) {
 	return func(s string) ([]string, error) {
 		var result []string
 
@@ -434,7 +434,7 @@ func byMeta(meta string, services []*dep.HealthService) (groups map[string][]*de
 }
 
 // serviceFunc returns or accumulates health service dependencies.
-func serviceFunc(r Recaller, used, missing depSet) func(...string) ([]*dep.HealthService, error) {
+func serviceFunc(r Recaller, used, missing *depSet) func(...string) ([]*dep.HealthService, error) {
 	return func(s ...string) ([]*dep.HealthService, error) {
 		result := []*dep.HealthService{}
 
@@ -460,7 +460,7 @@ func serviceFunc(r Recaller, used, missing depSet) func(...string) ([]*dep.Healt
 }
 
 // servicesFunc returns or accumulates catalog services dependencies.
-func servicesFunc(r Recaller, used, missing depSet) func(...string) ([]*dep.CatalogSnippet, error) {
+func servicesFunc(r Recaller, used, missing *depSet) func(...string) ([]*dep.CatalogSnippet, error) {
 	return func(s ...string) ([]*dep.CatalogSnippet, error) {
 		result := []*dep.CatalogSnippet{}
 
@@ -482,7 +482,7 @@ func servicesFunc(r Recaller, used, missing depSet) func(...string) ([]*dep.Cata
 }
 
 // connectFunc returns or accumulates health connect dependencies.
-func connectFunc(r Recaller, used, missing depSet) func(...string) ([]*dep.HealthService, error) {
+func connectFunc(r Recaller, used, missing *depSet) func(...string) ([]*dep.HealthService, error) {
 	return func(s ...string) ([]*dep.HealthService, error) {
 		result := []*dep.HealthService{}
 
@@ -507,7 +507,7 @@ func connectFunc(r Recaller, used, missing depSet) func(...string) ([]*dep.Healt
 	}
 }
 
-func connectCARootsFunc(r Recaller, used, missing depSet,
+func connectCARootsFunc(r Recaller, used, missing *depSet,
 ) func(...string) ([]*api.CARoot, error) {
 	return func(...string) ([]*api.CARoot, error) {
 		d := dep.NewConnectCAQuery()
@@ -520,7 +520,7 @@ func connectCARootsFunc(r Recaller, used, missing depSet,
 	}
 }
 
-func connectLeafFunc(r Recaller, used, missing depSet,
+func connectLeafFunc(r Recaller, used, missing *depSet,
 ) func(...string) (*api.LeafCert, error) {
 	return func(s ...string) (*api.LeafCert, error) {
 		if len(s) == 0 || s[0] == "" {
@@ -537,14 +537,14 @@ func connectLeafFunc(r Recaller, used, missing depSet,
 	}
 }
 
-func safeTreeFunc(r Recaller, used, missing depSet) func(string) ([]*dep.KeyPair, error) {
+func safeTreeFunc(r Recaller, used, missing *depSet) func(string) ([]*dep.KeyPair, error) {
 	// call treeFunc but explicitly mark that empty data set returned on
 	// monitored KV prefix is NOT safe
 	return treeFunc(r, used, missing, false)
 }
 
 // treeFunc returns or accumulates keyPrefix dependencies.
-func treeFunc(r Recaller, used, missing depSet, emptyIsSafe bool) func(string) ([]*dep.KeyPair, error) {
+func treeFunc(r Recaller, used, missing *depSet, emptyIsSafe bool) func(string) ([]*dep.KeyPair, error) {
 	return func(s string) ([]*dep.KeyPair, error) {
 		result := []*dep.KeyPair{}
 
