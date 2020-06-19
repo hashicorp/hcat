@@ -213,10 +213,14 @@ func (w *Watcher) Stop() {
 	w.depViewMap = make(map[string]*view)
 
 	// Empty cache
-	w.cache.Reset()
+	if w.cache != nil {
+		w.cache.Reset()
+	}
 
 	// Close any idle TCP connections
-	w.clients.Stop()
+	if w.clients != nil {
+		w.clients.Stop()
+	}
 }
 
 // Wrap embedded cache's Recaller interface
