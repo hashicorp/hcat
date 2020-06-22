@@ -30,8 +30,8 @@ type ClientSet struct {
 
 // consulClient is a wrapper around a real Consul API client.
 type consulClient struct {
-	client    *consulapi.Client
-	transport *http.Transport
+	client     *consulapi.Client
+	httpClient *http.Client
 }
 
 // vaultClient is a wrapper around a real Vault API client.
@@ -68,8 +68,8 @@ type CreateClientInput struct {
 	TransportMaxIdleConnsPerHost int
 	TransportTLSHandshakeTimeout time.Duration
 
-	// optionally, for testing, just pass in a finished transport
-	Transport *http.Transport
+	// optional, principally for testing
+	HttpClient *http.Client
 }
 
 // NewClientSet creates a new client set that is ready to accept clients.
@@ -100,15 +100,17 @@ func (c *ClientSet) CreateConsulClient(i *CreateClientInput) error {
 		}
 	}
 
-	transport, err := newTransport(i)
-	if err != nil {
+	// set/create our HTTP client
+	if client, err := httpClient(i); err != nil {
 		return err
+	} else {
+		consulConfig.HttpClient = client
 	}
+
 	// Setup the new transport
 	if i.SSLEnabled {
 		consulConfig.Scheme = "https"
 	}
-	consulConfig.Transport = transport
 
 	// Create the API client
 	client, err := consulapi.NewClient(consulConfig)
@@ -119,8 +121,8 @@ func (c *ClientSet) CreateConsulClient(i *CreateClientInput) error {
 	// Save the data on ourselves
 	c.Lock()
 	c.consul = &consulClient{
-		client:    client,
-		transport: transport,
+		client:     client,
+		httpClient: consulConfig.HttpClient,
 	}
 	c.Unlock()
 
@@ -134,12 +136,12 @@ func (c *ClientSet) CreateVaultClient(i *CreateClientInput) error {
 		vaultConfig.Address = i.Address
 	}
 
-	transport, err := newTransport(i)
-	if err != nil {
+	// set/create our HTTP client
+	if client, err := httpClient(i); err != nil {
 		return err
+	} else {
+		vaultConfig.HttpClient = client
 	}
-	// Setup the new transport
-	vaultConfig.HttpClient.Transport = transport
 
 	// Create the client
 	client, err := vaultapi.NewClient(vaultConfig)
@@ -209,19 +211,37 @@ func (c *ClientSet) Stop() {
 	c.Lock()
 	defer c.Unlock()
 
-	if c.consul != nil {
-		c.consul.transport.CloseIdleConnections()
+	switch {
+	case c.consul == nil:
+	case c.consul.httpClient == nil:
+	default:
+		c.consul.httpClient.CloseIdleConnections()
 	}
 
-	if c.vault != nil {
-		c.vault.httpClient.Transport.(*http.Transport).CloseIdleConnections()
+	switch {
+	case c.vault == nil:
+	case c.vault.httpClient == nil:
+	default:
+		c.vault.httpClient.CloseIdleConnections()
 	}
 }
 
-func newTransport(i *CreateClientInput) (*http.Transport, error) {
-	if i.Transport != nil {
-		return i.Transport, nil
+// httpClient returns the http.Client to use with the API client.
+// Returns the test one if given, otherwise creates one with default transport.
+func httpClient(i *CreateClientInput) (client *http.Client, err error) {
+	if i.HttpClient != nil {
+		return i.HttpClient, nil
 	}
+	var transport *http.Transport
+	if transport, err = newTransport(i); err == nil {
+		client = &http.Client{
+			Transport: transport,
+		}
+	}
+	return client, err
+}
+
+func newTransport(i *CreateClientInput) (*http.Transport, error) {
 	// This transport will attempt to keep connections open to the server.
 	transport := &http.Transport{
 		Proxy: http.ProxyFromEnvironment,
