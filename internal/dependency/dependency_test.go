@@ -100,6 +100,7 @@ func TestMain(m *testing.M) {
 
 	testConsul.Stop()
 	testVault.Stop()
+	testClients.Stop()
 	os.Exit(exit)
 }
 
