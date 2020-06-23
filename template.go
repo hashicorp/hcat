@@ -71,6 +71,14 @@ type NewTemplateInput struct {
 
 	// FuncMapMerge a map of functions that add-to or override those used when
 	// executing the template. (text/template)
+
+	// There is a special case for the FuncMapMerge where, if matched, gets
+	// called with the cache, used and missing sets (like the dependency
+	// functions) should return a function that works with the templates
+	// FuncMap. 2 variants are accepted:
+	// func(Recaller, *depSet, *depSet) func(string) (string, error)
+	// func(Recaller, *depSet, *depSet) func(string) string
+	// (note the returned funcs match those accepted by the FuncMap)
 	FuncMapMerge template.FuncMap
 
 	// SandboxPath adds a prefix to any path provided to the `file` function
@@ -266,8 +274,17 @@ func funcMap(i *funcMapInput) template.FuncMap {
 		"maximum":  maximum,
 	}
 
+	type depFunc1 = func(Recaller, *depSet, *depSet) func(string) string
+	type depFunc2 = func(Recaller, *depSet, *depSet) func(string) (string, error)
 	for k, v := range i.funcMapMerge {
-		r[k] = v
+		switch f := v.(type) {
+		case depFunc1:
+			r[k] = f(i.store, i.used, i.missing)
+		case depFunc2:
+			r[k] = f(i.store, i.used, i.missing)
+		default:
+			r[k] = v
+		}
 	}
 
 	return r
