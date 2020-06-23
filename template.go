@@ -76,8 +76,8 @@ type NewTemplateInput struct {
 	// called with the cache, used and missing sets (like the dependency
 	// functions) should return a function that works with the templates
 	// FuncMap. 2 variants are accepted:
-	// func(Recaller, *depSet, *depSet) func(string) (string, error)
-	// func(Recaller, *depSet, *depSet) func(string) string
+	// func(Recaller, *depSet, *depSet) func(string) (interface{}, error)
+	// func(Recaller, *depSet, *depSet) func(string) interface{}
 	// (note the returned funcs match those accepted by the FuncMap)
 	FuncMapMerge template.FuncMap
 
@@ -272,8 +272,8 @@ func funcMap(i *funcMapInput) template.FuncMap {
 		"maximum":  maximum,
 	}
 
-	type depFunc1 = func(Recaller, *DepSet, *DepSet) func(string) string
-	type depFunc2 = func(Recaller, *DepSet, *DepSet) func(string) (string, error)
+	type depFunc1 = func(Recaller, *DepSet, *DepSet) func(string) interface{}
+	type depFunc2 = func(Recaller, *DepSet, *DepSet) func(string) (interface{}, error)
 	for k, v := range i.funcMapMerge {
 		switch f := v.(type) {
 		case depFunc1:
