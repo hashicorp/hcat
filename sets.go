@@ -45,30 +45,33 @@ func (s stringSet) Map() map[string]struct{} {
 }
 
 // Clear deletes all entries from set
-func (s stringSet) Clear() {
-	s.Lock()
-	defer s.Unlock()
+func (s stringSet) clear() {
 	for k := range s.set {
 		delete(s.set, k)
 	}
 }
+func (s stringSet) Clear() {
+	s.Lock()
+	defer s.Unlock()
+	s.clear()
+}
 
-// depSet is a dependency-specific set implementation.
-// Relative ordering is preserved.
-type depSet struct {
+// DepSet is a set (type) of Dependencies and is used with public template
+// rendering interface. Relative ordering is preserved.
+type DepSet struct {
 	stringSet
 	list []Dependency
 }
 
-func newDepSet() *depSet {
-	return &depSet{
+func NewDepSet() *DepSet {
+	return &DepSet{
 		list:      make([]Dependency, 0, 8),
 		stringSet: newStringSet(),
 	}
 }
 
 // Add adds a new element to the set if it does not already exist.
-func (s *depSet) Add(d Dependency) bool {
+func (s *DepSet) Add(d Dependency) bool {
 	s.Lock()
 	defer s.Unlock()
 	if _, ok := s.stringSet.set[d.String()]; !ok {
@@ -80,15 +83,26 @@ func (s *depSet) Add(d Dependency) bool {
 }
 
 // List returns the insertion-ordered list of dependencies.
-func (s *depSet) List() []Dependency {
+func (s *DepSet) List() []Dependency {
 	s.RLock()
 	defer s.RUnlock()
 	return s.list
 }
 
 // String is a string representation of the set.
-func (s *depSet) String() string {
+func (s *DepSet) String() string {
 	s.RLock()
 	defer s.RUnlock()
 	return fmt.Sprint(s.list)
+}
+
+// Clear deletes all entries from set
+func (s *DepSet) Clear() {
+	s.Lock()
+	defer s.Unlock()
+	s.stringSet.clear()
+	for i := range s.list {
+		s.list[i] = nil
+	}
+	s.list = s.list[:0]
 }

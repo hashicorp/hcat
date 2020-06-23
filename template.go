@@ -131,12 +131,10 @@ func (t *Template) Render(content []byte) (RenderResult, error) {
 // ExecuteResult is the result of the template execution.
 type ExecuteResult struct {
 	// Used is the set of dependencies that were used.
-	// XXX convert to []Dependency ???
-	Used depSet
+	Used DepSet
 
 	// Missing is the set of dependencies that were missing.
-	// XXX convert to []Dependency ???
-	Missing depSet
+	Missing DepSet
 
 	// Output the (possibly partially) filled in template
 	Output []byte
@@ -144,7 +142,7 @@ type ExecuteResult struct {
 
 // Execute evaluates this template in the provided context.
 func (t *Template) Execute(r Recaller) (*ExecuteResult, error) {
-	var used, missing = newDepSet(), newDepSet()
+	var used, missing = NewDepSet(), NewDepSet()
 
 	tmpl := template.New(t.ID())
 	tmpl.Delims(t.leftDelim, t.rightDelim)
@@ -189,8 +187,8 @@ type funcMapInput struct {
 	env          []string
 	funcMapMerge template.FuncMap
 	sandboxPath  string
-	used         *depSet
-	missing      *depSet
+	used         *DepSet
+	missing      *DepSet
 }
 
 // funcMap is the map of template functions to their respective functions.
@@ -274,8 +272,8 @@ func funcMap(i *funcMapInput) template.FuncMap {
 		"maximum":  maximum,
 	}
 
-	type depFunc1 = func(Recaller, *depSet, *depSet) func(string) string
-	type depFunc2 = func(Recaller, *depSet, *depSet) func(string) (string, error)
+	type depFunc1 = func(Recaller, *DepSet, *DepSet) func(string) string
+	type depFunc2 = func(Recaller, *DepSet, *DepSet) func(string) (string, error)
 	for k, v := range i.funcMapMerge {
 		switch f := v.(type) {
 		case depFunc1:
