@@ -2,7 +2,6 @@ package hat
 
 import (
 	"fmt"
-	"log"
 	"math/rand"
 	"reflect"
 	"sync"
@@ -119,7 +118,7 @@ func (v *view) poll(viewCh chan<- *view, errCh chan<- error) {
 			// have some successful requests
 			retries = 0
 
-			log.Printf("[TRACE] (view) %s received data", v.dependency)
+			//log.Printf("[TRACE] (view) %s received data", v.dependency)
 			select {
 			case <-v.stopCh:
 				return
@@ -133,15 +132,15 @@ func (v *view) poll(viewCh chan<- *view, errCh chan<- error) {
 			// example, Consul make have an outage, but when it returns, the view
 			// is unchanged. We have to reset the counter retries, but not update the
 			// actual template.
-			log.Printf("[TRACE] (view) %s successful contact, resetting retries", v.dependency)
+			//log.Printf("[TRACE] (view) %s successful contact, resetting retries", v.dependency
 			retries = 0
 			goto WAIT
 		case err := <-fetchErrCh:
 			if v.retryFunc != nil {
 				retry, sleep := v.retryFunc(retries)
 				if retry {
-					log.Printf("[WARN] (view) %s (retry attempt %d after %q)",
-						err, retries+1, sleep)
+					//log.Printf("[WARN] (view) %s (retry attempt %d after %q)",
+					//err, retries+1, sleep)
 					select {
 					case <-time.After(sleep):
 						retries++
@@ -152,7 +151,7 @@ func (v *view) poll(viewCh chan<- *view, errCh chan<- error) {
 				}
 			}
 
-			log.Printf("[ERR] (view) %s (exceeded maximum retries)", err)
+			//log.Printf("[ERR] (view) %s (exceeded maximum retries)", err)
 
 			// Push the error back up to the watcher
 			select {
@@ -162,7 +161,7 @@ func (v *view) poll(viewCh chan<- *view, errCh chan<- error) {
 				return
 			}
 		case <-v.stopCh:
-			log.Printf("[TRACE] (view) %s stopping poll (received on view stopCh)", v.dependency)
+			//log.Printf("[TRACE] (view) %s stopping poll (received on view stopCh)", v.dependency)
 			return
 		}
 	}
@@ -174,7 +173,7 @@ func (v *view) poll(viewCh chan<- *view, errCh chan<- error) {
 // result of doneCh and errCh. It is assumed that only one instance of fetch
 // is running per view and therefore no locking or mutexes are used.
 func (v *view) fetch(doneCh, successCh chan<- struct{}, errCh chan<- error) {
-	log.Printf("[TRACE] (view) %s starting fetch", v.dependency)
+	//log.Printf("[TRACE] (view) %s starting fetch", v.dependency)
 
 	var allowStale bool
 	if v.maxStale != 0 {
@@ -200,7 +199,7 @@ func (v *view) fetch(doneCh, successCh chan<- struct{}, errCh chan<- error) {
 		})
 		if err != nil {
 			if err == dep.ErrStopped {
-				log.Printf("[TRACE] (view) %s reported stop", v.dependency)
+				//log.Printf("[TRACE] (view) %s reported stop", v.dependency)
 			} else {
 				errCh <- err
 			}
@@ -216,7 +215,7 @@ func (v *view) fetch(doneCh, successCh chan<- struct{}, errCh chan<- error) {
 		// If we got this far, we received data successfully. That data might not
 		// trigger a data update (because we could continue below), but we need to
 		// inform the poller to reset the retry count.
-		log.Printf("[TRACE] (view) %s marking successful data response", v.dependency)
+		//log.Printf("[TRACE] (view) %s marking successful data response", v.dependency)
 		select {
 		case successCh <- struct{}{}:
 		default:
@@ -224,7 +223,7 @@ func (v *view) fetch(doneCh, successCh chan<- struct{}, errCh chan<- error) {
 
 		if allowStale && rm.LastContact > v.maxStale {
 			allowStale = false
-			log.Printf("[TRACE] (view) %s stale data (last contact exceeded max_stale)", v.dependency)
+			//log.Printf("[TRACE] (view) %s stale data (last contact exceeded max_stale)", v.dependency)
 			continue
 		}
 
@@ -237,13 +236,13 @@ func (v *view) fetch(doneCh, successCh chan<- struct{}, errCh chan<- error) {
 		}
 
 		if rm.LastIndex == v.lastIndex {
-			log.Printf("[TRACE] (view) %s no new data (index was the same)", v.dependency)
+			//log.Printf("[TRACE] (view) %s no new data (index was the same)", v.dependency)
 			continue
 		}
 
 		v.dataLock.Lock()
 		if rm.LastIndex < v.lastIndex {
-			log.Printf("[TRACE] (view) %s had a lower index, resetting", v.dependency)
+			//log.Printf("[TRACE] (view) %s had a lower index, resetting", v.dependency)
 			v.lastIndex = 0
 			v.dataLock.Unlock()
 			continue
@@ -251,13 +250,13 @@ func (v *view) fetch(doneCh, successCh chan<- struct{}, errCh chan<- error) {
 		v.lastIndex = rm.LastIndex
 
 		if v.receivedData && reflect.DeepEqual(data, v.data) {
-			log.Printf("[TRACE] (view) %s no new data (contents were the same)", v.dependency)
+			//log.Printf("[TRACE] (view) %s no new data (contents were the same)", v.dependency)
 			v.dataLock.Unlock()
 			continue
 		}
 
 		if data == nil && rm.Block {
-			log.Printf("[TRACE] (view) %s asked for blocking query", v.dependency)
+			//log.Printf("[TRACE] (view) %s asked for blocking query", v.dependency)
 			v.dataLock.Unlock()
 			continue
 		}

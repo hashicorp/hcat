@@ -1,7 +1,6 @@
 package hat
 
 import (
-	"log"
 	"sync"
 	"time"
 
@@ -199,13 +198,13 @@ func (w *Watcher) Stop() {
 	w.depViewMapMx.Lock()
 	defer w.depViewMapMx.Unlock()
 
-	log.Printf("[DEBUG] (watcher) stopping all views")
+	//log.Printf("[DEBUG] (watcher) stopping all views")
 
 	for _, view := range w.depViewMap {
 		if view == nil {
 			continue
 		}
-		log.Printf("[TRACE] (watcher) stopping %s", view.Dependency())
+		//log.Printf("[TRACE] (watcher) stopping %s", view.Dependency())
 		view.stop()
 	}
 
@@ -245,10 +244,10 @@ func (w *Watcher) Add(d Dependency) bool {
 	w.depViewMapMx.Lock()
 	defer w.depViewMapMx.Unlock()
 
-	log.Printf("[DEBUG] (watcher) adding %s", d)
+	//log.Printf("[DEBUG] (watcher) adding %s", d)
 
 	if _, ok := w.depViewMap[d.String()]; ok {
-		log.Printf("[TRACE] (watcher) %s already exists, skipping", d)
+		//log.Printf("[TRACE] (watcher) %s already exists, skipping", d)
 		return false
 	}
 
@@ -269,7 +268,7 @@ func (w *Watcher) Add(d Dependency) bool {
 		RetryFunc:     retryFunc,
 	})
 
-	log.Printf("[TRACE] (watcher) %s starting", d)
+	//log.Printf("[TRACE] (watcher) %s starting", d)
 
 	w.depViewMap[d.String()] = v
 	go v.poll(w.dataCh, w.errCh)
@@ -285,18 +284,18 @@ func (w *Watcher) remove(id string) bool {
 	w.depViewMapMx.Lock()
 	defer w.depViewMapMx.Unlock()
 
-	log.Printf("[DEBUG] (watcher) removing %s", id)
+	//log.Printf("[DEBUG] (watcher) removing %s", id)
 
 	defer w.cache.Delete(id)
 
 	if view, ok := w.depViewMap[id]; ok {
-		log.Printf("[TRACE] (watcher) actually removing %s", id)
+		//log.Printf("[TRACE] (watcher) actually removing %s", id)
 		view.stop()
 		delete(w.depViewMap, id)
 		return true
 	}
 
-	log.Printf("[TRACE] (watcher) %s did not exist, skipping", id)
+	//log.Printf("[TRACE] (watcher) %s did not exist, skipping", id)
 	return false
 }
 
