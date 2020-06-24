@@ -151,7 +151,7 @@ func TestFetch_maxStale(t *testing.T) {
 
 func TestFetch_savesView(t *testing.T) {
 	view := newView(&newViewInput{
-		Dependency: &dep.FakeDep{},
+		Dependency: &dep.FakeDep{Name: "this is some data"},
 	})
 
 	doneCh := make(chan struct{})
