@@ -6,14 +6,15 @@ import (
 	"time"
 )
 
+////////////
 // FakeDep is a fake dependency that does not actually speaks to a server.
 type FakeDep struct {
 	Name string
 }
 
-func (d *FakeDep) Fetch(clients Clients, opts *QueryOptions) (interface{}, *ResponseMetadata, error) {
-	time.Sleep(time.Millisecond)
-	data := "this is some data"
+func (d *FakeDep) Fetch(Clients, *QueryOptions) (interface{}, *ResponseMetadata, error) {
+	time.Sleep(time.Microsecond)
+	data := d.Name
 	rm := &ResponseMetadata{LastIndex: 1}
 	return data, rm, nil
 }
@@ -32,6 +33,36 @@ func (d *FakeDep) Type() Type {
 	return TypeLocal
 }
 
+////////////
+// FakeListDep is a fake dependency that does not actually speaks to a server.
+// Returns a list, to allow for multi-pass template tests
+type FakeListDep struct {
+	Name string
+	Data []string
+}
+
+func (d *FakeListDep) Fetch(Clients, *QueryOptions) (interface{}, *ResponseMetadata, error) {
+	time.Sleep(time.Microsecond)
+	data := d.Data
+	rm := &ResponseMetadata{LastIndex: 1}
+	return data, rm, nil
+}
+
+func (d *FakeListDep) CanShare() bool {
+	return true
+}
+
+func (d *FakeListDep) String() string {
+	return fmt.Sprintf("test_list_dep(%s)", d.Name)
+}
+
+func (d *FakeListDep) Stop() {}
+
+func (d *FakeListDep) Type() Type {
+	return TypeLocal
+}
+
+////////////
 // FakeDepStale is a fake dependency that can be used to test what happens
 // when stale data is permitted.
 type FakeDepStale struct {
@@ -40,7 +71,7 @@ type FakeDepStale struct {
 
 // Fetch is used to implement the dependency interface.
 func (d *FakeDepStale) Fetch(clients Clients, opts *QueryOptions) (interface{}, *ResponseMetadata, error) {
-	time.Sleep(time.Millisecond)
+	time.Sleep(time.Microsecond)
 
 	if opts == nil {
 		opts = &QueryOptions{}
@@ -71,13 +102,14 @@ func (d *FakeDepStale) Type() Type {
 	return TypeLocal
 }
 
+////////////
 // FakeDepFetchError is a fake dependency that returns an error while fetching.
 type FakeDepFetchError struct {
 	Name string
 }
 
-func (d *FakeDepFetchError) Fetch(clients Clients, opts *QueryOptions) (interface{}, *ResponseMetadata, error) {
-	time.Sleep(time.Millisecond)
+func (d *FakeDepFetchError) Fetch(Clients, *QueryOptions) (interface{}, *ResponseMetadata, error) {
+	time.Sleep(time.Microsecond)
 	return nil, nil, fmt.Errorf("failed to contact server")
 }
 
@@ -97,9 +129,10 @@ func (d *FakeDepFetchError) Type() Type {
 
 var _ Dependency = (*FakeDepSameIndex)(nil)
 
+////////////
 type FakeDepSameIndex struct{}
 
-func (d *FakeDepSameIndex) Fetch(clients Clients, opts *QueryOptions) (interface{}, *ResponseMetadata, error) {
+func (d *FakeDepSameIndex) Fetch(Clients, *QueryOptions) (interface{}, *ResponseMetadata, error) {
 	meta := &ResponseMetadata{LastIndex: 100}
 	return nil, meta, nil
 }
@@ -118,6 +151,7 @@ func (d *FakeDepSameIndex) Type() Type {
 	return TypeLocal
 }
 
+////////////
 // FakeDepRetry is a fake dependency that errors on the first fetch and
 // succeeds on subsequent fetches.
 type FakeDepRetry struct {
@@ -126,8 +160,8 @@ type FakeDepRetry struct {
 	retried bool
 }
 
-func (d *FakeDepRetry) Fetch(clients Clients, opts *QueryOptions) (interface{}, *ResponseMetadata, error) {
-	time.Sleep(time.Millisecond)
+func (d *FakeDepRetry) Fetch(Clients, *QueryOptions) (interface{}, *ResponseMetadata, error) {
+	time.Sleep(time.Microsecond)
 
 	d.Lock()
 	defer d.Unlock()
