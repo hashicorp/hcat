@@ -167,6 +167,15 @@ func (w *Watcher) Wait(timeout time.Duration) error {
 	}
 }
 
+// Register is used to tell the Watcher which dependencies are used by
+// which templates. This is used to enable a you to check to see if a template
+// needs to be udpated by checking if any of its dependencies have Changed().
+func (w *Watcher) Register(tmplID string, deps ...Dependency) {
+	if len(deps) > 0 {
+		w.depTracker.update(tmplID, deps...)
+	}
+}
+
 // Changed is used to check a template to see if any of its dependencies
 // have beed updated (changed).
 // Returns True if template dependencies have changed.
@@ -183,60 +192,8 @@ func (w *Watcher) Changed(tmplID string) bool {
 	return false
 }
 
-// Register is used to tell the Watcher which dependencies are used by
-// which templates. This is used to enable a you to check to see if a template
-// needs to be udpated by checking if any of its dependencies have Changed().
-func (w *Watcher) Register(tmplID string, deps ...Dependency) {
-	if len(deps) > 0 {
-		w.depTracker.update(tmplID, deps...)
-	}
-}
-
-// Stop halts this watcher and any currently polling views immediately. If a
-// view was in the middle of a poll, no data will be returned.
-func (w *Watcher) Stop() {
-	w.depViewMapMx.Lock()
-	defer w.depViewMapMx.Unlock()
-
-	//log.Printf("[DEBUG] (watcher) stopping all views")
-
-	for _, view := range w.depViewMap {
-		if view == nil {
-			continue
-		}
-		//log.Printf("[TRACE] (watcher) stopping %s", view.Dependency())
-		view.stop()
-	}
-
-	// Reset the map to have no views
-	w.depViewMap = make(map[string]*view)
-
-	// Empty cache
-	if w.cache != nil {
-		w.cache.Reset()
-	}
-
-	// Close any idle TCP connections
-	if w.clients != nil {
-		w.clients.Stop()
-	}
-}
-
-// Wrap embedded cache's Recaller interface
-func (w *Watcher) Recall(id string) (interface{}, bool) {
-	return w.cache.Recall(id)
-}
-
-// Size returns the number of views this watcher is watching.
-func (w *Watcher) Size() int {
-	w.depViewMapMx.Lock()
-	defer w.depViewMapMx.Unlock()
-	return len(w.depViewMap)
-}
-
-// add adds the given dependency to the list of monitored dependencies
-// and start the associated view. If the dependency already exists, no action is
-// taken.
+// Add the given dependency to the list of monitored dependencies and start the
+// associated view. If the dependency already exists, no action is taken.
 //
 // If the Dependency already existed, it this function will return false. If the
 // view was successfully created, it will return true.
@@ -276,6 +233,50 @@ func (w *Watcher) Add(d Dependency) bool {
 	return true
 }
 
+// Wrap embedded cache's Recaller interface
+func (w *Watcher) Recall(id string) (interface{}, bool) {
+	return w.cache.Recall(id)
+}
+
+// Stop halts this watcher and any currently polling views immediately. If a
+// view was in the middle of a poll, no data will be returned.
+func (w *Watcher) Stop() {
+	w.depViewMapMx.Lock()
+	defer w.depViewMapMx.Unlock()
+
+	//log.Printf("[DEBUG] (watcher) stopping all views")
+
+	for _, view := range w.depViewMap {
+		if view == nil {
+			continue
+		}
+		//log.Printf("[TRACE] (watcher) stopping %s", view.Dependency())
+		view.stop()
+	}
+
+	// Reset the map to have no views
+	w.depViewMap = make(map[string]*view)
+
+	// Empty cache
+	if w.cache != nil {
+		w.cache.Reset()
+	}
+
+	// Close any idle TCP connections
+	if w.clients != nil {
+		w.clients.Stop()
+	}
+}
+
+// Size returns the number of views this watcher is watching.
+func (w *Watcher) Size() int {
+	w.depViewMapMx.Lock()
+	defer w.depViewMapMx.Unlock()
+	return len(w.depViewMap)
+}
+
+//////// private/internal
+
 // Remove-s the given dependency from the list and stops the
 // associated view. If a view for the given dependency does not exist, this
 // function will return false. If the view does exist, this function will return
@@ -308,19 +309,7 @@ func (w *Watcher) watching(id string) bool {
 	return ok
 }
 
-// ForceWatching is used to force setting the internal state of watching
-// a dependency. This is only used for unit testing purposes.
-func (w *Watcher) forceWatching(d Dependency, enabled bool) {
-	w.depViewMapMx.Lock()
-	defer w.depViewMapMx.Unlock()
-
-	if enabled {
-		w.depViewMap[d.String()] = nil
-	} else {
-		delete(w.depViewMap, d.String())
-	}
-}
-
+///////////
 // internal structure used to track template <-> dependencies relationships
 type depmap map[string]map[string]struct{}
 
