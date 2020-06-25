@@ -25,16 +25,16 @@ func NewResolver() *Resolver {
 }
 
 // Watcherer is the subset of the Watcher's API that the resolver needs.
-// It is used primarily to enable testing.
+// The interface is used to make the used/required API explicit.
 type Watcherer interface {
 	Recaller
-	Changed(tmplID string) bool
 	Add(Dependency) bool
-	TemplateDeps(tmplID string, deps ...Dependency)
+	Changed(tmplID string) bool
+	Register(tmplID string, deps ...Dependency)
 }
 
 // Templater the interface the Template provides.
-// It is used primarily to enable testing.
+// The interface is used to make the used/required API explicit.
 type Templater interface {
 	Execute(Recaller) (*ExecuteResult, error)
 	ID() string
@@ -60,7 +60,7 @@ func (r *Resolver) Run(tmpl Templater, w Watcherer) (ResolveEvent, error) {
 
 	// register all dependencies used
 	if l := result.Used.Len(); l > 0 {
-		w.TemplateDeps(tmpl.ID(), result.Used.List()...)
+		w.Register(tmpl.ID(), result.Used.List()...)
 	}
 
 	// add missing dependencies to watcher

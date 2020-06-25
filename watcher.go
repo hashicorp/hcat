@@ -183,10 +183,10 @@ func (w *Watcher) Changed(tmplID string) bool {
 	return false
 }
 
-// TemplateDeps is used to tell the Watcher which dependencies are used by
+// Register is used to tell the Watcher which dependencies are used by
 // which templates. This is used to enable a you to check to see if a template
 // needs to be udpated by checking if any of its dependencies have Changed().
-func (w *Watcher) TemplateDeps(tmplID string, deps ...Dependency) {
+func (w *Watcher) Register(tmplID string, deps ...Dependency) {
 	if len(deps) > 0 {
 		w.depTracker.update(tmplID, deps...)
 	}
