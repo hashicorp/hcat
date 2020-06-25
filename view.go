@@ -1,4 +1,4 @@
-package hat
+package hcat
 
 import (
 	"fmt"
@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	dep "github.com/hashicorp/hat/internal/dependency"
+	dep "github.com/hashicorp/hcat/internal/dependency"
 )
 
 // view is a representation of a Dependency and the most recent data it has

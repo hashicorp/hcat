@@ -1,4 +1,4 @@
-package hat
+package hcat
 
 import (
 	"fmt"
@@ -7,7 +7,7 @@ import (
 	"runtime"
 	"testing"
 
-	dep "github.com/hashicorp/hat/internal/dependency"
+	dep "github.com/hashicorp/hcat/internal/dependency"
 )
 
 // NOTE: the template functions are all tested in ./template_test.go and

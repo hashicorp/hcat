@@ -1,11 +1,11 @@
-package hat
+package hcat
 
 import (
 	"strings"
 	"testing"
 	"text/template"
 
-	dep "github.com/hashicorp/hat/internal/dependency"
+	dep "github.com/hashicorp/hcat/internal/dependency"
 )
 
 func TestResolverRun(t *testing.T) {

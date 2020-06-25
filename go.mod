@@ -1,4 +1,4 @@
-module github.com/hashicorp/hat
+module github.com/hashicorp/hcat
 
 go 1.14
 

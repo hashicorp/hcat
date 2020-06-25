@@ -1,4 +1,4 @@
-package hat
+package hcat
 
 import (
 	"bytes"
@@ -22,7 +22,7 @@ import (
 	"github.com/BurntSushi/toml"
 	"github.com/hashicorp/consul/api"
 	socktmpl "github.com/hashicorp/go-sockaddr/template"
-	dep "github.com/hashicorp/hat/internal/dependency"
+	dep "github.com/hashicorp/hcat/internal/dependency"
 	"github.com/pkg/errors"
 	yaml "gopkg.in/yaml.v2"
 )

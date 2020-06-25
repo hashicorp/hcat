@@ -1,10 +1,10 @@
-package hat
+package hcat
 
 import (
 	"reflect"
 	"testing"
 
-	dep "github.com/hashicorp/hat/internal/dependency"
+	dep "github.com/hashicorp/hcat/internal/dependency"
 )
 
 func TestNewStore(t *testing.T) {

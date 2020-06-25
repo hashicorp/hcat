@@ -1,4 +1,4 @@
-package hat
+package hcat
 
 // Runner responsible rendering Templates and invoking Commands.
 // Empty but reserving the space for future use.

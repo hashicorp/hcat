@@ -1,4 +1,4 @@
-package hat
+package hcat
 
 import (
 	"sync"

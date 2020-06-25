@@ -1,4 +1,4 @@
-package hat
+package hcat
 
 import (
 	"bytes"
@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/consul/api"
-	dep "github.com/hashicorp/hat/internal/dependency"
+	dep "github.com/hashicorp/hcat/internal/dependency"
 )
 
 func TestNewTemplate(t *testing.T) {

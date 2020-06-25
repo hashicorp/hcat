@@ -1,9 +1,9 @@
-package hat
+package hcat
 
 import (
 	"os"
 
-	dep "github.com/hashicorp/hat/internal/dependency"
+	dep "github.com/hashicorp/hcat/internal/dependency"
 )
 
 // Interface for looking up data from Consul, Vault and the Environment.

@@ -1,11 +1,11 @@
-package hat
+package hcat
 
 import (
 	"reflect"
 	"testing"
 	"time"
 
-	dep "github.com/hashicorp/hat/internal/dependency"
+	dep "github.com/hashicorp/hcat/internal/dependency"
 )
 
 func TestPoll_returnsViewCh(t *testing.T) {
