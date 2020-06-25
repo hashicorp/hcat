@@ -33,7 +33,7 @@ func TestResolverRun(t *testing.T) {
 
 		// seed the dependency tracking
 		// otherwise it will trigger first run
-		w.TemplateDeps(tt.ID(), &dep.FakeDep{Name: "foo"})
+		w.Register(tt.ID(), &dep.FakeDep{Name: "foo"})
 		// basically this is what we're testing
 
 		r, err := rv.Run(tt, w)
