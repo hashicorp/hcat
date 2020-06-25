@@ -71,14 +71,13 @@ type NewTemplateInput struct {
 
 	// FuncMapMerge a map of functions that add-to or override those used when
 	// executing the template. (text/template)
-
-	// There is a special case for the FuncMapMerge where, if matched, gets
+	//
+	// There is a special case for FuncMapMerge where, if matched, gets
 	// called with the cache, used and missing sets (like the dependency
-	// functions) should return a function that works with the templates
-	// FuncMap (masked by an interface).
-	// The function signature should look like..
-	// func(Recaller, *depSet, *depSet) interface{}
-	// (note the returned funcs match those accepted by the FuncMap)
+	// functions) should return a function that matches a signature required
+	// by text/template's Funcmap (masked by an interface).
+	// This special case function's signature should match:
+	//    func(Recaller, *DepSet, *DepSet) interface{}
 	FuncMapMerge template.FuncMap
 
 	// SandboxPath adds a prefix to any path provided to the `file` function
