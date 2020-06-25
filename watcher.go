@@ -169,7 +169,7 @@ func (w *Watcher) Wait(timeout time.Duration) error {
 
 // Register is used to tell the Watcher which dependencies are used by
 // which templates. This is used to enable a you to check to see if a template
-// needs to be udpated by checking if any of its dependencies have Changed().
+// needs to be updated by checking if any of its dependencies have Changed().
 func (w *Watcher) Register(tmplID string, deps ...Dependency) {
 	if len(deps) > 0 {
 		w.depTracker.update(tmplID, deps...)
@@ -177,7 +177,7 @@ func (w *Watcher) Register(tmplID string, deps ...Dependency) {
 }
 
 // Changed is used to check a template to see if any of its dependencies
-// have beed updated (changed).
+// have been updated (changed).
 // Returns True if template dependencies have changed.
 func (w *Watcher) Changed(tmplID string) bool {
 	deps, initialized := w.depTracker.templateDeps(tmplID)
