@@ -122,12 +122,21 @@ func (w *Watcher) Wait(timeout time.Duration) error {
 	usedDone := make(chan struct{})
 	defer close(usedDone)
 	go func() {
-		for k := range w.depTracker.unused(w.depViewMap) {
+		// get all dependencies
+		w.depViewMapMx.Lock()
+		deps := make([]string, 0, len(w.depViewMap))
+		for k := range w.depViewMap {
+			deps = append(deps, k)
+		}
+		w.depViewMapMx.Unlock()
+		// remove any no longer used
+		for k := range w.depTracker.findUnused(deps) {
 			select {
 			case w.olddepCh <- k:
 			case <-usedDone:
 				return
 			}
+			//w.remove(d)
 		}
 	}()
 
@@ -352,11 +361,11 @@ func (t *tracker) clear(tmplID string) {
 	}
 }
 
-func (t *tracker) unused(depIDs map[string]*view) map[string]struct{} {
+func (t *tracker) findUnused(depIDs []string) map[string]struct{} {
 	t.RLock()
 	defer t.RUnlock()
 	result := make(map[string]struct{})
-	for depID := range depIDs {
+	for _, depID := range depIDs {
 		if len(t.deps[depID]) == 0 {
 			result[depID] = struct{}{}
 		}
