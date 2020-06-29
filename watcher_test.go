@@ -128,12 +128,12 @@ func TestWatcherWait(t *testing.T) {
 		w := newWatcher(t)
 		defer w.Stop()
 		t1 := time.Now()
-		err := w.Wait(time.Millisecond)
+		err := w.Wait(time.Microsecond * 100)
 		if err != nil {
 			t.Fatal("Error not expected")
 		}
 		dur := time.Now().Sub(t1)
-		if dur < time.Millisecond || dur > time.Millisecond*2 {
+		if dur < time.Microsecond*100 || dur > time.Millisecond*10 {
 			t.Fatal("Wait call was off;", dur)
 		}
 	})
@@ -143,12 +143,12 @@ func TestWatcherWait(t *testing.T) {
 		t1 := time.Now()
 		testerr := errors.New("test")
 		go func() {
-			time.Sleep(time.Millisecond)
+			time.Sleep(time.Microsecond * 100)
 			w.errCh <- testerr
 		}()
 		w.Wait(0)
 		dur := time.Now().Sub(t1)
-		if dur < time.Millisecond || dur > time.Millisecond*2 {
+		if dur < time.Microsecond*100 || dur > time.Millisecond*10 {
 			t.Fatal("Wait call was off;", dur)
 		}
 	})
