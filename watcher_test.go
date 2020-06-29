@@ -172,9 +172,7 @@ func TestWatcherWait(t *testing.T) {
 		if _, ok := w.depViewMap[d.String()]; !ok {
 			t.Error("expected dependency to be present")
 		}
-		w.olddepCh <- d.String()
-		// use timeout to get it to return and give remove time to run
-		w.Wait(time.Millisecond)
+		w.cleanDeps(nil)
 		if _, ok := w.depViewMap[d.String()]; ok {
 			t.Error("expected dependency to be removed")
 		}

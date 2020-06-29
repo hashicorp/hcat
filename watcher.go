@@ -119,25 +119,10 @@ func (w *Watcher) Wait(timeout time.Duration) error {
 	}
 	w.changed.Clear() // clear old updates before waiting on new ones
 
-	usedDone := make(chan struct{})
-	defer close(usedDone)
+	cleanStop := make(chan struct{})
+	defer close(cleanStop) // only run while waiting
 	go func() {
-		// get all dependencies
-		w.depViewMapMx.Lock()
-		deps := make([]string, 0, len(w.depViewMap))
-		for k := range w.depViewMap {
-			deps = append(deps, k)
-		}
-		w.depViewMapMx.Unlock()
-		// remove any no longer used
-		for k := range w.depTracker.findUnused(deps) {
-			select {
-			case w.olddepCh <- k:
-			case <-usedDone:
-				return
-			}
-			//w.remove(d)
-		}
+		w.cleanDeps(cleanStop)
 	}()
 
 	// combine cache and changed updates so we don't forget one
@@ -172,6 +157,28 @@ func (w *Watcher) Wait(timeout time.Duration) error {
 			// Push the error back up the stack
 			return err
 
+		}
+	}
+}
+
+// cleanDeps scans all current dependencies and removes any unused ones.
+// This can happen in, for example, cases of a loop that gets service
+// information for all services and the 'all services' list changes over time.
+func (w *Watcher) cleanDeps(done chan struct{}) {
+	// get all dependencies
+	w.depViewMapMx.Lock()
+	deps := make([]string, 0, len(w.depViewMap))
+	for k := range w.depViewMap {
+		deps = append(deps, k)
+	}
+	w.depViewMapMx.Unlock()
+	// remove any no longer used
+	for k := range w.depTracker.findUnused(deps) {
+		w.remove(k)
+		select {
+		case <-done:
+			return
+		default:
 		}
 	}
 }
