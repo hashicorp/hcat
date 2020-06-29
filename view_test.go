@@ -112,8 +112,8 @@ func TestFetch_resetRetries(t *testing.T) {
 	})
 
 	doneCh := make(chan struct{})
-	successCh := make(chan struct{})
-	errCh := make(chan error)
+	successCh := make(chan struct{}, 1)
+	errCh := make(chan error, 1)
 
 	go view.fetch(doneCh, successCh, errCh)
 
