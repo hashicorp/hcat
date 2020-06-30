@@ -26,23 +26,3 @@ Additionally, for issues and pull requests we'll be using the :+1: reactions as
 a rough voting system to help gauge community priorities. So please add :+1: to
 any issue or pull request you'd like to see worked on. Thanks.
 
-## Basic Usage
-
-A simple example of how you might use this library to generate the contents of
-a single template, waiting for all its dependencies (external data) to be
-fetched and filled in, then have that content returned.
-
-```go
-func WaitForTemplate(tmpl *hcat.Template, w *hcat.Watcher)([]byte, error) {
-	for {
-		re, err := r.Run(tmpl, w)
-		if re.Complete || err != nil {
-			return re.Contents, err
-		}
-		err = w.Wait(timeout)
-		if err != nil {
-			return nil, err
-		}
-	}
-}
-```
