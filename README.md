@@ -1,6 +1,7 @@
 # Hashicorp Configuration And Templating (hashicat) library
 
 [![Go Documentation](https://img.shields.io/badge/go-documentation-%2300acd7)](https://godoc.org/github.com/hashicorp/hcat)
+[![CircleCI](https://circleci.com/gh/hashicorp/hcat.svg?style=svg)](https://circleci.com/gh/hashicorp/hcat)
 
 This library provides a means to fetch data managed by external services and
 render templates using that data. It also enables monitoring those services for
