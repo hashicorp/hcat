@@ -353,9 +353,9 @@ func (t *tracker) update(tmplID string, deps ...Dependency) {
 	t.clear(tmplID)
 	t.Lock()
 	defer t.Unlock()
-	for _, dep := range deps {
-		t.deps.add(dep.String(), tmplID)
-		t.tpls.add(tmplID, dep.String())
+	for _, d := range deps {
+		t.deps.add(d.String(), tmplID)
+		t.tpls.add(tmplID, d.String())
 	}
 }
 
