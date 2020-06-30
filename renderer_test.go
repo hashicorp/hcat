@@ -96,7 +96,7 @@ func TestAtomicWrite(t *testing.T) {
 	})
 }
 
-func TestSingleBackup(t *testing.T) {
+func TestBackup(t *testing.T) {
 	t.Run("backup", func(t *testing.T) {
 		outDir, err := ioutil.TempDir("", "")
 		if err != nil {
@@ -114,7 +114,7 @@ func TestSingleBackup(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		SingleBackup(outFile.Name())
+		Backup(outFile.Name())
 
 		f, err := ioutil.ReadFile(outFile.Name() + ".bak")
 		if err != nil {
@@ -147,7 +147,7 @@ func TestSingleBackup(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		SingleBackup(outFile.Name())
+		Backup(outFile.Name())
 
 		// Shouldn't have a backup file, since the original file didn't exist
 		if _, err := os.Stat(outFile.Name() + ".bak"); err == nil {
@@ -183,14 +183,14 @@ func TestSingleBackup(t *testing.T) {
 			}
 		}
 
-		SingleBackup(outFile.Name())
+		Backup(outFile.Name())
 		err = atomicWrite(outFile.Name(), []byte("second"), 0644, true)
 		if err != nil {
 			t.Fatal(err)
 		}
 		contains(outFile.Name(), "first")
 
-		SingleBackup(outFile.Name())
+		Backup(outFile.Name())
 		contains(outFile.Name(), "second")
 	})
 }
