@@ -1,4 +1,4 @@
-# Hashicorp Configuration And Templating library
+# Hashicorp Configuration And Templating (hashicat) library
 
 [![Go Documentation](https://img.shields.io/badge/go-documentation-%2300acd7)](https://godoc.org/github.com/hashicorp/hcat)
 

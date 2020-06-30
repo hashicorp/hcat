@@ -24,6 +24,7 @@ var (
 	errMissingDest = errors.New("missing destination")
 )
 
+// FileRenderer will handle rendering the template text to a file.
 type FileRenderer struct {
 	createDestDirs bool
 	path           string
@@ -31,6 +32,7 @@ type FileRenderer struct {
 	backup         BackupFunc
 }
 
+// NewFileRenderer returns a new FileRenderer.
 func NewFileRenderer(i NewFileRendererInput) FileRenderer {
 	backup := i.Backup
 	if backup == nil {
@@ -44,6 +46,7 @@ func NewFileRenderer(i NewFileRendererInput) FileRenderer {
 	}
 }
 
+// NewFileRendererInput is the input structure for NewFileRenderer.
 type NewFileRendererInput struct {
 	// CreateDestDirs causes missing directories on path to be created
 	CreateDestDirs bool
@@ -55,7 +58,8 @@ type NewFileRendererInput struct {
 	Backup BackupFunc
 }
 
-// BackupFunc takes the path of the current file to back up
+// BackupFunc defines the function type passed in to make backups if previously
+// rendered templates, if desired.
 type BackupFunc func(path string)
 
 // RenderResult is returned and stored. It contains the status of the render
@@ -100,8 +104,9 @@ func (r FileRenderer) Render(contents []byte) (*RenderResult, error) {
 	}, nil
 }
 
-// SingleBackup creates a [filename].bak copy, preserving the Mode
-func SingleBackup(path string) {
+// Backup creates a [filename].bak copy, preserving the Mode
+// Provided for convenience (to use as the BackupFunc) and an example.
+func Backup(path string) {
 	if path == "" {
 		return
 	}

@@ -45,7 +45,8 @@ type Template struct {
 	renderer Renderer
 }
 
-// Implemented by FileRenderer
+// Renderer defines the interface used to render (output) and template.
+// FileRenderer implements this to write to disk.
 type Renderer interface {
 	Render([]byte) (RenderResult, error)
 }

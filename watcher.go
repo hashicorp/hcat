@@ -11,8 +11,12 @@ import (
 // dataBufferSize is the default number of views to process in a batch.
 const dataBufferSize = 2048
 
+// RetryFunc defines the function type used to determine how many and how often
+// to retry calls to the external services.
 type RetryFunc func(int) (bool, time.Duration)
 
+// Cacher defines the interface required by the watcher for caching data
+// retreived from external services. It is implemented by Store.
 type Cacher interface {
 	Save(string, interface{})
 	Recall(string) (interface{}, bool)

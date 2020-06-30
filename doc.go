@@ -1,4 +1,5 @@
 /*
+The Hashicat library.
 
 This library provides a means to fetch data managed by external services and
 render templates using that data. It also enables monitoring those services for
@@ -9,8 +10,8 @@ a single template, waiting for all its dependencies (external data) to be
 fetched and filled in, then have that content returned.
 
 
-	func ExampleWaitTillComplete(tmpl *Template, w *Watcher) ([]byte, error) {
-		r := Resolver{}
+	func WaitTillComplete(tmpl *Template, w *Watcher) ([]byte, error) {
+		r := NewResolver()
 		for {
 			re, err := r.Run(tmpl, w)
 			if re.Complete || err != nil {

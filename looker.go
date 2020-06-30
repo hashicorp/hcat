@@ -13,6 +13,7 @@ type Looker interface {
 	Stop()
 }
 
+// ClientSetInput defines the inputs needed to configure the clients.
 type ClientSetInput dep.CreateClientInput
 
 // internal clientSet focuses only on external (consul/vault) dependencies
@@ -23,6 +24,8 @@ type clientSet struct {
 	injectedEnv []string
 }
 
+// NewClientSet is used to create the clients used.
+// Fulfills the Looker interface.
 func NewClientSet(in ClientSetInput) *clientSet {
 	din := dep.CreateClientInput(in)
 	clients := dep.NewClientSet()
@@ -34,6 +37,8 @@ func NewClientSet(in ClientSetInput) *clientSet {
 	}
 }
 
+// Stop closes all idle connections for any attached clients and clears
+// the list of injected environment variables.
 func (cs *clientSet) Stop() {
 	if cs.ClientSet != nil {
 		cs.ClientSet.Stop()

@@ -33,7 +33,7 @@ func (s stringSet) Add(k string) {
 	s.add(k)
 }
 
-// Map returns a copy of the underlying map used by the set
+// Map returns a copy of the underlying map used by the set for membership.
 func (s stringSet) Map() map[string]struct{} {
 	s.RLock()
 	defer s.RUnlock()
@@ -63,6 +63,7 @@ type DepSet struct {
 	list []Dependency
 }
 
+// NewDepSet returns an initialized DepSet (set of dependencies).
 func NewDepSet() *DepSet {
 	return &DepSet{
 		list:      make([]Dependency, 0, 8),
@@ -96,7 +97,7 @@ func (s *DepSet) String() string {
 	return fmt.Sprint(s.list)
 }
 
-// Clear deletes all entries from set
+// Clear deletes all entries from set.
 func (s *DepSet) Clear() {
 	s.Lock()
 	defer s.Unlock()
