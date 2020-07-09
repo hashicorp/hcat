@@ -1,3 +1,6 @@
+*This package is unreleased, alpha quality that will have API breaking changes
+as we get it in shape. We'll do an official release when it is ready.*
+
 # Hashicorp Configuration And Templating (hashicat) library
 
 [![Go Documentation](https://img.shields.io/badge/go-documentation-%2300acd7)](https://godoc.org/github.com/hashicorp/hcat)
