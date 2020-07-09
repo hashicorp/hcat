@@ -1,7 +1,9 @@
 package hcat
 
 import (
+	"net/http"
 	"os"
+	"time"
 
 	dep "github.com/hashicorp/hcat/internal/dependency"
 )
@@ -13,9 +15,6 @@ type Looker interface {
 	Stop()
 }
 
-// ClientSetInput defines the inputs needed to configure the clients.
-type ClientSetInput dep.CreateClientInput
-
 // internal clientSet focuses only on external (consul/vault) dependencies
 // at this point so we extend it here to include environment variables to meet
 // the looker interface.
@@ -26,15 +25,21 @@ type clientSet struct {
 
 // NewClientSet is used to create the clients used.
 // Fulfills the Looker interface.
-func NewClientSet(in ClientSetInput) *clientSet {
-	din := dep.CreateClientInput(in)
-	clients := dep.NewClientSet()
-	clients.CreateConsulClient(&din)
-	clients.CreateVaultClient(&din)
+func NewClientSet() *clientSet {
 	return &clientSet{
-		ClientSet:   clients,
+		ClientSet:   dep.NewClientSet(),
 		injectedEnv: []string{},
 	}
+}
+
+func (cs *clientSet) AddConsul(i ConsulInput) *clientSet {
+	cs.CreateConsulClient(i.toInternal())
+	return cs
+}
+
+func (cs *clientSet) AddVault(i VaultInput) *clientSet {
+	cs.CreateVaultClient(i.toInternal())
+	return cs
 }
 
 // Stop closes all idle connections for any attached clients and clears
@@ -58,4 +63,89 @@ func (cs *clientSet) InjectEnv(env ...string) {
 // As this will just use the raw Environment.
 func (cs *clientSet) Env() []string {
 	return append(os.Environ(), cs.injectedEnv...)
+}
+
+// Input wrappers around internal structure. Going to rework the internal
+// structure, so this abstracts that away to make that workable.
+
+// ClientSetInput defines the inputs needed to configure the clients.
+type VaultInput struct {
+	Address     string
+	Namespace   string
+	Token       string
+	UnwrapToken bool
+	Transport   TransportInput
+	// optional, principally for testing
+	HttpClient *http.Client
+}
+
+func (i VaultInput) toInternal() *dep.CreateClientInput {
+	cci := &dep.CreateClientInput{
+		Address:     i.Address,
+		Namespace:   i.Namespace,
+		Token:       i.Token,
+		UnwrapToken: i.UnwrapToken,
+	}
+	return i.Transport.toInternal(cci)
+}
+
+type ConsulInput struct {
+	Address      string
+	Namespace    string
+	Token        string
+	AuthEnabled  bool
+	AuthUsername string
+	AuthPassword string
+	Transport    TransportInput
+	// optional, principally for testing
+	HttpClient *http.Client
+}
+
+func (i ConsulInput) toInternal() *dep.CreateClientInput {
+	cci := &dep.CreateClientInput{
+		Address:      i.Address,
+		Namespace:    i.Namespace,
+		Token:        i.Token,
+		AuthEnabled:  i.AuthEnabled,
+		AuthUsername: i.AuthUsername,
+		AuthPassword: i.AuthPassword,
+	}
+	return i.Transport.toInternal(cci)
+}
+
+type TransportInput struct {
+	// Transport/TLS
+	SSLEnabled bool
+	SSLVerify  bool
+	SSLCert    string
+	SSLKey     string
+	SSLCACert  string
+	SSLCAPath  string
+	ServerName string
+
+	DialKeepAlive       time.Duration
+	DialTimeout         time.Duration
+	DisableKeepAlives   bool
+	IdleConnTimeout     time.Duration
+	MaxIdleConns        int
+	MaxIdleConnsPerHost int
+	TLSHandshakeTimeout time.Duration
+}
+
+func (i TransportInput) toInternal(cci *dep.CreateClientInput) *dep.CreateClientInput {
+	cci.SSLEnabled = i.SSLEnabled
+	cci.SSLVerify = i.SSLVerify
+	cci.SSLCert = i.SSLCert
+	cci.SSLKey = i.SSLKey
+	cci.SSLCACert = i.SSLCACert
+	cci.SSLCAPath = i.SSLCAPath
+	cci.ServerName = i.ServerName
+	cci.TransportDialKeepAlive = i.DialKeepAlive
+	cci.TransportDialTimeout = i.DialTimeout
+	cci.TransportDisableKeepAlives = i.DisableKeepAlives
+	cci.TransportIdleConnTimeout = i.IdleConnTimeout
+	cci.TransportMaxIdleConns = i.MaxIdleConns
+	cci.TransportMaxIdleConnsPerHost = i.MaxIdleConnsPerHost
+	cci.TransportTLSHandshakeTimeout = i.TLSHandshakeTimeout
+	return cci
 }

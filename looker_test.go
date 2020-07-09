@@ -7,7 +7,9 @@ import (
 
 func TestClientSet(t *testing.T) {
 	t.Run("client-api-init", func(t *testing.T) {
-		cs := NewClientSet(ClientSetInput{})
+		cs := NewClientSet()
+		cs.AddConsul(ConsulInput{})
+		cs.AddVault(VaultInput{})
 		defer cs.Stop()
 		if c := cs.Consul(); c == nil {
 			t.Fatal("Consul Client failed to load.")
@@ -18,7 +20,7 @@ func TestClientSet(t *testing.T) {
 	})
 
 	t.Run("env", func(t *testing.T) {
-		cs := NewClientSet(ClientSetInput{})
+		cs := NewClientSet()
 		defer cs.Stop()
 		// All os environment variables should be present
 		parentEnv := make(map[string]bool)
