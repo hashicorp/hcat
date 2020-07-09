@@ -30,7 +30,7 @@ func TestRecall(t *testing.T) {
 	}
 
 	nodes := []*dep.Node{
-		&dep.Node{
+		{
 			Node:    "node",
 			Address: "address",
 		},
@@ -60,7 +60,7 @@ func TestForceSet(t *testing.T) {
 	}
 
 	nodes := []*dep.Node{
-		&dep.Node{
+		{
 			Node:    "node",
 			Address: "address",
 		},
@@ -89,7 +89,7 @@ func TestForget(t *testing.T) {
 	}
 
 	nodes := []*dep.Node{
-		&dep.Node{
+		{
 			Node:    "node",
 			Address: "address",
 		},
@@ -114,7 +114,7 @@ func TestReset(t *testing.T) {
 	}
 
 	nodes := []*dep.Node{
-		&dep.Node{
+		{
 			Node:    "node",
 			Address: "address",
 		},
