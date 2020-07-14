@@ -107,6 +107,49 @@ func TestWatcherRemove(t *testing.T) {
 	})
 }
 
+func TestWatcherVaultToken(t *testing.T) {
+	t.Run("empty-token", func(t *testing.T) {
+		w := newWatcher(t)
+		defer w.Stop()
+		err := w.WatchVaultToken("")
+		if err != nil {
+			t.Fatal("Didn't expect and error:", err)
+		}
+		if len(w.depViewMap) > 0 {
+			t.Fatal("dependency should not have been added")
+		}
+	})
+	t.Run("token-added", func(t *testing.T) {
+		w := newWatcher(t)
+		defer w.Stop()
+		err := w.WatchVaultToken("fake-token")
+		if err != nil {
+			t.Fatal("Didn't expect and error:", err)
+		}
+		test_id := (&dep.VaultTokenQuery{}).String()
+		if _, ok := w.depViewMap[test_id]; !ok {
+			t.Fatal("token dep not added to watcher")
+		}
+	})
+	t.Run("not-cleaned", func(t *testing.T) {
+		w := newWatcher(t)
+		defer w.Stop()
+		err := w.WatchVaultToken("fake-token")
+		if err != nil {
+			t.Fatal("Didn't expect and error:", err)
+		}
+		test_id := (&dep.VaultTokenQuery{}).String()
+		if _, ok := w.depViewMap[test_id]; !ok {
+			t.Fatal("token dep not added to watcher")
+		}
+		stop := make(chan struct{})
+		w.cleanDeps(stop)
+		if _, ok := w.depViewMap[test_id]; !ok {
+			t.Fatal("token dep should not have been cleaned")
+		}
+	})
+}
+
 func TestWatcherSize(t *testing.T) {
 	t.Run("empty", func(t *testing.T) {
 		w := newWatcher(t)
@@ -280,12 +323,8 @@ func TestWatcherWait(t *testing.T) {
 }
 
 func newWatcher(t *testing.T) *Watcher {
-	w, err := NewWatcher(&NewWatcherInput{
+	return NewWatcher(&NewWatcherInput{
 		Clients: NewClientSet(),
 		Cache:   NewStore(),
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	return w
 }

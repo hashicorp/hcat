@@ -67,10 +67,6 @@ type NewWatcherInput struct {
 	Cache Cacher
 
 	// Optional Vault specific parameters
-	// VaultToken is a Vault token used to access Vault.
-	VaultToken string
-	// VaultRenewToken indicates if this watcher should renew VaultToken.
-	VaultRenewToken bool
 	// Default non-renewable secret duration
 	VaultDefaultLease time.Duration
 	// RetryFun for Vault
@@ -86,7 +82,7 @@ type NewWatcherInput struct {
 }
 
 // NewWatcher creates a new watcher using the given API client.
-func NewWatcher(i *NewWatcherInput) (*Watcher, error) {
+func NewWatcher(i *NewWatcherInput) *Watcher {
 	w := &Watcher{
 		clients:         i.Clients,
 		cache:           i.Cache,
@@ -103,16 +99,27 @@ func NewWatcher(i *NewWatcherInput) (*Watcher, error) {
 		defaultLease:    i.VaultDefaultLease,
 	}
 
+	return w
+}
+
+const vaultTokenDummyTemplateID = "dummy.watcher.vault-token.id"
+
+// WatchVaultToken takes a vault token and watches it to keep it updated.
+// This is a specialized method as this token can be required without being in
+// a template. I hope to generalize this idea so you can watch arbitrary
+// dependencies in the future.
+func (w *Watcher) WatchVaultToken(token string) error {
 	// Start a watcher for the Vault renew if that config was specified
-	if i.VaultRenewToken && i.VaultToken != "" {
-		vt, err := dep.NewVaultTokenQuery(i.VaultToken)
+	if token != "" {
+		vt, err := dep.NewVaultTokenQuery(token)
 		if err != nil {
-			return nil, errors.Wrap(err, "watcher")
+			return errors.Wrap(err, "watcher")
 		}
 		w.Add(vt)
+		// prevent cleanDeps from removing it
+		w.Register(vaultTokenDummyTemplateID, vt)
 	}
-
-	return w, nil
+	return nil
 }
 
 // Wait blocks until new a watched value changes
@@ -294,8 +301,6 @@ func (w *Watcher) Size() int {
 	defer w.depViewMapMx.Unlock()
 	return len(w.depViewMap)
 }
-
-//////// private/internal
 
 // Remove-s the given dependency from the list and stops the
 // associated view. If a view for the given dependency does not exist, this

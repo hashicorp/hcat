@@ -228,9 +228,5 @@ func echoListTemplate(t *testing.T, data ...string) *Template {
 
 // watcher with no Looker
 func blindWatcher(t *testing.T) *Watcher {
-	w, err := NewWatcher(&NewWatcherInput{Cache: NewStore()})
-	if err != nil {
-		t.Fatal("new watcher error:", err)
-	}
-	return w
+	return NewWatcher(&NewWatcherInput{Cache: NewStore()})
 }
