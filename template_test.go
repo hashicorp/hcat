@@ -19,7 +19,7 @@ func TestNewTemplate(t *testing.T) {
 
 	cases := []struct {
 		name string
-		i    *NewTemplateInput
+		i    *TemplateInput
 		e    *Template
 	}{
 		{
@@ -29,7 +29,7 @@ func TestNewTemplate(t *testing.T) {
 		},
 		{
 			"contents",
-			&NewTemplateInput{
+			&TemplateInput{
 				Contents: "test",
 			},
 			&Template{
@@ -39,7 +39,7 @@ func TestNewTemplate(t *testing.T) {
 		},
 		{
 			"custom_delims",
-			&NewTemplateInput{
+			&TemplateInput{
 				Contents:   "test",
 				LeftDelim:  "<<",
 				RightDelim: ">>",
@@ -53,7 +53,7 @@ func TestNewTemplate(t *testing.T) {
 		},
 		{
 			"err_missing_key",
-			&NewTemplateInput{
+			&TemplateInput{
 				Contents:      "test",
 				ErrMissingKey: true,
 			},
@@ -94,14 +94,14 @@ func TestTemplate_Execute(t *testing.T) {
 
 	cases := []struct {
 		name string
-		ti   *NewTemplateInput
+		ti   *TemplateInput
 		i    Recaller
 		e    string
 		err  bool
 	}{
 		{
 			"nil",
-			&NewTemplateInput{
+			&TemplateInput{
 				Contents: `test`,
 			},
 			nil,
@@ -110,7 +110,7 @@ func TestTemplate_Execute(t *testing.T) {
 		},
 		{
 			"bad_func",
-			&NewTemplateInput{
+			&TemplateInput{
 				Contents: `{{ bad_func }}`,
 			},
 			nil,
@@ -119,7 +119,7 @@ func TestTemplate_Execute(t *testing.T) {
 		},
 		{
 			"missing_deps",
-			&NewTemplateInput{
+			&TemplateInput{
 				Contents: `{{ key "foo" }}`,
 			},
 			NewStore(),
@@ -130,7 +130,7 @@ func TestTemplate_Execute(t *testing.T) {
 		// missing keys
 		{
 			"err_missing_keys__true",
-			&NewTemplateInput{
+			&TemplateInput{
 				Contents:      `{{ .Data.Foo }}`,
 				ErrMissingKey: true,
 			},
@@ -140,7 +140,7 @@ func TestTemplate_Execute(t *testing.T) {
 		},
 		{
 			"err_missing_keys__false",
-			&NewTemplateInput{
+			&TemplateInput{
 				Contents:      `{{ .Data.Foo }}`,
 				ErrMissingKey: false,
 			},
@@ -152,7 +152,7 @@ func TestTemplate_Execute(t *testing.T) {
 		// funcs
 		{
 			"func_base64Decode",
-			&NewTemplateInput{
+			&TemplateInput{
 				Contents: `{{ base64Decode "aGVsbG8=" }}`,
 			},
 			nil,
@@ -161,7 +161,7 @@ func TestTemplate_Execute(t *testing.T) {
 		},
 		{
 			"func_base64Decode_bad",
-			&NewTemplateInput{
+			&TemplateInput{
 				Contents: `{{ base64Decode "aGVsxxbG8=" }}`,
 			},
 			nil,
@@ -170,7 +170,7 @@ func TestTemplate_Execute(t *testing.T) {
 		},
 		{
 			"func_base64Encode",
-			&NewTemplateInput{
+			&TemplateInput{
 				Contents: `{{ base64Encode "hello" }}`,
 			},
 			nil,
@@ -179,7 +179,7 @@ func TestTemplate_Execute(t *testing.T) {
 		},
 		{
 			"func_base64URLDecode",
-			&NewTemplateInput{
+			&TemplateInput{
 				Contents: `{{ base64URLDecode "dGVzdGluZzEyMw==" }}`,
 			},
 			nil,
@@ -188,7 +188,7 @@ func TestTemplate_Execute(t *testing.T) {
 		},
 		{
 			"func_base64URLDecode_bad",
-			&NewTemplateInput{
+			&TemplateInput{
 				Contents: `{{ base64URLDecode "aGVsxxbG8=" }}`,
 			},
 			nil,
@@ -197,7 +197,7 @@ func TestTemplate_Execute(t *testing.T) {
 		},
 		{
 			"func_base64URLEncode",
-			&NewTemplateInput{
+			&TemplateInput{
 				Contents: `{{ base64URLEncode "testing123" }}`,
 			},
 			nil,
@@ -206,7 +206,7 @@ func TestTemplate_Execute(t *testing.T) {
 		},
 		{
 			"func_datacenters",
-			&NewTemplateInput{
+			&TemplateInput{
 				Contents: `{{ datacenters }}`,
 			},
 			func() *Store {
@@ -223,7 +223,7 @@ func TestTemplate_Execute(t *testing.T) {
 		},
 		{
 			"func_datacenters_ignore",
-			&NewTemplateInput{
+			&TemplateInput{
 				Contents: `{{ datacenters true }}`,
 			},
 			func() *Store {
@@ -240,7 +240,7 @@ func TestTemplate_Execute(t *testing.T) {
 		},
 		{
 			"func_file",
-			&NewTemplateInput{
+			&TemplateInput{
 				Contents: `{{ file "/path/to/file" }}`,
 			},
 			func() *Store {
@@ -257,7 +257,7 @@ func TestTemplate_Execute(t *testing.T) {
 		},
 		{
 			"func_key",
-			&NewTemplateInput{
+			&TemplateInput{
 				Contents: `{{ key "key" }}`,
 			},
 			func() *Store {
@@ -275,7 +275,7 @@ func TestTemplate_Execute(t *testing.T) {
 		},
 		{
 			"func_keyExists",
-			&NewTemplateInput{
+			&TemplateInput{
 				Contents: `{{ keyExists "key" }} {{ keyExists "no_key" }}`,
 			},
 			func() *Store {
@@ -292,7 +292,7 @@ func TestTemplate_Execute(t *testing.T) {
 		},
 		{
 			"func_keyOrDefault",
-			&NewTemplateInput{
+			&TemplateInput{
 				Contents: `{{ keyOrDefault "key" "100" }} {{ keyOrDefault "no_key" "200" }}`,
 			},
 			func() *Store {
@@ -309,7 +309,7 @@ func TestTemplate_Execute(t *testing.T) {
 		},
 		{
 			"func_ls",
-			&NewTemplateInput{
+			&TemplateInput{
 				Contents: `{{ range ls "list" }}{{ .Key }}={{ .Value }}{{ end }}`,
 			},
 			func() *Store {
@@ -330,7 +330,7 @@ func TestTemplate_Execute(t *testing.T) {
 		},
 		{
 			"func_node",
-			&NewTemplateInput{
+			&TemplateInput{
 				Contents: `{{ with node }}{{ .Node.Node }}{{ range .Services }}{{ .Service }}{{ end }}{{ end }}`,
 			},
 			func() *Store {
@@ -354,7 +354,7 @@ func TestTemplate_Execute(t *testing.T) {
 		},
 		{
 			"func_nodes",
-			&NewTemplateInput{
+			&TemplateInput{
 				Contents: `{{ range nodes }}{{ .Node }}{{ end }}`,
 			},
 			func() *Store {
@@ -374,7 +374,7 @@ func TestTemplate_Execute(t *testing.T) {
 		},
 		{
 			"func_secret_read",
-			&NewTemplateInput{
+			&TemplateInput{
 				Contents: `{{ with secret "secret/foo" }}{{ .Data.zip }}{{ end }}`,
 			},
 			func() *Store {
@@ -396,7 +396,7 @@ func TestTemplate_Execute(t *testing.T) {
 		},
 		{
 			"func_secret_read_versions",
-			&NewTemplateInput{
+			&TemplateInput{
 				Contents: `{{with secret "secret/foo"}}{{.Data.zip}}{{end}}:{{with secret "secret/foo?version=1"}}{{.Data.zip}}{{end}}`,
 			},
 			func() *Store {
@@ -422,7 +422,7 @@ func TestTemplate_Execute(t *testing.T) {
 		},
 		{
 			"func_secret_read_no_exist",
-			&NewTemplateInput{
+			&TemplateInput{
 				Contents: `{{ with secret "secret/nope" }}{{ .Data.zip }}{{ end }}`,
 			},
 			func() *Store {
@@ -433,7 +433,7 @@ func TestTemplate_Execute(t *testing.T) {
 		},
 		{
 			"func_secret_read_no_exist_falsey",
-			&NewTemplateInput{
+			&TemplateInput{
 				Contents: `{{ if secret "secret/nope" }}yes{{ else }}no{{ end }}`,
 			},
 			func() *Store {
@@ -444,7 +444,7 @@ func TestTemplate_Execute(t *testing.T) {
 		},
 		{
 			"func_secret_write",
-			&NewTemplateInput{
+			&TemplateInput{
 				Contents: `{{ with secret "transit/encrypt/foo" "plaintext=a" }}{{ .Data.ciphertext }}{{ end }}`,
 			},
 			func() *Store {
@@ -468,7 +468,7 @@ func TestTemplate_Execute(t *testing.T) {
 		},
 		{
 			"func_secret_write_no_exist",
-			&NewTemplateInput{
+			&TemplateInput{
 				Contents: `{{ with secret "secret/nope" "a=b" }}{{ .Data.zip }}{{ end }}`,
 			},
 			func() *Store {
@@ -479,7 +479,7 @@ func TestTemplate_Execute(t *testing.T) {
 		},
 		{
 			"func_secret_write_no_exist_falsey",
-			&NewTemplateInput{
+			&TemplateInput{
 				Contents: `{{ if secret "secret/nope" "a=b" }}yes{{ else }}no{{ end }}`,
 			},
 			func() *Store {
@@ -490,7 +490,7 @@ func TestTemplate_Execute(t *testing.T) {
 		},
 		{
 			"func_secret_no_exist_falsey_with",
-			&NewTemplateInput{
+			&TemplateInput{
 				Contents: `{{ with secret "secret/nope" }}{{ .Data.foo.bar }}{{ end }}`,
 			},
 			func() *Store {
@@ -501,7 +501,7 @@ func TestTemplate_Execute(t *testing.T) {
 		},
 		{
 			"func_secrets",
-			&NewTemplateInput{
+			&TemplateInput{
 				Contents: `{{ secrets "secret/" }}`,
 			},
 			func() *Store {
@@ -518,7 +518,7 @@ func TestTemplate_Execute(t *testing.T) {
 		},
 		{
 			"func_secrets_no_exist",
-			&NewTemplateInput{
+			&TemplateInput{
 				Contents: `{{ secrets "secret/" }}`,
 			},
 			func() *Store {
@@ -529,7 +529,7 @@ func TestTemplate_Execute(t *testing.T) {
 		},
 		{
 			"func_secrets_no_exist_falsey",
-			&NewTemplateInput{
+			&TemplateInput{
 				Contents: `{{ if secrets "secret/" }}yes{{ else }}no{{ end }}`,
 			},
 			func() *Store {
@@ -540,7 +540,7 @@ func TestTemplate_Execute(t *testing.T) {
 		},
 		{
 			"func_secrets_no_exist_falsey_with",
-			&NewTemplateInput{
+			&TemplateInput{
 				Contents: `{{ with secrets "secret/" }}{{ . }}{{ end }}`,
 			},
 			func() *Store {
@@ -551,7 +551,7 @@ func TestTemplate_Execute(t *testing.T) {
 		},
 		{
 			"func_service",
-			&NewTemplateInput{
+			&TemplateInput{
 				Contents: `{{ range service "webapp" }}{{ .Address }}{{ end }}`,
 			},
 			func() *Store {
@@ -577,7 +577,7 @@ func TestTemplate_Execute(t *testing.T) {
 		},
 		{
 			"func_service_filter",
-			&NewTemplateInput{
+			&TemplateInput{
 				Contents: `{{ range service "webapp" "passing,any" }}{{ .Address }}{{ end }}`,
 			},
 			func() *Store {
@@ -603,7 +603,7 @@ func TestTemplate_Execute(t *testing.T) {
 		},
 		{
 			"func_services",
-			&NewTemplateInput{
+			&TemplateInput{
 				Contents: `{{ range services }}{{ .Name }}{{ end }}`,
 			},
 			func() *Store {
@@ -627,7 +627,7 @@ func TestTemplate_Execute(t *testing.T) {
 		},
 		{
 			"func_tree",
-			&NewTemplateInput{
+			&TemplateInput{
 				Contents: `{{ range tree "key" }}{{ .Key }}={{ .Value }}{{ end }}`,
 			},
 			func() *Store {
@@ -651,7 +651,7 @@ func TestTemplate_Execute(t *testing.T) {
 		// scratch
 		{
 			"scratch.Key",
-			&NewTemplateInput{
+			&TemplateInput{
 				Contents: `{{ scratch.Set "a" "2" }}{{ scratch.Key "a" }}`,
 			},
 			NewStore(),
@@ -660,7 +660,7 @@ func TestTemplate_Execute(t *testing.T) {
 		},
 		{
 			"scratch.Get",
-			&NewTemplateInput{
+			&TemplateInput{
 				Contents: `{{ scratch.Set "a" "2" }}{{ scratch.Get "a" }}`,
 			},
 			NewStore(),
@@ -669,7 +669,7 @@ func TestTemplate_Execute(t *testing.T) {
 		},
 		{
 			"scratch.SetX",
-			&NewTemplateInput{
+			&TemplateInput{
 				Contents: `{{ scratch.SetX "a" "2" }}{{ scratch.SetX "a" "1" }}{{ scratch.Get "a" }}`,
 			},
 			NewStore(),
@@ -678,7 +678,7 @@ func TestTemplate_Execute(t *testing.T) {
 		},
 		{
 			"scratch.MapSet",
-			&NewTemplateInput{
+			&TemplateInput{
 				Contents: `{{ scratch.MapSet "a" "foo" "bar" }}{{ scratch.MapValues "a" }}`,
 			},
 			NewStore(),
@@ -687,7 +687,7 @@ func TestTemplate_Execute(t *testing.T) {
 		},
 		{
 			"scratch.MapSetX",
-			&NewTemplateInput{
+			&TemplateInput{
 				Contents: `{{ scratch.MapSetX "a" "foo" "bar" }}{{ scratch.MapSetX "a" "foo" "baz" }}{{ scratch.MapValues "a" }}`,
 			},
 			NewStore(),
@@ -698,7 +698,7 @@ func TestTemplate_Execute(t *testing.T) {
 		// helpers
 		{
 			"helper_by_key",
-			&NewTemplateInput{
+			&TemplateInput{
 				Contents: `{{ range $key, $pairs := tree "list" | byKey }}{{ $key }}:{{ range $pairs }}{{ .Key }}={{ .Value }}{{ end }}{{ end }}`,
 			},
 			func() *Store {
@@ -719,7 +719,7 @@ func TestTemplate_Execute(t *testing.T) {
 		},
 		{
 			"helper_by_tag",
-			&NewTemplateInput{
+			&TemplateInput{
 				Contents: `{{ range $tag, $services := service "webapp" | byTag }}{{ $tag }}:{{ range $services }}{{ .Address }}{{ end }}{{ end }}`,
 			},
 			func() *Store {
@@ -745,7 +745,7 @@ func TestTemplate_Execute(t *testing.T) {
 		},
 		{
 			"helper_contains",
-			&NewTemplateInput{
+			&TemplateInput{
 				Contents: `{{ range service "webapp" }}{{ if .Tags | contains "prod" }}{{ .Address }}{{ end }}{{ end }}`,
 			},
 			func() *Store {
@@ -771,7 +771,7 @@ func TestTemplate_Execute(t *testing.T) {
 		},
 		{
 			"helper_containsAll",
-			&NewTemplateInput{
+			&TemplateInput{
 				Contents: `{{ $requiredTags := parseJSON "[\"prod\",\"us-realm\"]" }}{{ range service "webapp" }}{{ if .Tags | containsAll $requiredTags }}{{ .Address }}{{ end }}{{ end }}`,
 			},
 			func() *Store {
@@ -797,7 +797,7 @@ func TestTemplate_Execute(t *testing.T) {
 		},
 		{
 			"helper_containsAll__empty",
-			&NewTemplateInput{
+			&TemplateInput{
 				Contents: `{{ $requiredTags := parseJSON "[]" }}{{ range service "webapp" }}{{ if .Tags | containsAll $requiredTags }}{{ .Address }}{{ end }}{{ end }}`,
 			},
 			func() *Store {
@@ -823,7 +823,7 @@ func TestTemplate_Execute(t *testing.T) {
 		},
 		{
 			"helper_containsAny",
-			&NewTemplateInput{
+			&TemplateInput{
 				Contents: `{{ $acceptableTags := parseJSON "[\"v2\",\"v3\"]" }}{{ range service "webapp" }}{{ if .Tags | containsAny $acceptableTags }}{{ .Address }}{{ end }}{{ end }}`,
 			},
 			func() *Store {
@@ -849,7 +849,7 @@ func TestTemplate_Execute(t *testing.T) {
 		},
 		{
 			"helper_containsAny__empty",
-			&NewTemplateInput{
+			&TemplateInput{
 				Contents: `{{ $acceptableTags := parseJSON "[]" }}{{ range service "webapp" }}{{ if .Tags | containsAny $acceptableTags }}{{ .Address }}{{ end }}{{ end }}`,
 			},
 			func() *Store {
@@ -875,7 +875,7 @@ func TestTemplate_Execute(t *testing.T) {
 		},
 		{
 			"helper_containsNone",
-			&NewTemplateInput{
+			&TemplateInput{
 				Contents: `{{ $forbiddenTags := parseJSON "[\"devel\",\"staging\"]" }}{{ range service "webapp" }}{{ if .Tags | containsNone $forbiddenTags }}{{ .Address }}{{ end }}{{ end }}`,
 			},
 			func() *Store {
@@ -901,7 +901,7 @@ func TestTemplate_Execute(t *testing.T) {
 		},
 		{
 			"helper_containsNone__empty",
-			&NewTemplateInput{
+			&TemplateInput{
 				Contents: `{{ $forbiddenTags := parseJSON "[]" }}{{ range service "webapp" }}{{ if .Tags | containsNone $forbiddenTags }}{{ .Address }}{{ end }}{{ end }}`,
 			},
 			func() *Store {
@@ -927,7 +927,7 @@ func TestTemplate_Execute(t *testing.T) {
 		},
 		{
 			"helper_containsNotAll",
-			&NewTemplateInput{
+			&TemplateInput{
 				Contents: `{{ $excludingTags := parseJSON "[\"es-v1\",\"es-v2\"]" }}{{ range service "webapp" }}{{ if .Tags | containsNotAll $excludingTags }}{{ .Address }}{{ end }}{{ end }}`,
 			},
 			func() *Store {
@@ -953,7 +953,7 @@ func TestTemplate_Execute(t *testing.T) {
 		},
 		{
 			"helper_containsNotAll__empty",
-			&NewTemplateInput{
+			&TemplateInput{
 				Contents: `{{ $excludingTags := parseJSON "[]" }}{{ range service "webapp" }}{{ if .Tags | containsNotAll $excludingTags }}{{ .Address }}{{ end }}{{ end }}`,
 			},
 			func() *Store {
@@ -979,7 +979,7 @@ func TestTemplate_Execute(t *testing.T) {
 		},
 		{
 			"helper_env",
-			&NewTemplateInput{
+			&TemplateInput{
 				// CT_TEST set above
 				Contents: `{{ env "CT_TEST" }}`,
 			},
@@ -989,7 +989,7 @@ func TestTemplate_Execute(t *testing.T) {
 		},
 		{
 			"helper_executeTemplate",
-			&NewTemplateInput{
+			&TemplateInput{
 				Contents: `{{ define "custom" }}{{ key "foo" }}{{ end }}{{ executeTemplate "custom" }}`,
 			},
 			func() *Store {
@@ -1007,7 +1007,7 @@ func TestTemplate_Execute(t *testing.T) {
 		},
 		{
 			"helper_executeTemplate__dot",
-			&NewTemplateInput{
+			&TemplateInput{
 				Contents: `{{ define "custom" }}{{ key . }}{{ end }}{{ executeTemplate "custom" "foo" }}`,
 			},
 			func() *Store {
@@ -1025,7 +1025,7 @@ func TestTemplate_Execute(t *testing.T) {
 		},
 		{
 			"helper_explode",
-			&NewTemplateInput{
+			&TemplateInput{
 				Contents: `{{ range $k, $v := tree "list" | explode }}{{ $k }}{{ $v }}{{ end }}`,
 			},
 			func() *Store {
@@ -1046,7 +1046,7 @@ func TestTemplate_Execute(t *testing.T) {
 		},
 		{
 			"helper_explodemap",
-			&NewTemplateInput{
+			&TemplateInput{
 				Contents: `{{ scratch.MapSet "explode-test" "foo/bar" "a"}}{{ scratch.MapSet "explode-test" "qux" "c"}}{{ scratch.MapSet "explode-test" "zip/zap" "d"}}{{ scratch.Get "explode-test" | explodeMap }}`,
 			},
 			NewStore(),
@@ -1055,7 +1055,7 @@ func TestTemplate_Execute(t *testing.T) {
 		},
 		{
 			"helper_in",
-			&NewTemplateInput{
+			&TemplateInput{
 				Contents: `{{ range service "webapp" }}{{ if "prod" | in .Tags }}{{ .Address }}{{ end }}{{ end }}`,
 			},
 			func() *Store {
@@ -1081,7 +1081,7 @@ func TestTemplate_Execute(t *testing.T) {
 		},
 		{
 			"helper_indent",
-			&NewTemplateInput{
+			&TemplateInput{
 				Contents: `{{ "hello\nhello\r\nHELLO\r\nhello\nHELLO" | indent 4 }}`,
 			},
 			NewStore(),
@@ -1090,7 +1090,7 @@ func TestTemplate_Execute(t *testing.T) {
 		},
 		{
 			"helper_indent_negative",
-			&NewTemplateInput{
+			&TemplateInput{
 				Contents: `{{ "hello\nhello\r\nHELLO\r\nhello\nHELLO" | indent -4 }}`,
 			},
 			NewStore(),
@@ -1099,7 +1099,7 @@ func TestTemplate_Execute(t *testing.T) {
 		},
 		{
 			"helper_indent_zero",
-			&NewTemplateInput{
+			&TemplateInput{
 				Contents: `{{ "hello\nhello\r\nHELLO\r\nhello\nHELLO" | indent 0 }}`,
 			},
 			NewStore(),
@@ -1108,7 +1108,7 @@ func TestTemplate_Execute(t *testing.T) {
 		},
 		{
 			"helper_loop",
-			&NewTemplateInput{
+			&TemplateInput{
 				Contents: `{{ range loop 3 }}1{{ end }}`,
 			},
 			NewStore(),
@@ -1117,7 +1117,7 @@ func TestTemplate_Execute(t *testing.T) {
 		},
 		{
 			"helper_loop__i",
-			&NewTemplateInput{
+			&TemplateInput{
 				Contents: `{{ range $i := loop 3 }}{{ $i }}{{ end }}`,
 			},
 			NewStore(),
@@ -1126,7 +1126,7 @@ func TestTemplate_Execute(t *testing.T) {
 		},
 		{
 			"helper_loop_start",
-			&NewTemplateInput{
+			&TemplateInput{
 				Contents: `{{ range loop 1 3 }}1{{ end }}`,
 			},
 			NewStore(),
@@ -1135,7 +1135,7 @@ func TestTemplate_Execute(t *testing.T) {
 		},
 		{
 			"helper_loop_text",
-			&NewTemplateInput{
+			&TemplateInput{
 				Contents: `{{ range loop 1 "3" }}1{{ end }}`,
 			},
 			NewStore(),
@@ -1144,7 +1144,7 @@ func TestTemplate_Execute(t *testing.T) {
 		},
 		{
 			"helper_loop_parseInt",
-			&NewTemplateInput{
+			&TemplateInput{
 				Contents: `{{ $i := print "3" | parseInt }}{{ range loop 1 $i }}1{{ end }}`,
 			},
 			NewStore(),
@@ -1154,7 +1154,7 @@ func TestTemplate_Execute(t *testing.T) {
 		{
 			// GH-1143
 			"helper_loop_var",
-			&NewTemplateInput{
+			&TemplateInput{
 				Contents: `{{$n := 3 }}` +
 					`{{ range $i := loop $n }}{{ $i }}{{ end }}`,
 			},
@@ -1164,7 +1164,7 @@ func TestTemplate_Execute(t *testing.T) {
 		},
 		{
 			"helper_join",
-			&NewTemplateInput{
+			&TemplateInput{
 				Contents: `{{ "a,b,c" | split "," | join ";" }}`,
 			},
 			NewStore(),
@@ -1173,7 +1173,7 @@ func TestTemplate_Execute(t *testing.T) {
 		},
 		{
 			"helper_parseBool",
-			&NewTemplateInput{
+			&TemplateInput{
 				Contents: `{{ "true" | parseBool }}`,
 			},
 			NewStore(),
@@ -1182,7 +1182,7 @@ func TestTemplate_Execute(t *testing.T) {
 		},
 		{
 			"helper_parseFloat",
-			&NewTemplateInput{
+			&TemplateInput{
 				Contents: `{{ "1.2" | parseFloat }}`,
 			},
 			NewStore(),
@@ -1191,7 +1191,7 @@ func TestTemplate_Execute(t *testing.T) {
 		},
 		{
 			"helper_parseInt",
-			&NewTemplateInput{
+			&TemplateInput{
 				Contents: `{{ "-1" | parseInt }}`,
 			},
 			NewStore(),
@@ -1200,7 +1200,7 @@ func TestTemplate_Execute(t *testing.T) {
 		},
 		{
 			"helper_parseJSON",
-			&NewTemplateInput{
+			&TemplateInput{
 				Contents: `{{ "{\"foo\": \"bar\"}" | parseJSON }}`,
 			},
 			NewStore(),
@@ -1209,7 +1209,7 @@ func TestTemplate_Execute(t *testing.T) {
 		},
 		{
 			"helper_parseUint",
-			&NewTemplateInput{
+			&TemplateInput{
 				Contents: `{{ "1" | parseUint }}`,
 			},
 			NewStore(),
@@ -1218,7 +1218,7 @@ func TestTemplate_Execute(t *testing.T) {
 		},
 		{
 			"helper_parseYAML",
-			&NewTemplateInput{
+			&TemplateInput{
 				Contents: `{{ "foo: bar" | parseYAML }}`,
 			},
 			NewStore(),
@@ -1227,7 +1227,7 @@ func TestTemplate_Execute(t *testing.T) {
 		},
 		{
 			"helper_parseYAMLv2",
-			&NewTemplateInput{
+			&TemplateInput{
 				Contents: `{{ "foo: bar\nbaz: \"foo\"" | parseYAML }}`,
 			},
 			NewStore(),
@@ -1236,7 +1236,7 @@ func TestTemplate_Execute(t *testing.T) {
 		},
 		{
 			"helper_parseYAMLnested",
-			&NewTemplateInput{
+			&TemplateInput{
 				Contents: `{{ "foo:\n  bar: \"baz\"\n  baz: 7" | parseYAML }}`,
 			},
 			NewStore(),
@@ -1245,7 +1245,7 @@ func TestTemplate_Execute(t *testing.T) {
 		},
 		{
 			"helper_plugin",
-			&NewTemplateInput{
+			&TemplateInput{
 				Contents: `{{ "1" | plugin "echo" }}`,
 			},
 			NewStore(),
@@ -1254,7 +1254,7 @@ func TestTemplate_Execute(t *testing.T) {
 		},
 		{
 			"helper_plugin_disabled",
-			&NewTemplateInput{
+			&TemplateInput{
 				Contents:     `{{ "1" | plugin "echo" }}`,
 				FuncMapMerge: template.FuncMap{"plugin": DenyFunc},
 			},
@@ -1264,7 +1264,7 @@ func TestTemplate_Execute(t *testing.T) {
 		},
 		{
 			"helper_regexMatch",
-			&NewTemplateInput{
+			&TemplateInput{
 				Contents: `{{ "foo" | regexMatch "[a-z]+" }}`,
 			},
 			NewStore(),
@@ -1273,7 +1273,7 @@ func TestTemplate_Execute(t *testing.T) {
 		},
 		{
 			"helper_regexReplaceAll",
-			&NewTemplateInput{
+			&TemplateInput{
 				Contents: `{{ "foo" | regexReplaceAll "\\w" "x" }}`,
 			},
 			NewStore(),
@@ -1282,7 +1282,7 @@ func TestTemplate_Execute(t *testing.T) {
 		},
 		{
 			"helper_replaceAll",
-			&NewTemplateInput{
+			&TemplateInput{
 				Contents: `{{ "hello my hello" | regexReplaceAll "hello" "bye" }}`,
 			},
 			NewStore(),
@@ -1291,7 +1291,7 @@ func TestTemplate_Execute(t *testing.T) {
 		},
 		{
 			"helper_split",
-			&NewTemplateInput{
+			&TemplateInput{
 				Contents: `{{ "a,b,c" | split "," }}`,
 			},
 			NewStore(),
@@ -1300,7 +1300,7 @@ func TestTemplate_Execute(t *testing.T) {
 		},
 		{
 			"helper_timestamp",
-			&NewTemplateInput{
+			&TemplateInput{
 				Contents: `{{ timestamp }}`,
 			},
 			NewStore(),
@@ -1309,7 +1309,7 @@ func TestTemplate_Execute(t *testing.T) {
 		},
 		{
 			"helper_helper_timestamp__formatted",
-			&NewTemplateInput{
+			&TemplateInput{
 				Contents: `{{ timestamp "2006-01-02" }}`,
 			},
 			NewStore(),
@@ -1318,7 +1318,7 @@ func TestTemplate_Execute(t *testing.T) {
 		},
 		{
 			"helper_toJSON",
-			&NewTemplateInput{
+			&TemplateInput{
 				Contents: `{{ "a,b,c" | split "," | toJSON }}`,
 			},
 			NewStore(),
@@ -1327,7 +1327,7 @@ func TestTemplate_Execute(t *testing.T) {
 		},
 		{
 			"helper_toLower",
-			&NewTemplateInput{
+			&TemplateInput{
 				Contents: `{{ "HI" | toLower }}`,
 			},
 			NewStore(),
@@ -1336,7 +1336,7 @@ func TestTemplate_Execute(t *testing.T) {
 		},
 		{
 			"helper_toTitle",
-			&NewTemplateInput{
+			&TemplateInput{
 				Contents: `{{ "this is a sentence" | toTitle }}`,
 			},
 			NewStore(),
@@ -1345,7 +1345,7 @@ func TestTemplate_Execute(t *testing.T) {
 		},
 		{
 			"helper_toTOML",
-			&NewTemplateInput{
+			&TemplateInput{
 				Contents: `{{ "{\"foo\":\"bar\"}" | parseJSON | toTOML }}`,
 			},
 			NewStore(),
@@ -1354,7 +1354,7 @@ func TestTemplate_Execute(t *testing.T) {
 		},
 		{
 			"helper_toUpper",
-			&NewTemplateInput{
+			&TemplateInput{
 				Contents: `{{ "hi" | toUpper }}`,
 			},
 			NewStore(),
@@ -1363,7 +1363,7 @@ func TestTemplate_Execute(t *testing.T) {
 		},
 		{
 			"helper_toYAML",
-			&NewTemplateInput{
+			&TemplateInput{
 				Contents: `{{ "{\"foo\":\"bar\"}" | parseJSON | toYAML }}`,
 			},
 			NewStore(),
@@ -1372,7 +1372,7 @@ func TestTemplate_Execute(t *testing.T) {
 		},
 		{
 			"helper_trimSpace",
-			&NewTemplateInput{
+			&TemplateInput{
 				Contents: `{{ "\t hi\n " | trimSpace }}`,
 			},
 			NewStore(),
@@ -1381,7 +1381,7 @@ func TestTemplate_Execute(t *testing.T) {
 		},
 		{
 			"helper_sockaddr",
-			&NewTemplateInput{
+			&TemplateInput{
 				Contents: `{{ sockaddr "GetAllInterfaces | include \"flag\" \"loopback\" | include \"type\" \"IPv4\" | sort \"address\" | limit 1 | attr \"address\""}}`,
 			},
 			NewStore(),
@@ -1390,7 +1390,7 @@ func TestTemplate_Execute(t *testing.T) {
 		},
 		{
 			"math_add",
-			&NewTemplateInput{
+			&TemplateInput{
 				Contents: `{{ 2 | add 2 }}`,
 			},
 			NewStore(),
@@ -1399,7 +1399,7 @@ func TestTemplate_Execute(t *testing.T) {
 		},
 		{
 			"math_subtract",
-			&NewTemplateInput{
+			&TemplateInput{
 				Contents: `{{ 2 | subtract 2 }}`,
 			},
 			NewStore(),
@@ -1408,7 +1408,7 @@ func TestTemplate_Execute(t *testing.T) {
 		},
 		{
 			"math_multiply",
-			&NewTemplateInput{
+			&TemplateInput{
 				Contents: `{{ 2 | multiply 2 }}`,
 			},
 			NewStore(),
@@ -1417,7 +1417,7 @@ func TestTemplate_Execute(t *testing.T) {
 		},
 		{
 			"math_divide",
-			&NewTemplateInput{
+			&TemplateInput{
 				Contents: `{{ 2 | divide 2 }}`,
 			},
 			NewStore(),
@@ -1426,7 +1426,7 @@ func TestTemplate_Execute(t *testing.T) {
 		},
 		{
 			"math_modulo",
-			&NewTemplateInput{
+			&TemplateInput{
 				Contents: `{{ 3 | modulo 2 }}`,
 			},
 			NewStore(),
@@ -1435,7 +1435,7 @@ func TestTemplate_Execute(t *testing.T) {
 		},
 		{
 			"math_minimum",
-			&NewTemplateInput{
+			&TemplateInput{
 				Contents: `{{ 3 | minimum 2 }}`,
 			},
 			NewStore(),
@@ -1444,7 +1444,7 @@ func TestTemplate_Execute(t *testing.T) {
 		},
 		{
 			"math_maximum",
-			&NewTemplateInput{
+			&TemplateInput{
 				Contents: `{{ 3 | maximum 2 }}`,
 			},
 			NewStore(),
@@ -1453,7 +1453,7 @@ func TestTemplate_Execute(t *testing.T) {
 		},
 		{
 			"leaf_cert",
-			&NewTemplateInput{
+			&TemplateInput{
 				Contents: `{{with caLeaf "foo"}}` +
 					`{{.CertPEM}}{{.PrivateKeyPEM}}{{end}}`,
 			},
@@ -1472,7 +1472,7 @@ func TestTemplate_Execute(t *testing.T) {
 		},
 		{
 			"root_ca",
-			&NewTemplateInput{
+			&TemplateInput{
 				Contents: `{{range caRoots}}{{.RootCertPEM}}{{end}}`,
 			},
 			func() *Store {
@@ -1492,7 +1492,7 @@ func TestTemplate_Execute(t *testing.T) {
 		},
 		{
 			"func_connect",
-			&NewTemplateInput{
+			&TemplateInput{
 				Contents: `{{ range connect "webapp" }}{{ .Address }}{{ end }}`,
 			},
 			func() *Store {
@@ -1520,7 +1520,7 @@ func TestTemplate_Execute(t *testing.T) {
 
 	//	struct {
 	//		name string
-	//		ti   *NewTemplateInput
+	//		ti   *TemplateInput
 	//		i    Recaller
 	//		e    string
 	//		err  bool

@@ -33,7 +33,7 @@ type FileRenderer struct {
 }
 
 // NewFileRenderer returns a new FileRenderer.
-func NewFileRenderer(i NewFileRendererInput) FileRenderer {
+func NewFileRenderer(i FileRendererInput) FileRenderer {
 	backup := i.Backup
 	if backup == nil {
 		backup = func(string) {}
@@ -46,8 +46,8 @@ func NewFileRenderer(i NewFileRendererInput) FileRenderer {
 	}
 }
 
-// NewFileRendererInput is the input structure for NewFileRenderer.
-type NewFileRendererInput struct {
+// FileRendererInput is the input structure for NewFileRenderer.
+type FileRendererInput struct {
 	// CreateDestDirs causes missing directories on path to be created
 	CreateDestDirs bool
 	// Path is the full file path to write to
