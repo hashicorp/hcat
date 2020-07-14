@@ -13,6 +13,7 @@ import (
 func TestWatcherAdd(t *testing.T) {
 	t.Run("updates-map", func(t *testing.T) {
 		w := newWatcher(t)
+		defer w.Stop()
 
 		d := &dep.FakeDep{}
 		if added := w.Add(d); !added {
@@ -26,9 +27,10 @@ func TestWatcherAdd(t *testing.T) {
 	})
 	t.Run("exists", func(t *testing.T) {
 		w := newWatcher(t)
+		defer w.Stop()
 
 		d := &dep.FakeDep{}
-		w.depViewMap[d.String()] = &view{}
+		w.depViewMap[d.String()] = newView(&newViewInput{Dependency: d})
 
 		if added := w.Add(d); added {
 			t.Errorf("expected add to return false")
@@ -36,6 +38,7 @@ func TestWatcherAdd(t *testing.T) {
 	})
 	t.Run("startsViewPoll", func(t *testing.T) {
 		w := newWatcher(t)
+		defer w.Stop()
 
 		if added := w.Add(&dep.FakeDep{}); !added {
 			t.Errorf("expected add to return true")
@@ -53,6 +56,7 @@ func TestWatcherAdd(t *testing.T) {
 func TestWatcherWatching(t *testing.T) {
 	t.Run("not-exists", func(t *testing.T) {
 		w := newWatcher(t)
+		defer w.Stop()
 
 		d := &dep.FakeDep{}
 		if w.watching(d.String()) == true {
@@ -62,6 +66,7 @@ func TestWatcherWatching(t *testing.T) {
 
 	t.Run("exists", func(t *testing.T) {
 		w := newWatcher(t)
+		defer w.Stop()
 
 		d := &dep.FakeDep{}
 		w.Add(d)
@@ -75,6 +80,7 @@ func TestWatcherWatching(t *testing.T) {
 func TestWatcherRemove(t *testing.T) {
 	t.Run("exists", func(t *testing.T) {
 		w := newWatcher(t)
+		defer w.Stop()
 
 		d := &dep.FakeDep{}
 		w.Add(d)
@@ -91,6 +97,7 @@ func TestWatcherRemove(t *testing.T) {
 
 	t.Run("does-not-exist", func(t *testing.T) {
 		w := newWatcher(t)
+		defer w.Stop()
 
 		var fd dep.FakeDep
 		removed := w.remove(fd.String())
@@ -103,6 +110,7 @@ func TestWatcherRemove(t *testing.T) {
 func TestWatcherSize(t *testing.T) {
 	t.Run("empty", func(t *testing.T) {
 		w := newWatcher(t)
+		defer w.Stop()
 
 		if w.Size() != 0 {
 			t.Errorf("expected %d to be %d", w.Size(), 0)
@@ -111,6 +119,7 @@ func TestWatcherSize(t *testing.T) {
 
 	t.Run("returns-num-views", func(t *testing.T) {
 		w := newWatcher(t)
+		defer w.Stop()
 
 		for i := 0; i < 10; i++ {
 			d := &dep.FakeDep{Name: fmt.Sprintf("%d", i)}
