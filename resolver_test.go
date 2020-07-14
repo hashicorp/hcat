@@ -168,26 +168,18 @@ func TestResolverRun(t *testing.T) {
 // Helpers
 
 func fooTemplate(t *testing.T) *Template {
-	tm, err := NewTemplate(
+	return NewTemplate(
 		&NewTemplateInput{
 			Contents: `{{key "foo"}}`,
 		})
-	if err != nil {
-		t.Fatal("new template error:", err)
-	}
-	return tm
 }
 
 func echoTemplate(t *testing.T, data string) *Template {
-	tm, err := NewTemplate(
+	return NewTemplate(
 		&NewTemplateInput{
 			Contents:     `{{echo "` + data + `"}}`,
 			FuncMapMerge: template.FuncMap{"echo": echoFunc},
 		})
-	if err != nil {
-		t.Fatal("new template error:", err)
-	}
-	return tm
 }
 
 func echoFunc(r Recaller, used, missing *DepSet) interface{} {
@@ -225,17 +217,13 @@ func wordListFunc(r Recaller, used, missing *DepSet) interface{} {
 
 func echoListTemplate(t *testing.T, data ...string) *Template {
 	list := strings.Join(data, `" "`)
-	tm, err := NewTemplate(
+	return NewTemplate(
 		&NewTemplateInput{
 			Contents: `{{range words "` + list + `"}}{{echo .}}{{end}}`,
 			FuncMapMerge: template.FuncMap{
 				"echo":  echoFunc,
 				"words": wordListFunc},
 		})
-	if err != nil {
-		t.Fatal("new template error:", err)
-	}
-	return tm
 }
 
 // watcher with no Looker

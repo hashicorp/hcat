@@ -94,13 +94,9 @@ type NewTemplateInput struct {
 // path. If the template does not exist, an error is returned. During
 // initialization, the template is read and is parsed for dependencies. Any
 // errors that occur are returned.
-func NewTemplate(i *NewTemplateInput) (*Template, error) {
+func NewTemplate(i *NewTemplateInput) *Template {
 	if i == nil {
 		i = &NewTemplateInput{}
-	}
-
-	if i.Contents == "" {
-		return nil, errTemplateMissingContents
 	}
 
 	var t Template
@@ -115,7 +111,7 @@ func NewTemplate(i *NewTemplateInput) (*Template, error) {
 	hash := md5.Sum([]byte(t.contents))
 	t.hexMD5 = hex.EncodeToString(hash[:])
 
-	return &t, nil
+	return &t
 }
 
 // ID returns the identifier for this template.

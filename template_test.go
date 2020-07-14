@@ -21,19 +21,11 @@ func TestNewTemplate(t *testing.T) {
 		name string
 		i    *NewTemplateInput
 		e    *Template
-		err  bool
 	}{
 		{
 			"nil",
 			nil,
-			nil,
-			true,
-		},
-		{
-			"no_contents",
-			&NewTemplateInput{},
-			nil,
-			true,
+			NewTemplate(nil),
 		},
 		{
 			"contents",
@@ -44,7 +36,6 @@ func TestNewTemplate(t *testing.T) {
 				contents: "test",
 				hexMD5:   "098f6bcd4621d373cade4e832627b4f6",
 			},
-			false,
 		},
 		{
 			"custom_delims",
@@ -59,7 +50,6 @@ func TestNewTemplate(t *testing.T) {
 				leftDelim:  "<<",
 				rightDelim: ">>",
 			},
-			false,
 		},
 		{
 			"err_missing_key",
@@ -72,18 +62,14 @@ func TestNewTemplate(t *testing.T) {
 				hexMD5:        "098f6bcd4621d373cade4e832627b4f6",
 				errMissingKey: true,
 			},
-			false,
 		},
 	}
 
 	for i, tc := range cases {
 		t.Run(fmt.Sprintf("%d_%s", i, tc.name), func(t *testing.T) {
-			a, err := NewTemplate(tc.i)
-			if (err != nil) != tc.err {
-				t.Fatal(err)
-			}
-			if !reflect.DeepEqual(tc.e, a) {
-				t.Errorf("\nexp: %#v\nact: %#v", tc.e, a)
+			tmpl := NewTemplate(tc.i)
+			if !reflect.DeepEqual(tc.e, tmpl) {
+				t.Errorf("\nexp: %#v\nact: %#v", tc.e, tmpl)
 			}
 		})
 	}
@@ -1542,7 +1528,7 @@ func TestTemplate_Execute(t *testing.T) {
 
 	for i, tc := range cases {
 		t.Run(fmt.Sprintf("%d_%s", i, tc.name), func(t *testing.T) {
-			tpl, err := NewTemplate(tc.ti)
+			tpl := NewTemplate(tc.ti)
 			if err != nil {
 				t.Fatal(err)
 			}
