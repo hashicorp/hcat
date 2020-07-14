@@ -8,43 +8,46 @@ import (
 	dep "github.com/hashicorp/hcat/internal/dependency"
 )
 
-// Interface for looking up data from Consul, Vault and the Environment.
+// Looker is an interface for looking up data from Consul, Vault and the
+// Environment.
 type Looker interface {
 	dep.Clients
 	Env() []string
 	Stop()
 }
 
-// internal clientSet focuses only on external (consul/vault) dependencies
+// ClientSet focuses only on external (consul/vault) dependencies
 // at this point so we extend it here to include environment variables to meet
 // the looker interface.
-type clientSet struct {
+type ClientSet struct {
 	*dep.ClientSet
 	injectedEnv []string
 }
 
 // NewClientSet is used to create the clients used.
 // Fulfills the Looker interface.
-func NewClientSet() *clientSet {
-	return &clientSet{
+func NewClientSet() *ClientSet {
+	return &ClientSet{
 		ClientSet:   dep.NewClientSet(),
 		injectedEnv: []string{},
 	}
 }
 
-func (cs *clientSet) AddConsul(i ConsulInput) *clientSet {
+// AddConsul creates a Consul client and adds to the client set
+func (cs *ClientSet) AddConsul(i ConsulInput) *ClientSet {
 	cs.CreateConsulClient(i.toInternal())
 	return cs
 }
 
-func (cs *clientSet) AddVault(i VaultInput) *clientSet {
+// AddVault creates a Vault client and adds to the client set
+func (cs *ClientSet) AddVault(i VaultInput) *ClientSet {
 	cs.CreateVaultClient(i.toInternal())
 	return cs
 }
 
 // Stop closes all idle connections for any attached clients and clears
 // the list of injected environment variables.
-func (cs *clientSet) Stop() {
+func (cs *ClientSet) Stop() {
 	if cs.ClientSet != nil {
 		cs.ClientSet.Stop()
 	}
@@ -55,20 +58,20 @@ func (cs *clientSet) Stop() {
 // evaluations and child process runs. Note that this is in addition to the
 // environment running consul template and in the case of duplicates, the
 // last entry wins.
-func (cs *clientSet) InjectEnv(env ...string) {
+func (cs *ClientSet) InjectEnv(env ...string) {
 	cs.injectedEnv = append(cs.injectedEnv, env...)
 }
 
 // You should do any messaging of the Environment variables during startup
 // As this will just use the raw Environment.
-func (cs *clientSet) Env() []string {
+func (cs *ClientSet) Env() []string {
 	return append(os.Environ(), cs.injectedEnv...)
 }
 
 // Input wrappers around internal structure. Going to rework the internal
 // structure, so this abstracts that away to make that workable.
 
-// ClientSetInput defines the inputs needed to configure the clients.
+// VaultInput defines the inputs needed to configure the Vault client.
 type VaultInput struct {
 	Address     string
 	Namespace   string
@@ -89,6 +92,7 @@ func (i VaultInput) toInternal() *dep.CreateClientInput {
 	return i.Transport.toInternal(cci)
 }
 
+// ConsulInput defines the inputs needed to configure the Consul client.
 type ConsulInput struct {
 	Address      string
 	Namespace    string
