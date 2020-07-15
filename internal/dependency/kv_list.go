@@ -3,8 +3,6 @@ package dependency
 import (
 	"encoding/gob"
 	"fmt"
-	"log"
-	"net/url"
 	"regexp"
 	"strings"
 
@@ -71,17 +69,17 @@ func (d *KVListQuery) Fetch(clients Clients, opts *QueryOptions) (interface{}, *
 		Datacenter: d.dc,
 	})
 
-	log.Printf("[TRACE] %s: GET %s", d, &url.URL{
-		Path:     "/v1/kv/" + d.prefix,
-		RawQuery: opts.String(),
-	})
+	//log.Printf("[TRACE] %s: GET %s", d, &url.URL{
+	//	Path:     "/v1/kv/" + d.prefix,
+	//	RawQuery: opts.String(),
+	//})
 
 	list, qm, err := clients.Consul().KV().List(d.prefix, opts.ToConsulOpts())
 	if err != nil {
 		return nil, nil, errors.Wrap(err, d.String())
 	}
 
-	log.Printf("[TRACE] %s: returned %d pairs", d, len(list))
+	//log.Printf("[TRACE] %s: returned %d pairs", d, len(list))
 
 	pairs := make([]*KeyPair, 0, len(list))
 	for _, pair := range list {

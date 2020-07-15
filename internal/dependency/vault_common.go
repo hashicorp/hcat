@@ -1,7 +1,6 @@
 package dependency
 
 import (
-	"log"
 	"math/rand"
 	"path"
 	"strings"
@@ -76,7 +75,7 @@ type renewer interface {
 }
 
 func renewSecret(clients Clients, d renewer) error {
-	log.Printf("[TRACE] %s: starting renewer", d)
+	//log.Printf("[TRACE] %s: starting renewer", d)
 
 	secret, vaultSecret := d.secrets()
 	renewer, err := clients.Vault().NewRenewer(&api.RenewerInput{
@@ -92,12 +91,12 @@ func renewSecret(clients Clients, d renewer) error {
 		select {
 		case err := <-renewer.DoneCh():
 			if err != nil {
-				log.Printf("[WARN] %s: failed to renew: %s", d, err)
+				//log.Printf("[WARN] %s: failed to renew: %s", d, err)
 			}
-			log.Printf("[WARN] %s: renewer done (maybe the lease expired)", d)
+			//log.Printf("[WARN] %s: renewer done (maybe the lease expired)", d)
 			return nil
 		case renewal := <-renewer.RenewCh():
-			log.Printf("[TRACE] %s: successfully renewed", d)
+			//log.Printf("[TRACE] %s: successfully renewed", d)
 			printVaultWarnings(d, renewal.Secret.Warnings)
 			updateSecret(secret, renewal.Secret)
 		case <-d.stopChan():
@@ -115,7 +114,7 @@ func durationFromCert(certData string) int {
 	}
 	cert, err := x509.ParseCertificate(block.Bytes)
 	if err != nil {
-		log.Printf("[WARN] Unable to parse certificate data: %s", err)
+		//log.Printf("[WARN] Unable to parse certificate data: %s", err)
 		return -1
 	}
 
@@ -138,7 +137,7 @@ func leaseCheckWait(s *Secret) time.Duration {
 		if certData, ok := certInterface.(string); ok {
 			newDuration := durationFromCert(certData)
 			if newDuration > 0 {
-				log.Printf("[DEBUG] Found certificate and set lease duration to %d seconds", newDuration)
+				//log.Printf("[DEBUG] Found certificate and set lease duration to %d seconds", newDuration)
 				base = newDuration
 			}
 		}
@@ -152,7 +151,7 @@ func leaseCheckWait(s *Secret) time.Duration {
 		if ttlInterface, ok := s.Data["ttl"]; ok {
 			ttlData, err := ttlInterface.(json.Number).Int64()
 			if err == nil && ttlData > 0 {
-				log.Printf("[DEBUG] Found rotation_period and set lease duration to %d seconds", ttlData)
+				//log.Printf("[DEBUG] Found rotation_period and set lease duration to %d seconds", ttlData)
 				// Add a second for cushion
 				base = int(ttlData) + 1
 				rotatingSecret = true
@@ -184,9 +183,9 @@ func leaseCheckWait(s *Secret) time.Duration {
 
 // printVaultWarnings prints warnings for a given dependency.
 func printVaultWarnings(d Dependency, warnings []string) {
-	for _, w := range warnings {
-		log.Printf("[WARN] %s: %s", d, w)
-	}
+	//for _, w := range warnings {
+	//log.Printf("[WARN] %s: %s", d, w)
+	//}
 }
 
 // vaultSecretRenewable determines if the given secret is renewable.

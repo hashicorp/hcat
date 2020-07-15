@@ -4,8 +4,6 @@ import (
 	"crypto/sha1"
 	"fmt"
 	"io"
-	"log"
-	"net/url"
 	"sort"
 	"strings"
 	"time"
@@ -91,7 +89,7 @@ func (d *VaultWriteQuery) Fetch(clients Clients, opts *QueryOptions,
 
 	if !vaultSecretRenewable(d.secret) {
 		dur := leaseCheckWait(d.secret)
-		log.Printf("[TRACE] %s: non-renewable secret, set sleep for %s", d, dur)
+		//log.Printf("[TRACE] %s: non-renewable secret, set sleep for %s", d, dur)
 		d.sleepCh <- dur
 	}
 
@@ -146,16 +144,16 @@ func sha1Map(m map[string]interface{}) string {
 }
 
 func (d *VaultWriteQuery) printWarnings(warnings []string) {
-	for _, w := range warnings {
-		log.Printf("[WARN] %s: %s", d, w)
-	}
+	//	for _, w := range warnings {
+	//		//log.Printf("[WARN] %s: %s", d, w)
+	//	}
 }
 
 func (d *VaultWriteQuery) writeSecret(clients Clients, opts *QueryOptions) (*api.Secret, error) {
-	log.Printf("[TRACE] %s: PUT %s", d, &url.URL{
-		Path:     "/v1/" + d.path,
-		RawQuery: opts.String(),
-	})
+	//log.Printf("[TRACE] %s: PUT %s", d, &url.URL{
+	//	Path:     "/v1/" + d.path,
+	//	RawQuery: opts.String(),
+	//})
 
 	data := d.data
 

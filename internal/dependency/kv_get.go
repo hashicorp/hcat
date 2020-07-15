@@ -2,8 +2,6 @@ package dependency
 
 import (
 	"fmt"
-	"log"
-	"net/url"
 	"regexp"
 
 	"github.com/pkg/errors"
@@ -52,10 +50,10 @@ func (d *KVGetQuery) Fetch(clients Clients, opts *QueryOptions) (interface{}, *R
 		Datacenter: d.dc,
 	})
 
-	log.Printf("[TRACE] %s: GET %s", d, &url.URL{
-		Path:     "/v1/kv/" + d.key,
-		RawQuery: opts.String(),
-	})
+	//log.Printf("[TRACE] %s: GET %s", d, &url.URL{
+	//	Path:     "/v1/kv/" + d.key,
+	//	RawQuery: opts.String(),
+	//})
 
 	pair, qm, err := clients.Consul().KV().Get(d.key, opts.ToConsulOpts())
 	if err != nil {
@@ -69,12 +67,12 @@ func (d *KVGetQuery) Fetch(clients Clients, opts *QueryOptions) (interface{}, *R
 	}
 
 	if pair == nil {
-		log.Printf("[TRACE] %s: returned nil", d)
+		//log.Printf("[TRACE] %s: returned nil", d)
 		return nil, rm, nil
 	}
 
 	value := string(pair.Value)
-	log.Printf("[TRACE] %s: returned %q", d, value)
+	//log.Printf("[TRACE] %s: returned %q", d, value)
 	return value, rm, nil
 }
 

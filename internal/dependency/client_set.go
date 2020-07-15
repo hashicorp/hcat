@@ -3,7 +3,6 @@ package dependency
 import (
 	"crypto/tls"
 	"fmt"
-	"log"
 	"net"
 	"net/http"
 	"sync"
@@ -296,7 +295,7 @@ func newTransport(i *CreateClientInput) (*http.Transport, error) {
 			tlsConfig.InsecureSkipVerify = false
 		}
 		if !i.SSLVerify {
-			log.Printf("[WARN] (clients) disabling SSL verification")
+			//log.Printf("[WARN] (clients) disabling SSL verification")
 			tlsConfig.InsecureSkipVerify = true
 		}
 

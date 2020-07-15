@@ -1,8 +1,6 @@
 package dependency
 
 import (
-	"log"
-	"net/url"
 	"sort"
 	"time"
 
@@ -39,10 +37,10 @@ func NewCatalogDatacentersQuery(ignoreFailing bool) (*CatalogDatacentersQuery, e
 func (d *CatalogDatacentersQuery) Fetch(clients Clients, opts *QueryOptions) (interface{}, *ResponseMetadata, error) {
 	opts = opts.Merge(&QueryOptions{})
 
-	log.Printf("[TRACE] %s: GET %s", d, &url.URL{
-		Path:     "/v1/catalog/datacenters",
-		RawQuery: opts.String(),
-	})
+	//log.Printf("[TRACE] %s: GET %s", d, &url.URL{
+	//	Path:     "/v1/catalog/datacenters",
+	//	RawQuery: opts.String(),
+	//})
 
 	// This is pretty ghetto, but the datacenters endpoint does not support
 	// blocking queries, so we are going to "fake it until we make it". When we
@@ -54,7 +52,7 @@ func (d *CatalogDatacentersQuery) Fetch(clients Clients, opts *QueryOptions) (in
 	// This is probably okay given the frequency in which datacenters actually
 	// change, but is technically not edge-triggering.
 	if opts.WaitIndex != 0 {
-		log.Printf("[TRACE] %s: long polling for %s", d, CatalogDatacentersQuerySleepTime)
+		//log.Printf("[TRACE] %s: long polling for %s", d, CatalogDatacentersQuerySleepTime)
 
 		select {
 		case <-d.stopCh:
@@ -84,7 +82,7 @@ func (d *CatalogDatacentersQuery) Fetch(clients Clients, opts *QueryOptions) (in
 		result = dcs
 	}
 
-	log.Printf("[TRACE] %s: returned %d results", d, len(result))
+	//log.Printf("[TRACE] %s: returned %d results", d, len(result))
 
 	sort.Strings(result)
 

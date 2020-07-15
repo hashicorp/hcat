@@ -3,8 +3,6 @@ package dependency
 import (
 	"encoding/gob"
 	"fmt"
-	"log"
-	"net/url"
 	"regexp"
 	"sort"
 
@@ -63,17 +61,17 @@ func (d *CatalogServicesQuery) Fetch(clients Clients, opts *QueryOptions) (inter
 		Datacenter: d.dc,
 	})
 
-	log.Printf("[TRACE] %s: GET %s", d, &url.URL{
-		Path:     "/v1/catalog/services",
-		RawQuery: opts.String(),
-	})
+	//log.Printf("[TRACE] %s: GET %s", d, &url.URL{
+	//	Path:     "/v1/catalog/services",
+	//	RawQuery: opts.String(),
+	//})
 
 	entries, qm, err := clients.Consul().Catalog().Services(opts.ToConsulOpts())
 	if err != nil {
 		return nil, nil, errors.Wrap(err, d.String())
 	}
 
-	log.Printf("[TRACE] %s: returned %d results", d, len(entries))
+	//log.Printf("[TRACE] %s: returned %d results", d, len(entries))
 
 	var catalogServices []*CatalogSnippet
 	for name, tags := range entries {

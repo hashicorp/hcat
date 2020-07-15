@@ -3,7 +3,6 @@ package dependency
 import (
 	"encoding/gob"
 	"fmt"
-	"log"
 	"net/url"
 	"regexp"
 
@@ -88,14 +87,14 @@ func (d *CatalogServiceQuery) Fetch(clients Clients, opts *QueryOptions) (interf
 		q.Set("tag", d.tag)
 		u.RawQuery = q.Encode()
 	}
-	log.Printf("[TRACE] %s: GET %s", d, u)
+	//log.Printf("[TRACE] %s: GET %s", d, u)
 
 	entries, qm, err := clients.Consul().Catalog().Service(d.name, d.tag, opts.ToConsulOpts())
 	if err != nil {
 		return nil, nil, errors.Wrap(err, d.String())
 	}
 
-	log.Printf("[TRACE] %s: returned %d results", d, len(entries))
+	//log.Printf("[TRACE] %s: returned %d results", d, len(entries))
 
 	var list []*CatalogService
 	for _, s := range entries {

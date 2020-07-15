@@ -3,7 +3,6 @@ package dependency
 import (
 	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 	"os/exec"
 	"reflect"
@@ -23,7 +22,7 @@ var testVault *vaultServer
 var testClients *ClientSet
 
 func TestMain(m *testing.M) {
-	log.SetOutput(ioutil.Discard)
+	//log.SetOutput(ioutil.Discard)
 	runTestVault()
 	runTestConsul()
 	clients := NewClientSet()

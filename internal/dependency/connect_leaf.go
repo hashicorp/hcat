@@ -2,8 +2,6 @@ package dependency
 
 import (
 	"fmt"
-	"log"
-	"net/url"
 
 	"github.com/pkg/errors"
 )
@@ -35,10 +33,10 @@ func (d *ConnectLeafQuery) Fetch(clients Clients, opts *QueryOptions) (
 	default:
 	}
 	opts = opts.Merge(nil)
-	log.Printf("[TRACE] %s: GET %s", d, &url.URL{
-		Path:     "/v1/agent/connect/ca/leaf/" + d.service,
-		RawQuery: opts.String(),
-	})
+	//log.Printf("[TRACE] %s: GET %s", d, &url.URL{
+	//	Path:     "/v1/agent/connect/ca/leaf/" + d.service,
+	//	RawQuery: opts.String(),
+	//})
 
 	cert, md, err := clients.Consul().Agent().ConnectCALeaf(d.service,
 		opts.ToConsulOpts())
@@ -46,7 +44,7 @@ func (d *ConnectLeafQuery) Fetch(clients Clients, opts *QueryOptions) (
 		return nil, nil, errors.Wrap(err, d.String())
 	}
 
-	log.Printf("[TRACE] %s: returned response", d)
+	//log.Printf("[TRACE] %s: returned response", d)
 
 	rm := &ResponseMetadata{
 		LastIndex:   md.LastIndex,

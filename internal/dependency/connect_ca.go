@@ -1,9 +1,6 @@
 package dependency
 
 import (
-	"log"
-	"net/url"
-
 	"github.com/pkg/errors"
 )
 
@@ -32,10 +29,10 @@ func (d *ConnectCAQuery) Fetch(clients Clients, opts *QueryOptions) (
 	}
 
 	opts = opts.Merge(nil)
-	log.Printf("[TRACE] %s: GET %s", d, &url.URL{
-		Path:     "/v1/agent/connect/ca/roots",
-		RawQuery: opts.String(),
-	})
+	//log.Printf("[TRACE] %s: GET %s", d, &url.URL{
+	//	Path:     "/v1/agent/connect/ca/roots",
+	//	RawQuery: opts.String(),
+	//})
 
 	certs, md, err := clients.Consul().Agent().ConnectCARoots(
 		opts.ToConsulOpts())
@@ -43,8 +40,8 @@ func (d *ConnectCAQuery) Fetch(clients Clients, opts *QueryOptions) (
 		return nil, nil, errors.Wrap(err, d.String())
 	}
 
-	log.Printf("[TRACE] %s: returned %d results", d, len(certs.Roots))
-	log.Printf("[TRACE] %s: %#v ", d, md)
+	//log.Printf("[TRACE] %s: returned %d results", d, len(certs.Roots))
+	//log.Printf("[TRACE] %s: %#v ", d, md)
 
 	rm := &ResponseMetadata{
 		LastIndex:   md.LastIndex,

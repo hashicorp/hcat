@@ -2,8 +2,6 @@ package dependency
 
 import (
 	"fmt"
-	"log"
-	"net/url"
 	"regexp"
 	"strings"
 
@@ -52,10 +50,10 @@ func (d *KVKeysQuery) Fetch(clients Clients, opts *QueryOptions) (interface{}, *
 		Datacenter: d.dc,
 	})
 
-	log.Printf("[TRACE] %s: GET %s", d, &url.URL{
-		Path:     "/v1/kv/" + d.prefix,
-		RawQuery: opts.String(),
-	})
+	//log.Printf("[TRACE] %s: GET %s", d, &url.URL{
+	//	Path:     "/v1/kv/" + d.prefix,
+	//	RawQuery: opts.String(),
+	//})
 
 	list, qm, err := clients.Consul().KV().Keys(d.prefix, "", opts.ToConsulOpts())
 	if err != nil {
@@ -69,7 +67,7 @@ func (d *KVKeysQuery) Fetch(clients Clients, opts *QueryOptions) (interface{}, *
 		keys[i] = v
 	}
 
-	log.Printf("[TRACE] %s: returned %d results", d, len(list))
+	//log.Printf("[TRACE] %s: returned %d results", d, len(list))
 
 	rm := &ResponseMetadata{
 		LastIndex:   qm.LastIndex,

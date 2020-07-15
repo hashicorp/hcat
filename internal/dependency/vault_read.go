@@ -2,7 +2,6 @@ package dependency
 
 import (
 	"fmt"
-	"log"
 	"net/url"
 	"strings"
 	"time"
@@ -82,7 +81,7 @@ func (d *VaultReadQuery) Fetch(clients Clients, opts *QueryOptions,
 
 	if !vaultSecretRenewable(d.secret) {
 		dur := leaseCheckWait(d.secret)
-		log.Printf("[TRACE] %s: non-renewable secret, set sleep for %s", d, dur)
+		//log.Printf("[TRACE] %s: non-renewable secret, set sleep for %s", d, dur)
 		d.sleepCh <- dur
 	}
 
@@ -140,8 +139,8 @@ func (d *VaultReadQuery) readSecret(clients Clients, opts *QueryOptions) (*api.S
 	if d.isKVv2 == nil {
 		mountPath, isKVv2, err := isKVv2(vaultClient, d.rawPath)
 		if err != nil {
-			log.Printf("[WARN] %s: failed to check if %s is KVv2, "+
-				"assume not: %s", d, d.rawPath, err)
+			//log.Printf("[WARN] %s: failed to check if %s is KVv2, "+
+			//	"assume not: %s", d, d.rawPath, err)
 			isKVv2 = false
 			d.secretPath = d.rawPath
 		} else if isKVv2 {
@@ -152,11 +151,11 @@ func (d *VaultReadQuery) readSecret(clients Clients, opts *QueryOptions) (*api.S
 		d.isKVv2 = &isKVv2
 	}
 
-	queryString := d.queryValues.Encode()
-	log.Printf("[TRACE] %s: GET %s", d, &url.URL{
-		Path:     "/v1/" + d.secretPath,
-		RawQuery: queryString,
-	})
+	//queryString := d.queryValues.Encode()
+	//log.Printf("[TRACE] %s: GET %s", d, &url.URL{
+	//	Path:     "/v1/" + d.secretPath,
+	//	RawQuery: queryString,
+	//})
 	vaultSecret, err := vaultClient.Logical().ReadWithData(d.secretPath,
 		d.queryValues)
 

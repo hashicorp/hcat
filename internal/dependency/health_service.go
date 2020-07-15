@@ -3,7 +3,6 @@ package dependency
 import (
 	"encoding/gob"
 	"fmt"
-	"log"
 	"net/url"
 	"regexp"
 	"sort"
@@ -140,7 +139,7 @@ func (d *HealthServiceQuery) Fetch(clients Clients, opts *QueryOptions) (interfa
 		q.Set("tag", d.tag)
 		u.RawQuery = q.Encode()
 	}
-	log.Printf("[TRACE] %s: GET %s", d, u)
+	//log.Printf("[TRACE] %s: GET %s", d, u)
 
 	// Check if a user-supplied filter was given. If so, we may be querying for
 	// more than healthy services, so we need to implement client-side
@@ -156,7 +155,7 @@ func (d *HealthServiceQuery) Fetch(clients Clients, opts *QueryOptions) (interfa
 		return nil, nil, errors.Wrap(err, d.String())
 	}
 
-	log.Printf("[TRACE] %s: returned %d results", d, len(entries))
+	//log.Printf("[TRACE] %s: returned %d results", d, len(entries))
 
 	list := make([]*HealthService, 0, len(entries))
 	for _, entry := range entries {
@@ -195,7 +194,7 @@ func (d *HealthServiceQuery) Fetch(clients Clients, opts *QueryOptions) (interfa
 		})
 	}
 
-	log.Printf("[TRACE] %s: returned %d results after filtering", d, len(list))
+	//log.Printf("[TRACE] %s: returned %d results after filtering", d, len(list))
 
 	// Sort unless the user explicitly asked for nearness
 	if d.near == "" {
