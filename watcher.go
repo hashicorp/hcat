@@ -60,7 +60,7 @@ type Watcher struct {
 	defaultLease time.Duration
 }
 
-type NewWatcherInput struct {
+type WatcherInput struct {
 	// Clients is the client set to communicate with upstreams.
 	Clients Looker
 	// Cache is the Cacher for caching watched values
@@ -82,7 +82,7 @@ type NewWatcherInput struct {
 }
 
 // NewWatcher creates a new watcher using the given API client.
-func NewWatcher(i *NewWatcherInput) *Watcher {
+func NewWatcher(i *WatcherInput) *Watcher {
 	w := &Watcher{
 		clients:         i.Clients,
 		cache:           i.Cache,

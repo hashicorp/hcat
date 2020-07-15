@@ -57,8 +57,8 @@ type Recaller interface {
 	Recall(string) (interface{}, bool)
 }
 
-// NewTemplateInput is used as input when creating the template.
-type NewTemplateInput struct {
+// TemplateInput is used as input when creating the template.
+type TemplateInput struct {
 	// Contents are the raw template contents.
 	Contents string
 
@@ -94,9 +94,9 @@ type NewTemplateInput struct {
 // path. If the template does not exist, an error is returned. During
 // initialization, the template is read and is parsed for dependencies. Any
 // errors that occur are returned.
-func NewTemplate(i *NewTemplateInput) *Template {
+func NewTemplate(i *TemplateInput) *Template {
 	if i == nil {
-		i = &NewTemplateInput{}
+		i = &TemplateInput{}
 	}
 
 	var t Template

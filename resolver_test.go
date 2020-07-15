@@ -169,14 +169,14 @@ func TestResolverRun(t *testing.T) {
 
 func fooTemplate(t *testing.T) *Template {
 	return NewTemplate(
-		&NewTemplateInput{
+		&TemplateInput{
 			Contents: `{{key "foo"}}`,
 		})
 }
 
 func echoTemplate(t *testing.T, data string) *Template {
 	return NewTemplate(
-		&NewTemplateInput{
+		&TemplateInput{
 			Contents:     `{{echo "` + data + `"}}`,
 			FuncMapMerge: template.FuncMap{"echo": echoFunc},
 		})
@@ -218,7 +218,7 @@ func wordListFunc(r Recaller, used, missing *DepSet) interface{} {
 func echoListTemplate(t *testing.T, data ...string) *Template {
 	list := strings.Join(data, `" "`)
 	return NewTemplate(
-		&NewTemplateInput{
+		&TemplateInput{
 			Contents: `{{range words "` + list + `"}}{{echo .}}{{end}}`,
 			FuncMapMerge: template.FuncMap{
 				"echo":  echoFunc,
@@ -228,5 +228,5 @@ func echoListTemplate(t *testing.T, data ...string) *Template {
 
 // watcher with no Looker
 func blindWatcher(t *testing.T) *Watcher {
-	return NewWatcher(&NewWatcherInput{Cache: NewStore()})
+	return NewWatcher(&WatcherInput{Cache: NewStore()})
 }
