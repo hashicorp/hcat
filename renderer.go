@@ -32,6 +32,9 @@ type FileRenderer struct {
 	backup         BackupFunc
 }
 
+// check for innterface compliance
+var _ Renderer = (*FileRenderer)(nil)
+
 // NewFileRenderer returns a new FileRenderer.
 func NewFileRenderer(i FileRendererInput) FileRenderer {
 	backup := i.Backup
@@ -78,14 +81,14 @@ type RenderResult struct {
 
 // Render atomically renders a file contents to disk, returning a result of
 // whether it would have rendered and actually did render.
-func (r FileRenderer) Render(contents []byte) (*RenderResult, error) {
+func (r FileRenderer) Render(contents []byte) (RenderResult, error) {
 	existing, err := ioutil.ReadFile(r.path)
 	if err != nil && !os.IsNotExist(err) {
-		return nil, errors.Wrap(err, "failed reading file")
+		return RenderResult{}, errors.Wrap(err, "failed reading file")
 	}
 
 	if bytes.Equal(existing, contents) {
-		return &RenderResult{
+		return RenderResult{
 			DidRender:   false,
 			WouldRender: true,
 		}, nil
@@ -95,10 +98,10 @@ func (r FileRenderer) Render(contents []byte) (*RenderResult, error) {
 
 	err = atomicWrite(r.path, contents, r.perms, r.createDestDirs)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed writing file")
+		return RenderResult{}, errors.Wrap(err, "failed writing file")
 	}
 
-	return &RenderResult{
+	return RenderResult{
 		DidRender:   true,
 		WouldRender: true,
 	}, nil
