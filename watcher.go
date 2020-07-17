@@ -122,6 +122,16 @@ func (w *Watcher) WatchVaultToken(token string) error {
 	return nil
 }
 
+// WaitCh returns an error channel and runs Wait sending the result down
+// the channel. Sugur for when you need to use Wait in a select block.
+func (w *Watcher) WaitCh(timeout time.Duration) <-chan error {
+	errCh := make(chan error)
+	go func() {
+		errCh <- w.Wait(timeout)
+	}()
+	return errCh
+}
+
 // Wait blocks until new a watched value changes
 func (w *Watcher) Wait(timeout time.Duration) error {
 	var timer <-chan time.Time

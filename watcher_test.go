@@ -319,6 +319,23 @@ func TestWatcherWait(t *testing.T) {
 			t.Fatal("failed to track updated dependency")
 		}
 	})
+	t.Run("wait-channel", func(t *testing.T) {
+		w := newWatcher(t)
+		defer w.Stop()
+		foodep := &dep.FakeDep{Name: "foo"}
+		view := newView(&newViewInput{
+			Dependency: foodep,
+		})
+		w.dataCh <- view
+		err := <-w.WaitCh(0)
+		if err != nil {
+			t.Fatal("wait error:", err)
+		}
+		store := w.cache.(*Store)
+		if _, ok := store.data[foodep.String()]; !ok {
+			t.Fatal("failed update")
+		}
+	})
 
 }
 
