@@ -20,8 +20,7 @@ func TestWatcherAdd(t *testing.T) {
 			t.Fatal("expected add to return true")
 		}
 
-		_, exists := w.depViewMap[d.String()]
-		if !exists {
+		if !w.watching(d.String()) {
 			t.Errorf("expected add to append to map")
 		}
 	})
@@ -30,8 +29,9 @@ func TestWatcherAdd(t *testing.T) {
 		defer w.Stop()
 
 		d := &dep.FakeDep{}
-		w.depViewMap[d.String()] = newView(&newViewInput{Dependency: d})
-
+		if added := w.Add(d); !added {
+			t.Errorf("expected add to return true")
+		}
 		if added := w.Add(d); added {
 			t.Errorf("expected add to return false")
 		}
@@ -90,7 +90,7 @@ func TestWatcherRemove(t *testing.T) {
 			t.Error("expected Remove to return true")
 		}
 
-		if _, ok := w.depViewMap[d.String()]; ok {
+		if w.watching(d.String()) {
 			t.Error("expected dependency to be removed")
 		}
 	})
@@ -115,7 +115,7 @@ func TestWatcherVaultToken(t *testing.T) {
 		if err != nil {
 			t.Fatal("Didn't expect and error:", err)
 		}
-		if len(w.depViewMap) > 0 {
+		if w.Size() > 0 {
 			t.Fatal("dependency should not have been added")
 		}
 	})
@@ -127,7 +127,8 @@ func TestWatcherVaultToken(t *testing.T) {
 			t.Fatal("Didn't expect and error:", err)
 		}
 		test_id := (&dep.VaultTokenQuery{}).String()
-		if _, ok := w.depViewMap[test_id]; !ok {
+
+		if !w.watching(test_id) {
 			t.Fatal("token dep not added to watcher")
 		}
 	})
@@ -139,12 +140,12 @@ func TestWatcherVaultToken(t *testing.T) {
 			t.Fatal("Didn't expect and error:", err)
 		}
 		test_id := (&dep.VaultTokenQuery{}).String()
-		if _, ok := w.depViewMap[test_id]; !ok {
+		if !w.watching(test_id) {
 			t.Fatal("token dep not added to watcher")
 		}
 		stop := make(chan struct{})
 		w.cleanDeps(stop)
-		if _, ok := w.depViewMap[test_id]; !ok {
+		if !w.watching(test_id) {
 			t.Fatal("token dep should not have been cleaned")
 		}
 	})
@@ -221,11 +222,11 @@ func TestWatcherWait(t *testing.T) {
 		defer w.Stop()
 		d := &dep.FakeDep{}
 		w.Add(d)
-		if _, ok := w.depViewMap[d.String()]; !ok {
+		if !w.watching(d.String()) {
 			t.Error("expected dependency to be present")
 		}
 		w.cleanDeps(nil)
-		if _, ok := w.depViewMap[d.String()]; ok {
+		if w.watching(d.String()) {
 			t.Error("expected dependency to be removed")
 		}
 	})
