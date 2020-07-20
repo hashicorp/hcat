@@ -335,8 +335,8 @@ func (w *Watcher) remove(id string) bool {
 	return false
 }
 
-// Watching determines if the given dependency is being watched.
-func (w *Watcher) watching(id string) bool {
+// Watching determines if the given dependency (id) is being watched.
+func (w *Watcher) Watching(id string) bool {
 	w.depViewMapMx.Lock()
 	defer w.depViewMapMx.Unlock()
 

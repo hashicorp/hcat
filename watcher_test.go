@@ -20,7 +20,7 @@ func TestWatcherAdd(t *testing.T) {
 			t.Fatal("expected add to return true")
 		}
 
-		if !w.watching(d.String()) {
+		if !w.Watching(d.String()) {
 			t.Errorf("expected add to append to map")
 		}
 	})
@@ -59,8 +59,8 @@ func TestWatcherWatching(t *testing.T) {
 		defer w.Stop()
 
 		d := &dep.FakeDep{}
-		if w.watching(d.String()) == true {
-			t.Errorf("expected to not be watching")
+		if w.Watching(d.String()) == true {
+			t.Errorf("expected to not be Watching")
 		}
 	})
 
@@ -71,8 +71,8 @@ func TestWatcherWatching(t *testing.T) {
 		d := &dep.FakeDep{}
 		w.Add(d)
 
-		if w.watching(d.String()) == false {
-			t.Errorf("expected to be watching")
+		if w.Watching(d.String()) == false {
+			t.Errorf("expected to be Watching")
 		}
 	})
 }
@@ -90,7 +90,7 @@ func TestWatcherRemove(t *testing.T) {
 			t.Error("expected Remove to return true")
 		}
 
-		if w.watching(d.String()) {
+		if w.Watching(d.String()) {
 			t.Error("expected dependency to be removed")
 		}
 	})
@@ -128,7 +128,7 @@ func TestWatcherVaultToken(t *testing.T) {
 		}
 		test_id := (&dep.VaultTokenQuery{}).String()
 
-		if !w.watching(test_id) {
+		if !w.Watching(test_id) {
 			t.Fatal("token dep not added to watcher")
 		}
 	})
@@ -140,12 +140,12 @@ func TestWatcherVaultToken(t *testing.T) {
 			t.Fatal("Didn't expect and error:", err)
 		}
 		test_id := (&dep.VaultTokenQuery{}).String()
-		if !w.watching(test_id) {
+		if !w.Watching(test_id) {
 			t.Fatal("token dep not added to watcher")
 		}
 		stop := make(chan struct{})
 		w.cleanDeps(stop)
-		if !w.watching(test_id) {
+		if !w.Watching(test_id) {
 			t.Fatal("token dep should not have been cleaned")
 		}
 	})
@@ -222,11 +222,11 @@ func TestWatcherWait(t *testing.T) {
 		defer w.Stop()
 		d := &dep.FakeDep{}
 		w.Add(d)
-		if !w.watching(d.String()) {
+		if !w.Watching(d.String()) {
 			t.Error("expected dependency to be present")
 		}
 		w.cleanDeps(nil)
-		if w.watching(d.String()) {
+		if w.Watching(d.String()) {
 			t.Error("expected dependency to be removed")
 		}
 	})
