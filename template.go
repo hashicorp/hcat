@@ -106,6 +106,7 @@ func NewTemplate(i *TemplateInput) *Template {
 	t.errMissingKey = i.ErrMissingKey
 	t.sandboxPath = i.SandboxPath
 	t.funcMapMerge = i.FuncMapMerge
+	t.renderer = i.Renderer
 
 	// Compute the MD5, encode as hex
 	hash := md5.Sum([]byte(t.contents))
