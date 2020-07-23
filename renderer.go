@@ -83,11 +83,12 @@ type RenderResult struct {
 // whether it would have rendered and actually did render.
 func (r FileRenderer) Render(contents []byte) (RenderResult, error) {
 	existing, err := ioutil.ReadFile(r.path)
-	if err != nil && !os.IsNotExist(err) {
+	fileExists := !os.IsNotExist(err)
+	if err != nil && fileExists {
 		return RenderResult{}, errors.Wrap(err, "failed reading file")
 	}
 
-	if bytes.Equal(existing, contents) {
+	if bytes.Equal(existing, contents) && fileExists {
 		return RenderResult{
 			DidRender:   false,
 			WouldRender: true,
