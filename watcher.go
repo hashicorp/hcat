@@ -83,9 +83,18 @@ type WatcherInput struct {
 
 // NewWatcher creates a new watcher using the given API client.
 func NewWatcher(i WatcherInput) *Watcher {
+	cache := i.Cache
+	if cache == nil {
+		cache = NewStore()
+	}
+	clients := i.Clients
+	if clients == nil {
+		clients = NewClientSet()
+	}
+
 	w := &Watcher{
-		clients:         i.Clients,
-		cache:           i.Cache,
+		clients:         clients,
+		cache:           cache,
 		dataCh:          make(chan *view, dataBufferSize),
 		errCh:           make(chan error),
 		olddepCh:        make(chan string, dataBufferSize),
