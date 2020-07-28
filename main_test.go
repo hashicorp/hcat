@@ -24,7 +24,6 @@ func TestMain(m *testing.M) {
 	retCode := m.Run()
 	cleanup() // can't defer w/ os.Exit
 	os.Exit(retCode)
-
 }
 
 // support for running consul as part of integration testing
