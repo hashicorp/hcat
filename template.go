@@ -94,10 +94,7 @@ type TemplateInput struct {
 // path. If the template does not exist, an error is returned. During
 // initialization, the template is read and is parsed for dependencies. Any
 // errors that occur are returned.
-func NewTemplate(i *TemplateInput) *Template {
-	if i == nil {
-		i = &TemplateInput{}
-	}
+func NewTemplate(i TemplateInput) *Template {
 
 	var t Template
 	t.contents = i.Contents

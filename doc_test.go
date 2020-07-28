@@ -23,12 +23,12 @@ var examples = []string{exampleServiceTemplate, exampleNodeTemplate}
 // ResolveEvent shows the template has fetched all values and completed, then
 // returns the output.
 func RenderExampleOnce(addr string) string {
-	tmpl := NewTemplate(&TemplateInput{
+	tmpl := NewTemplate(TemplateInput{
 		Contents: exampleServiceTemplate,
 	})
 	clients := NewClientSet()
 	clients.AddConsul(ConsulInput{Address: addr})
-	w := NewWatcher(&WatcherInput{
+	w := NewWatcher(WatcherInput{
 		Clients: clients,
 		Cache:   NewStore(),
 	})
@@ -56,11 +56,11 @@ func RenderExampleOnce(addr string) string {
 func RenderMultipleOnce(addr string) string {
 	templates := make([]*Template, len(examples))
 	for i, egs := range examples {
-		templates[i] = NewTemplate(&TemplateInput{Contents: egs})
+		templates[i] = NewTemplate(TemplateInput{Contents: egs})
 	}
 	clients := NewClientSet()
 	clients.AddConsul(ConsulInput{Address: addr})
-	w := NewWatcher(&WatcherInput{
+	w := NewWatcher(WatcherInput{
 		Clients: clients,
 		Cache:   NewStore(),
 	})

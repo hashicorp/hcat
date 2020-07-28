@@ -341,7 +341,7 @@ func TestWatcherWait(t *testing.T) {
 }
 
 func newWatcher(t *testing.T) *Watcher {
-	return NewWatcher(&WatcherInput{
+	return NewWatcher(WatcherInput{
 		Clients: NewClientSet(),
 		Cache:   NewStore(),
 	})

@@ -82,7 +82,7 @@ type WatcherInput struct {
 }
 
 // NewWatcher creates a new watcher using the given API client.
-func NewWatcher(i *WatcherInput) *Watcher {
+func NewWatcher(i WatcherInput) *Watcher {
 	w := &Watcher{
 		clients:         i.Clients,
 		cache:           i.Cache,
