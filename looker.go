@@ -3,6 +3,7 @@ package hcat
 import (
 	"net/http"
 	"os"
+	"sync"
 	"time"
 
 	dep "github.com/hashicorp/hcat/internal/dependency"
@@ -21,14 +22,19 @@ type Looker interface {
 // the looker interface.
 type ClientSet struct {
 	*dep.ClientSet
-	injectedEnv []string
+
+	// map of client-structs to retry functions
+	injectedEnv   []string
+	*sync.RWMutex // locking for env and retry
 }
 
 // NewClientSet is used to create the clients used.
 // Fulfills the Looker interface.
 func NewClientSet() *ClientSet {
 	return &ClientSet{
-		ClientSet:   dep.NewClientSet(),
+		ClientSet: dep.NewClientSet(),
+
+		RWMutex:     &sync.RWMutex{},
 		injectedEnv: []string{},
 	}
 }
@@ -59,12 +65,16 @@ func (cs *ClientSet) Stop() {
 // environment running consul template and in the case of duplicates, the
 // last entry wins.
 func (cs *ClientSet) InjectEnv(env ...string) {
+	cs.Lock()
+	defer cs.Unlock()
 	cs.injectedEnv = append(cs.injectedEnv, env...)
 }
 
 // You should do any messaging of the Environment variables during startup
 // As this will just use the raw Environment.
 func (cs *ClientSet) Env() []string {
+	cs.RLock()
+	defer cs.RUnlock()
 	return append(os.Environ(), cs.injectedEnv...)
 }
 
