@@ -33,6 +33,7 @@ type Node struct {
 
 // CatalogNodesQuery is the representation of all registered nodes in Consul.
 type CatalogNodesQuery struct {
+	isConsul
 	stopCh chan struct{}
 
 	dc   string
@@ -128,11 +129,6 @@ func (d *CatalogNodesQuery) String() string {
 // Stop halts the dependency's fetch function.
 func (d *CatalogNodesQuery) Stop() {
 	close(d.stopCh)
-}
-
-// Type returns the type of this dependency.
-func (d *CatalogNodesQuery) Type() Type {
-	return TypeConsul
 }
 
 // ByNode is a sortable list of nodes by name and then IP address.

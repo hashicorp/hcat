@@ -55,6 +55,7 @@ type HealthService struct {
 
 // HealthServiceQuery is the representation of all a service query in Consul.
 type HealthServiceQuery struct {
+	isConsul
 	stopCh chan struct{}
 
 	dc      string
@@ -235,11 +236,6 @@ func (d *HealthServiceQuery) String() string {
 		name = name + "|" + strings.Join(d.filters, ",")
 	}
 	return fmt.Sprintf("health.service(%s)", name)
-}
-
-// Type returns the type of this dependency.
-func (d *HealthServiceQuery) Type() Type {
-	return TypeConsul
 }
 
 // acceptStatus allows us to check if a slice of health checks pass this filter.

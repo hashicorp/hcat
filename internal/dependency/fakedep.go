@@ -29,10 +29,6 @@ func (d *FakeDep) String() string {
 
 func (d *FakeDep) Stop() {}
 
-func (d *FakeDep) Type() Type {
-	return TypeLocal
-}
-
 ////////////
 // FakeListDep is a fake dependency that does not actually speaks to a server.
 // Returns a list, to allow for multi-pass template tests
@@ -57,10 +53,6 @@ func (d *FakeListDep) String() string {
 }
 
 func (d *FakeListDep) Stop() {}
-
-func (d *FakeListDep) Type() Type {
-	return TypeLocal
-}
 
 ////////////
 // FakeDepStale is a fake dependency that can be used to test what happens
@@ -98,10 +90,6 @@ func (d *FakeDepStale) String() string {
 
 func (d *FakeDepStale) Stop() {}
 
-func (d *FakeDepStale) Type() Type {
-	return TypeLocal
-}
-
 ////////////
 // FakeDepFetchError is a fake dependency that returns an error while fetching.
 type FakeDepFetchError struct {
@@ -123,10 +111,6 @@ func (d *FakeDepFetchError) String() string {
 
 func (d *FakeDepFetchError) Stop() {}
 
-func (d *FakeDepFetchError) Type() Type {
-	return TypeLocal
-}
-
 var _ Dependency = (*FakeDepSameIndex)(nil)
 
 ////////////
@@ -145,10 +129,6 @@ func (d *FakeDepSameIndex) Stop() {}
 
 func (d *FakeDepSameIndex) String() string {
 	return "test_dep_same_index"
-}
-
-func (d *FakeDepSameIndex) Type() Type {
-	return TypeLocal
 }
 
 ////////////
@@ -185,7 +165,3 @@ func (d *FakeDepRetry) String() string {
 }
 
 func (d *FakeDepRetry) Stop() {}
-
-func (d *FakeDepRetry) Type() Type {
-	return TypeLocal
-}

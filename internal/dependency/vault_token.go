@@ -12,6 +12,7 @@ var (
 
 // VaultTokenQuery is the dependency to Vault for a secret
 type VaultTokenQuery struct {
+	isVault
 	stopCh      chan struct{}
 	secret      *Secret
 	vaultSecret *api.Secret
@@ -73,9 +74,4 @@ func (d *VaultTokenQuery) Stop() {
 // String returns the human-friendly version of this dependency.
 func (d *VaultTokenQuery) String() string {
 	return "vault.token"
-}
-
-// Type returns the type of this dependency.
-func (d *VaultTokenQuery) Type() Type {
-	return TypeVault
 }

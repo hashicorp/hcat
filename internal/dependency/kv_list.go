@@ -37,6 +37,7 @@ type KeyPair struct {
 
 // KVListQuery queries the KV store for a single key.
 type KVListQuery struct {
+	isConsul
 	stopCh chan struct{}
 
 	dc     string
@@ -123,9 +124,4 @@ func (d *KVListQuery) String() string {
 // Stop halts the dependency's fetch function.
 func (d *KVListQuery) Stop() {
 	close(d.stopCh)
-}
-
-// Type returns the type of this dependency.
-func (d *KVListQuery) Type() Type {
-	return TypeConsul
 }

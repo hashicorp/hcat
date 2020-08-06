@@ -256,10 +256,10 @@ func (w *Watcher) Add(d Dependency) bool {
 
 	// Choose the correct retry function based off of the dependency's type.
 	var retryFunc RetryFunc
-	switch d.Type() {
-	case dep.TypeConsul:
+	switch d.(type) {
+	case dep.ConsulType:
 		retryFunc = w.retryFuncConsul
-	case dep.TypeVault:
+	case dep.VaultType:
 		retryFunc = w.retryFuncVault
 	}
 

@@ -40,6 +40,7 @@ type CatalogService struct {
 // CatalogServiceQuery is the representation of a requested catalog services
 // dependency from inside a template.
 type CatalogServiceQuery struct {
+	isConsul
 	stopCh chan struct{}
 
 	dc   string
@@ -145,9 +146,4 @@ func (d *CatalogServiceQuery) String() string {
 // Stop halts the dependency's fetch function.
 func (d *CatalogServiceQuery) Stop() {
 	close(d.stopCh)
-}
-
-// Type returns the type of this dependency.
-func (d *CatalogServiceQuery) Type() Type {
-	return TypeConsul
 }

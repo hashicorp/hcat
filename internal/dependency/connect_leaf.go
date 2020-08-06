@@ -12,6 +12,7 @@ var (
 )
 
 type ConnectLeafQuery struct {
+	isConsul
 	stopCh chan struct{}
 
 	service string
@@ -61,10 +62,6 @@ func (d *ConnectLeafQuery) Stop() {
 
 func (d *ConnectLeafQuery) CanShare() bool {
 	return false
-}
-
-func (d *ConnectLeafQuery) Type() Type {
-	return TypeConsul
 }
 
 func (d *ConnectLeafQuery) String() string {

@@ -19,6 +19,7 @@ var (
 
 // VaultWriteQuery is the dependency to Vault for a secret
 type VaultWriteQuery struct {
+	isVault
 	stopCh  chan struct{}
 	sleepCh chan time.Duration
 
@@ -118,11 +119,6 @@ func (d *VaultWriteQuery) Stop() {
 // String returns the human-friendly version of this dependency.
 func (d *VaultWriteQuery) String() string {
 	return fmt.Sprintf("vault.write(%s -> %s)", d.path, d.dataHash)
-}
-
-// Type returns the type of this dependency.
-func (d *VaultWriteQuery) Type() Type {
-	return TypeVault
 }
 
 // sha1Map returns the sha1 hash of the data in the map. The reason this data is

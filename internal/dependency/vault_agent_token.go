@@ -22,9 +22,11 @@ const (
 
 // VaultAgentTokenQuery is the dependency to Vault Agent token
 type VaultAgentTokenQuery struct {
+	isVault
 	stopCh chan struct{}
-	path   string
-	stat   os.FileInfo
+
+	path string
+	stat os.FileInfo
 }
 
 // NewVaultAgentTokenQuery creates a new dependency.
@@ -76,11 +78,6 @@ func (d *VaultAgentTokenQuery) Stop() {
 // String returns the human-friendly version of this dependency.
 func (d *VaultAgentTokenQuery) String() string {
 	return "vault-agent.token"
-}
-
-// Type returns the type of this dependency.
-func (d *VaultAgentTokenQuery) Type() Type {
-	return TypeVault
 }
 
 // watch watches the file for changes

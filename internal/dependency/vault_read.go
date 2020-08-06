@@ -17,6 +17,7 @@ var (
 
 // VaultReadQuery is the dependency to Vault for a secret
 type VaultReadQuery struct {
+	isVault
 	stopCh  chan struct{}
 	sleepCh chan time.Duration
 
@@ -125,11 +126,6 @@ func (d *VaultReadQuery) String() string {
 		return fmt.Sprintf("vault.read(%s.v%s)", d.rawPath, v[0])
 	}
 	return fmt.Sprintf("vault.read(%s)", d.rawPath)
-}
-
-// Type returns the type of this dependency.
-func (d *VaultReadQuery) Type() Type {
-	return TypeVault
 }
 
 func (d *VaultReadQuery) readSecret(clients Clients, opts *QueryOptions) (*api.Secret, error) {

@@ -24,6 +24,7 @@ func init() {
 
 // CatalogNodeQuery represents a single node from the Consul catalog.
 type CatalogNodeQuery struct {
+	isConsul
 	stopCh chan struct{}
 
 	dc   string
@@ -159,11 +160,6 @@ func (d *CatalogNodeQuery) String() string {
 // Stop halts the dependency's fetch function.
 func (d *CatalogNodeQuery) Stop() {
 	close(d.stopCh)
-}
-
-// Type returns the type of this dependency.
-func (d *CatalogNodeQuery) Type() Type {
-	return TypeConsul
 }
 
 // ByService is a sorter of node services by their service name and then ID.

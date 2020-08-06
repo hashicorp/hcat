@@ -16,6 +16,7 @@ var (
 
 // VaultListQuery is the dependency to Vault for a secret
 type VaultListQuery struct {
+	isVault
 	stopCh chan struct{}
 
 	path string
@@ -116,9 +117,4 @@ func (d *VaultListQuery) Stop() {
 // String returns the human-friendly version of this dependency.
 func (d *VaultListQuery) String() string {
 	return fmt.Sprintf("vault.list(%s)", d.path)
-}
-
-// Type returns the type of this dependency.
-func (d *VaultListQuery) Type() Type {
-	return TypeVault
 }

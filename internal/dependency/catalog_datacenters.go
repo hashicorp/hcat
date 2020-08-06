@@ -19,9 +19,9 @@ var (
 
 // CatalogDatacentersQuery is the dependency to query all datacenters
 type CatalogDatacentersQuery struct {
+	isConsul
 	ignoreFailing bool
-
-	stopCh chan struct{}
+	stopCh        chan struct{}
 }
 
 // NewCatalogDatacentersQuery creates a new datacenter dependency.
@@ -102,9 +102,4 @@ func (d *CatalogDatacentersQuery) String() string {
 // Stop terminates this dependency's fetch.
 func (d *CatalogDatacentersQuery) Stop() {
 	close(d.stopCh)
-}
-
-// Type returns the type of this dependency.
-func (d *CatalogDatacentersQuery) Type() Type {
-	return TypeConsul
 }

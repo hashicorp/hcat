@@ -10,6 +10,7 @@ var (
 )
 
 type ConnectCAQuery struct {
+	isConsul
 	stopCh chan struct{}
 }
 
@@ -58,10 +59,6 @@ func (d *ConnectCAQuery) Stop() {
 
 func (d *ConnectCAQuery) CanShare() bool {
 	return false
-}
-
-func (d *ConnectCAQuery) Type() Type {
-	return TypeConsul
 }
 
 func (d *ConnectCAQuery) String() string {

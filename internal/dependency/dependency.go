@@ -21,21 +21,19 @@ const (
 	tagRe         = `((?P<tag>[[:word:]=:\.\-\_]+)\.)?`
 )
 
-type Type int
-
-const (
-	TypeConsul Type = iota
-	TypeVault
-	TypeLocal
-)
-
-func (t Type) String() string {
-	if t > 2 {
-		return "unknown"
-	}
-
-	return []string{"consul", "vault", "local"}[t]
+type VaultType interface {
+	isVault()
 }
+
+type ConsulType interface {
+	isConsul()
+}
+
+type isConsul struct{}
+type isVault struct{}
+
+func (isConsul) isConsul() {}
+func (isVault) isVault()   {}
 
 // Dependency is an interface for a dependency that Consul Template is capable
 // of watching.
@@ -44,7 +42,6 @@ type Dependency interface {
 	CanShare() bool
 	String() string
 	Stop()
-	Type() Type
 }
 
 // ServiceTags is a slice of tags assigned to a Service
