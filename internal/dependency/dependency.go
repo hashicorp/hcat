@@ -39,7 +39,7 @@ func (isVault) isVault()   {}
 // of watching.
 type Dependency interface {
 	Fetch(Clients, *QueryOptions) (interface{}, *ResponseMetadata, error)
-	CanShare() bool
+	//CanShare() bool
 	String() string
 	Stop()
 }
