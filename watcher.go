@@ -18,9 +18,9 @@ type RetryFunc func(int) (bool, time.Duration)
 // Cacher defines the interface required by the watcher for caching data
 // retreived from external services. It is implemented by Store.
 type Cacher interface {
-	Save(string, interface{})
-	Recall(string) (interface{}, bool)
-	Delete(string)
+	Save(key string, value interface{})
+	Recall(key string) (value interface{}, found bool)
+	Delete(key string)
 	Reset()
 }
 

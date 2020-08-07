@@ -48,13 +48,13 @@ type Template struct {
 // Renderer defines the interface used to render (output) and template.
 // FileRenderer implements this to write to disk.
 type Renderer interface {
-	Render([]byte) (RenderResult, error)
+	Render(contents []byte) (RenderResult, error)
 }
 
 // Recaller is the read interface for the cache
 // Implemented by Store and Watcher (which wraps Store)
 type Recaller interface {
-	Recall(string) (interface{}, bool)
+	Recall(key string) (value interface{}, found bool)
 }
 
 // TemplateInput is used as input when creating the template.
