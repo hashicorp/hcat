@@ -6,12 +6,13 @@ import (
 
 var (
 	// Ensure implements
-	_ Dependency = (*ConnectCAQuery)(nil)
+	_ isDependency = (*ConnectCAQuery)(nil)
 )
 
 type ConnectCAQuery struct {
 	isConsul
 	stopCh chan struct{}
+	opts   QueryOptions
 }
 
 func NewConnectCAQuery() *ConnectCAQuery {
@@ -20,7 +21,7 @@ func NewConnectCAQuery() *ConnectCAQuery {
 	}
 }
 
-func (d *ConnectCAQuery) Fetch(clients Clients, opts *QueryOptions) (
+func (d *ConnectCAQuery) Fetch(clients Clients) (
 	interface{}, *ResponseMetadata, error,
 ) {
 	select {
@@ -29,7 +30,7 @@ func (d *ConnectCAQuery) Fetch(clients Clients, opts *QueryOptions) (
 	default:
 	}
 
-	opts = opts.Merge(nil)
+	opts := d.opts.Merge(nil)
 	//log.Printf("[TRACE] %s: GET %s", d, &url.URL{
 	//	Path:     "/v1/agent/connect/ca/roots",
 	//	RawQuery: opts.String(),
@@ -63,4 +64,8 @@ func (d *ConnectCAQuery) CanShare() bool {
 
 func (d *ConnectCAQuery) String() string {
 	return "connect.caroots"
+}
+
+func (d *ConnectCAQuery) SetOptions(opts QueryOptions) {
+	d.opts = opts
 }

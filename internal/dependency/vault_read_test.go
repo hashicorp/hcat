@@ -140,7 +140,7 @@ func TestVaultReadQuery_Fetch_KVv1(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			act, _, err := d.Fetch(clients, nil)
+			act, _, err := d.Fetch(clients)
 			if (err != nil) != tc.err {
 				t.Fatal(err)
 			}
@@ -166,7 +166,7 @@ func TestVaultReadQuery_Fetch_KVv1(t *testing.T) {
 		errCh := make(chan error, 1)
 		go func() {
 			for {
-				data, _, err := d.Fetch(clients, nil)
+				data, _, err := d.Fetch(clients)
 				if err != nil {
 					errCh <- err
 					return
@@ -202,7 +202,8 @@ func TestVaultReadQuery_Fetch_KVv1(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		_, qm, err := d.Fetch(clients, nil)
+		//_, qm, err := d.Fetch(clients, nil)
+		_, _, err = d.Fetch(clients)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -211,7 +212,8 @@ func TestVaultReadQuery_Fetch_KVv1(t *testing.T) {
 		errCh := make(chan error, 1)
 		go func() {
 			for {
-				data, _, err := d.Fetch(clients, &QueryOptions{WaitIndex: qm.LastIndex})
+				//data, _, err := d.Fetch(clients, &QueryOptions{WaitIndex: qm.LastIndex})
+				data, _, err := d.Fetch(clients)
 				if err != nil {
 					errCh <- err
 					return
@@ -234,15 +236,16 @@ func TestVaultReadQuery_Fetch_KVv1(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		_, qm, err := d.Fetch(clients, nil)
+		//_, qm, err := d.Fetch(clients)
+		_, _, err = d.Fetch(clients)
 		if err != nil {
 			t.Fatal(err)
 		}
 
 		errCh := make(chan error, 1)
 		go func() {
-			_, _, err := d.Fetch(clients,
-				&QueryOptions{WaitIndex: qm.LastIndex})
+			_, _, err := d.Fetch(clients)
+			//&QueryOptions{WaitIndex: qm.LastIndex})
 			if err != nil {
 				errCh <- err
 			}
@@ -381,7 +384,7 @@ func TestVaultReadQuery_Fetch_KVv2(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			act, _, err := d.Fetch(clients, nil)
+			act, _, err := d.Fetch(clients)
 			if (err != nil) != tc.err {
 				t.Fatal(err)
 			}
@@ -418,7 +421,7 @@ func TestVaultReadQuery_Fetch_KVv2(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		_, _, err = d.Fetch(clients, nil)
+		_, _, err = d.Fetch(clients)
 		if err == nil {
 			t.Fatal("Nil received when error expected")
 		}
@@ -439,7 +442,7 @@ func TestVaultReadQuery_Fetch_KVv2(t *testing.T) {
 		errCh := make(chan error, 1)
 		go func() {
 			for {
-				data, _, err := d.Fetch(clients, nil)
+				data, _, err := d.Fetch(clients)
 				if err != nil {
 					errCh <- err
 					return
@@ -477,7 +480,8 @@ func TestVaultReadQuery_Fetch_KVv2(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			_, qm, err := d.Fetch(clients, nil)
+			//_, qm, err := d.Fetch(clients, nil)
+			_, _, err = d.Fetch(clients)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -486,7 +490,8 @@ func TestVaultReadQuery_Fetch_KVv2(t *testing.T) {
 			errCh := make(chan error, 1)
 			go func() {
 				for {
-					data, _, err := d.Fetch(clients, &QueryOptions{WaitIndex: qm.LastIndex})
+					//data, _, err := d.Fetch(clients, &QueryOptions{WaitIndex: qm.LastIndex})
+					data, _, err := d.Fetch(clients)
 					if err != nil {
 						errCh <- err
 						return
@@ -549,7 +554,7 @@ func TestVaultReadQuery_Fetch_PKI_Anonymous(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	act, _, err := d.Fetch(anonClient, nil)
+	act, _, err := d.Fetch(anonClient)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -612,7 +617,7 @@ func TestVaultReadQuery_Fetch_NonSecrets(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	act, _, err := d.Fetch(anonClient, nil)
+	act, _, err := d.Fetch(anonClient)
 	if err != nil {
 		t.Fatal(err)
 	}

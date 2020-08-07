@@ -12,7 +12,7 @@ import (
 
 var (
 	// Ensure implements
-	_ Dependency = (*FileQuery)(nil)
+	_ isDependency = (*FileQuery)(nil)
 
 	// FileQuerySleepTime is the amount of time to sleep between queries, since
 	// the fsnotify library is not compatible with solaris and other OSes yet.
@@ -42,7 +42,7 @@ func NewFileQuery(s string) (*FileQuery, error) {
 
 // Fetch retrieves this dependency and returns the result or any errors that
 // occur in the process.
-func (d *FileQuery) Fetch(clients Clients, opts *QueryOptions) (interface{}, *ResponseMetadata, error) {
+func (d *FileQuery) Fetch(clients Clients) (interface{}, *ResponseMetadata, error) {
 	//log.Printf("[TRACE] %s: READ %s", d, d.path)
 
 	select {
@@ -80,6 +80,8 @@ func (d *FileQuery) Stop() {
 func (d *FileQuery) String() string {
 	return fmt.Sprintf("file(%s)", d.path)
 }
+
+func (d *FileQuery) SetOptions(opts QueryOptions) {}
 
 type watchResult struct {
 	stat os.FileInfo

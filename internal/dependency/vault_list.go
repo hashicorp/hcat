@@ -11,7 +11,7 @@ import (
 
 var (
 	// Ensure implements
-	_ Dependency = (*VaultListQuery)(nil)
+	_ isDependency = (*VaultListQuery)(nil)
 )
 
 // VaultListQuery is the dependency to Vault for a secret
@@ -20,6 +20,7 @@ type VaultListQuery struct {
 	stopCh chan struct{}
 
 	path string
+	opts QueryOptions
 }
 
 // NewVaultListQuery creates a new datacenter dependency.
@@ -37,14 +38,14 @@ func NewVaultListQuery(s string) (*VaultListQuery, error) {
 }
 
 // Fetch queries the Vault API
-func (d *VaultListQuery) Fetch(clients Clients, opts *QueryOptions) (interface{}, *ResponseMetadata, error) {
+func (d *VaultListQuery) Fetch(clients Clients) (interface{}, *ResponseMetadata, error) {
 	select {
 	case <-d.stopCh:
 		return nil, nil, ErrStopped
 	default:
 	}
 
-	opts = opts.Merge(&QueryOptions{})
+	opts := d.opts.Merge(&QueryOptions{})
 
 	// If this is not the first query, poll to simulate blocking-queries.
 	if opts.WaitIndex != 0 {
@@ -117,4 +118,8 @@ func (d *VaultListQuery) Stop() {
 // String returns the human-friendly version of this dependency.
 func (d *VaultListQuery) String() string {
 	return fmt.Sprintf("vault.list(%s)", d.path)
+}
+
+func (d *VaultListQuery) SetOptions(opts QueryOptions) {
+	d.opts = opts
 }

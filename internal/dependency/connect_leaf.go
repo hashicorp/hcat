@@ -8,7 +8,7 @@ import (
 
 var (
 	// Ensure implements
-	_ Dependency = (*ConnectLeafQuery)(nil)
+	_ isDependency = (*ConnectLeafQuery)(nil)
 )
 
 type ConnectLeafQuery struct {
@@ -16,6 +16,7 @@ type ConnectLeafQuery struct {
 	stopCh chan struct{}
 
 	service string
+	opts    QueryOptions
 }
 
 func NewConnectLeafQuery(service string) *ConnectLeafQuery {
@@ -25,7 +26,7 @@ func NewConnectLeafQuery(service string) *ConnectLeafQuery {
 	}
 }
 
-func (d *ConnectLeafQuery) Fetch(clients Clients, opts *QueryOptions) (
+func (d *ConnectLeafQuery) Fetch(clients Clients) (
 	interface{}, *ResponseMetadata, error,
 ) {
 	select {
@@ -33,7 +34,7 @@ func (d *ConnectLeafQuery) Fetch(clients Clients, opts *QueryOptions) (
 		return nil, nil, ErrStopped
 	default:
 	}
-	opts = opts.Merge(nil)
+	opts := d.opts.Merge(nil)
 	//log.Printf("[TRACE] %s: GET %s", d, &url.URL{
 	//	Path:     "/v1/agent/connect/ca/leaf/" + d.service,
 	//	RawQuery: opts.String(),
@@ -69,4 +70,8 @@ func (d *ConnectLeafQuery) String() string {
 		return fmt.Sprintf("connect.caleaf(%s)", d.service)
 	}
 	return "connect.caleaf"
+}
+
+func (d *ConnectLeafQuery) SetOptions(opts QueryOptions) {
+	d.opts = opts
 }

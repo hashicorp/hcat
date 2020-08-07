@@ -11,7 +11,7 @@ func TestConnectCAQuery_Fetch(t *testing.T) {
 	t.Parallel()
 
 	d := NewConnectCAQuery()
-	raw, _, err := d.Fetch(testClients, nil)
+	raw, _, err := d.Fetch(testClients)
 	assert.NoError(t, err)
 	act := raw.([]*api.CARoot)
 	if assert.Len(t, act, 1) {

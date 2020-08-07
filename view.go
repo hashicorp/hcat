@@ -191,12 +191,15 @@ func (v *view) fetch(doneCh, successCh chan<- struct{}, errCh chan<- error) {
 
 		start := time.Now() // for rateLimiter below
 
-		data, rm, err := v.dependency.Fetch(v.clients, &dep.QueryOptions{
-			AllowStale:   allowStale,
-			WaitTime:     v.blockWaitTime,
-			WaitIndex:    v.lastIndex,
-			DefaultLease: v.defaultLease,
-		})
+		if dep, ok := v.dependency.(queryOptionsSetter); ok {
+			dep.SetOptions(queryOptions{
+				AllowStale:   allowStale,
+				WaitTime:     v.blockWaitTime,
+				WaitIndex:    v.lastIndex,
+				DefaultLease: v.defaultLease,
+			})
+		}
+		data, rm, err := v.dependency.Fetch(v.clients)
 		if err != nil {
 			if err == dep.ErrStopped {
 				//log.Printf("[TRACE] (view) %s reported stop", v.dependency)

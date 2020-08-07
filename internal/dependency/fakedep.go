@@ -12,7 +12,7 @@ type FakeDep struct {
 	Name string
 }
 
-func (d *FakeDep) Fetch(Clients, *QueryOptions) (interface{}, *ResponseMetadata, error) {
+func (d *FakeDep) Fetch(Clients) (interface{}, *ResponseMetadata, error) {
 	time.Sleep(time.Microsecond)
 	data := d.Name
 	rm := &ResponseMetadata{LastIndex: 1}
@@ -27,7 +27,8 @@ func (d *FakeDep) String() string {
 	return fmt.Sprintf("test_dep(%s)", d.Name)
 }
 
-func (d *FakeDep) Stop() {}
+func (d *FakeDep) Stop()                        {}
+func (d *FakeDep) SetOptions(opts QueryOptions) {}
 
 ////////////
 // FakeListDep is a fake dependency that does not actually speaks to a server.
@@ -37,7 +38,7 @@ type FakeListDep struct {
 	Data []string
 }
 
-func (d *FakeListDep) Fetch(Clients, *QueryOptions) (interface{}, *ResponseMetadata, error) {
+func (d *FakeListDep) Fetch(Clients) (interface{}, *ResponseMetadata, error) {
 	time.Sleep(time.Microsecond)
 	data := d.Data
 	rm := &ResponseMetadata{LastIndex: 1}
@@ -52,7 +53,8 @@ func (d *FakeListDep) String() string {
 	return fmt.Sprintf("test_list_dep(%s)", d.Name)
 }
 
-func (d *FakeListDep) Stop() {}
+func (d *FakeListDep) Stop()                        {}
+func (d *FakeListDep) SetOptions(opts QueryOptions) {}
 
 ////////////
 // FakeDepStale is a fake dependency that can be used to test what happens
@@ -62,12 +64,10 @@ type FakeDepStale struct {
 }
 
 // Fetch is used to implement the dependency interface.
-func (d *FakeDepStale) Fetch(clients Clients, opts *QueryOptions) (interface{}, *ResponseMetadata, error) {
+func (d *FakeDepStale) Fetch(clients Clients) (interface{}, *ResponseMetadata, error) {
 	time.Sleep(time.Microsecond)
 
-	if opts == nil {
-		opts = &QueryOptions{}
-	}
+	opts := &QueryOptions{}
 
 	if opts.AllowStale {
 		data := "this is some stale data"
@@ -88,7 +88,8 @@ func (d *FakeDepStale) String() string {
 	return fmt.Sprintf("test_dep_stale(%s)", d.Name)
 }
 
-func (d *FakeDepStale) Stop() {}
+func (d *FakeDepStale) Stop()                        {}
+func (d *FakeDepStale) SetOptions(opts QueryOptions) {}
 
 ////////////
 // FakeDepFetchError is a fake dependency that returns an error while fetching.
@@ -96,7 +97,7 @@ type FakeDepFetchError struct {
 	Name string
 }
 
-func (d *FakeDepFetchError) Fetch(Clients, *QueryOptions) (interface{}, *ResponseMetadata, error) {
+func (d *FakeDepFetchError) Fetch(Clients) (interface{}, *ResponseMetadata, error) {
 	time.Sleep(time.Microsecond)
 	return nil, nil, fmt.Errorf("failed to contact server")
 }
@@ -109,14 +110,15 @@ func (d *FakeDepFetchError) String() string {
 	return fmt.Sprintf("test_dep_fetch_error(%s)", d.Name)
 }
 
-func (d *FakeDepFetchError) Stop() {}
-
-var _ Dependency = (*FakeDepSameIndex)(nil)
+func (d *FakeDepFetchError) Stop()                        {}
+func (d *FakeDepFetchError) SetOptions(opts QueryOptions) {}
 
 ////////////
+var _ isDependency = (*FakeDepSameIndex)(nil)
+
 type FakeDepSameIndex struct{}
 
-func (d *FakeDepSameIndex) Fetch(Clients, *QueryOptions) (interface{}, *ResponseMetadata, error) {
+func (d *FakeDepSameIndex) Fetch(Clients) (interface{}, *ResponseMetadata, error) {
 	meta := &ResponseMetadata{LastIndex: 100}
 	return nil, meta, nil
 }
@@ -125,11 +127,12 @@ func (d *FakeDepSameIndex) CanShare() bool {
 	return true
 }
 
-func (d *FakeDepSameIndex) Stop() {}
-
 func (d *FakeDepSameIndex) String() string {
 	return "test_dep_same_index"
 }
+
+func (d *FakeDepSameIndex) Stop()                        {}
+func (d *FakeDepSameIndex) SetOptions(opts QueryOptions) {}
 
 ////////////
 // FakeDepRetry is a fake dependency that errors on the first fetch and
@@ -140,7 +143,7 @@ type FakeDepRetry struct {
 	retried bool
 }
 
-func (d *FakeDepRetry) Fetch(Clients, *QueryOptions) (interface{}, *ResponseMetadata, error) {
+func (d *FakeDepRetry) Fetch(Clients) (interface{}, *ResponseMetadata, error) {
 	time.Sleep(time.Microsecond)
 
 	d.Lock()
@@ -164,4 +167,5 @@ func (d *FakeDepRetry) String() string {
 	return fmt.Sprintf("test_dep_retry(%s)", d.Name)
 }
 
-func (d *FakeDepRetry) Stop() {}
+func (d *FakeDepRetry) Stop()                        {}
+func (d *FakeDepRetry) SetOptions(opts QueryOptions) {}

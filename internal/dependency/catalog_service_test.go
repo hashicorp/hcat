@@ -207,7 +207,7 @@ func TestCatalogServiceQuery_Fetch(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			act, _, err := d.Fetch(testClients, nil)
+			act, _, err := d.Fetch(testClients)
 			if err != nil {
 				t.Fatal(err)
 			}

@@ -9,7 +9,7 @@ import (
 
 var (
 	// Ensure implements
-	_ Dependency = (*KVGetQuery)(nil)
+	_ isDependency = (*KVGetQuery)(nil)
 
 	// KVGetQueryRe is the regular expression to use.
 	KVGetQueryRe = regexp.MustCompile(`\A` + keyRe + dcRe + `\z`)
@@ -23,6 +23,7 @@ type KVGetQuery struct {
 	dc    string
 	key   string
 	block bool
+	opts  QueryOptions
 }
 
 // NewKVGetQuery parses a string into a dependency.
@@ -40,14 +41,14 @@ func NewKVGetQuery(s string) (*KVGetQuery, error) {
 }
 
 // Fetch queries the Consul API defined by the given client.
-func (d *KVGetQuery) Fetch(clients Clients, opts *QueryOptions) (interface{}, *ResponseMetadata, error) {
+func (d *KVGetQuery) Fetch(clients Clients) (interface{}, *ResponseMetadata, error) {
 	select {
 	case <-d.stopCh:
 		return nil, nil, ErrStopped
 	default:
 	}
 
-	opts = opts.Merge(&QueryOptions{
+	opts := d.opts.Merge(&QueryOptions{
 		Datacenter: d.dc,
 	})
 
@@ -103,4 +104,8 @@ func (d *KVGetQuery) String() string {
 // Stop halts the dependency's fetch function.
 func (d *KVGetQuery) Stop() {
 	close(d.stopCh)
+}
+
+func (d *KVGetQuery) SetOptions(opts QueryOptions) {
+	d.opts = opts
 }

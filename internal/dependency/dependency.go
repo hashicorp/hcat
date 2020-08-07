@@ -35,13 +35,26 @@ type isVault struct{}
 func (isConsul) isConsul() {}
 func (isVault) isVault()   {}
 
-// Dependency is an interface for a dependency that Consul Template is capable
-// of watching.
+// Dependency is an interface for a dependency that can be monitored.
+// This is the public/external interface.
 type Dependency interface {
-	Fetch(Clients, *QueryOptions) (interface{}, *ResponseMetadata, error)
+	Fetch(Clients) (interface{}, *ResponseMetadata, error)
 	//CanShare() bool
 	String() string
 	Stop()
+}
+
+// Used in hashicat to assert/access option setting
+type QueryOptionsSetter interface {
+	SetOptions(QueryOptions)
+}
+
+// This specifies all the fields internally required by dependencies.
+// The public ones + private ones used internally by hashicat.
+// Used to validate interface implementations in each dependency file.
+type isDependency interface {
+	Dependency
+	QueryOptionsSetter
 }
 
 // ServiceTags is a slice of tags assigned to a Service

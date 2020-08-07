@@ -33,7 +33,7 @@ func TestVaultAgentTokenQuery_Fetch(t *testing.T) {
 	}
 
 	clientSet := testClients
-	_, _, err = d.Fetch(clientSet, nil)
+	_, _, err = d.Fetch(clientSet)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -42,7 +42,7 @@ func TestVaultAgentTokenQuery_Fetch(t *testing.T) {
 
 	// Update the contents.
 	testWrite(tokenFile.Name(), []byte("another_token"))
-	_, _, err = d.Fetch(clientSet, nil)
+	_, _, err = d.Fetch(clientSet)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -63,7 +63,7 @@ func TestVaultAgentTokenQuery_Fetch_missingFile(t *testing.T) {
 	clientSet.CreateVaultClient(&CreateClientInput{
 		Token: "foo",
 	})
-	_, _, err = d.Fetch(clientSet, nil)
+	_, _, err = d.Fetch(clientSet)
 	if err == nil || !strings.Contains(err.Error(), "no such file") {
 		t.Fatal(err)
 	}

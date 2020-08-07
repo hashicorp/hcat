@@ -11,7 +11,7 @@ import (
 
 var (
 	// Ensure implements
-	_ Dependency = (*CatalogServicesQuery)(nil)
+	_ isDependency = (*CatalogServicesQuery)(nil)
 
 	// CatalogServicesQueryRe is the regular expression to use for CatalogNodesQuery.
 	CatalogServicesQueryRe = regexp.MustCompile(`\A` + dcRe + `\z`)
@@ -33,7 +33,8 @@ type CatalogServicesQuery struct {
 	isConsul
 	stopCh chan struct{}
 
-	dc string
+	dc   string
+	opts QueryOptions
 }
 
 // NewCatalogServicesQuery parses a string of the format @dc.
@@ -51,14 +52,14 @@ func NewCatalogServicesQuery(s string) (*CatalogServicesQuery, error) {
 
 // Fetch queries the Consul API defined by the given client and returns a slice
 // of CatalogService objects.
-func (d *CatalogServicesQuery) Fetch(clients Clients, opts *QueryOptions) (interface{}, *ResponseMetadata, error) {
+func (d *CatalogServicesQuery) Fetch(clients Clients) (interface{}, *ResponseMetadata, error) {
 	select {
 	case <-d.stopCh:
 		return nil, nil, ErrStopped
 	default:
 	}
 
-	opts = opts.Merge(&QueryOptions{
+	opts := d.opts.Merge(&QueryOptions{
 		Datacenter: d.dc,
 	})
 
@@ -108,6 +109,10 @@ func (d *CatalogServicesQuery) String() string {
 // Stop halts the dependency's fetch function.
 func (d *CatalogServicesQuery) Stop() {
 	close(d.stopCh)
+}
+
+func (d *CatalogServicesQuery) SetOptions(opts QueryOptions) {
+	d.opts = opts
 }
 
 // ByName is a sortable slice of CatalogService structs.

@@ -14,7 +14,7 @@ import (
 
 var (
 	// Ensure implements
-	_ Dependency = (*VaultWriteQuery)(nil)
+	_ isDependency = (*VaultWriteQuery)(nil)
 )
 
 // VaultWriteQuery is the dependency to Vault for a secret
@@ -27,6 +27,7 @@ type VaultWriteQuery struct {
 	data     map[string]interface{}
 	dataHash string
 	secret   *Secret
+	opts     QueryOptions
 
 	// vaultSecret is the actual Vault secret which we are renewing
 	vaultSecret *api.Secret
@@ -50,8 +51,7 @@ func NewVaultWriteQuery(s string, d map[string]interface{}) (*VaultWriteQuery, e
 }
 
 // Fetch queries the Vault API
-func (d *VaultWriteQuery) Fetch(clients Clients, opts *QueryOptions,
-) (interface{}, *ResponseMetadata, error) {
+func (d *VaultWriteQuery) Fetch(clients Clients) (interface{}, *ResponseMetadata, error) {
 	select {
 	case <-d.stopCh:
 		return nil, nil, ErrStopped
@@ -72,7 +72,7 @@ func (d *VaultWriteQuery) Fetch(clients Clients, opts *QueryOptions,
 		}
 	}
 
-	opts = opts.Merge(&QueryOptions{})
+	opts := d.opts.Merge(&QueryOptions{})
 	vaultSecret, err := d.writeSecret(clients, opts)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, d.String())
@@ -168,4 +168,8 @@ func (d *VaultWriteQuery) writeSecret(clients Clients, opts *QueryOptions) (*api
 	}
 
 	return vaultSecret, nil
+}
+
+func (d *VaultWriteQuery) SetOptions(opts QueryOptions) {
+	d.opts = opts
 }

@@ -11,7 +11,7 @@ import (
 
 var (
 	// Ensure implements
-	_ Dependency = (*CatalogNodeQuery)(nil)
+	_ isDependency = (*CatalogNodeQuery)(nil)
 
 	// CatalogNodeQueryRe is the regular expression to use.
 	CatalogNodeQueryRe = regexp.MustCompile(`\A` + nodeNameRe + dcRe + `\z`)
@@ -29,6 +29,7 @@ type CatalogNodeQuery struct {
 
 	dc   string
 	name string
+	opts QueryOptions
 }
 
 // CatalogNode is a wrapper around the node and its services.
@@ -65,14 +66,14 @@ func NewCatalogNodeQuery(s string) (*CatalogNodeQuery, error) {
 
 // Fetch queries the Consul API defined by the given client and returns a
 // of CatalogNode object.
-func (d *CatalogNodeQuery) Fetch(clients Clients, opts *QueryOptions) (interface{}, *ResponseMetadata, error) {
+func (d *CatalogNodeQuery) Fetch(clients Clients) (interface{}, *ResponseMetadata, error) {
 	select {
 	case <-d.stopCh:
 		return nil, nil, ErrStopped
 	default:
 	}
 
-	opts = opts.Merge(&QueryOptions{
+	opts := d.opts.Merge(&QueryOptions{
 		Datacenter: d.dc,
 	})
 
@@ -172,4 +173,8 @@ func (s ByService) Less(i, j int) bool {
 		return s[i].ID <= s[j].ID
 	}
 	return s[i].Service <= s[j].Service
+}
+
+func (d *CatalogNodeQuery) SetOptions(opts QueryOptions) {
+	d.opts = opts
 }

@@ -12,7 +12,7 @@ import (
 
 var (
 	// Ensure implements
-	_ Dependency = (*VaultReadQuery)(nil)
+	_ isDependency = (*VaultReadQuery)(nil)
 )
 
 // VaultReadQuery is the dependency to Vault for a secret
@@ -26,6 +26,7 @@ type VaultReadQuery struct {
 	secret      *Secret
 	isKVv2      *bool
 	secretPath  string
+	opts        QueryOptions
 
 	// vaultSecret is the actual Vault secret which we are renewing
 	vaultSecret *api.Secret
@@ -53,8 +54,7 @@ func NewVaultReadQuery(s string) (*VaultReadQuery, error) {
 }
 
 // Fetch queries the Vault API
-func (d *VaultReadQuery) Fetch(clients Clients, opts *QueryOptions,
-) (interface{}, *ResponseMetadata, error) {
+func (d *VaultReadQuery) Fetch(clients Clients) (interface{}, *ResponseMetadata, error) {
 	select {
 	case <-d.stopCh:
 		return nil, nil, ErrStopped
@@ -75,7 +75,7 @@ func (d *VaultReadQuery) Fetch(clients Clients, opts *QueryOptions,
 		}
 	}
 
-	err := d.fetchSecret(clients, opts)
+	err := d.fetchSecret(clients)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, d.String())
 	}
@@ -89,9 +89,8 @@ func (d *VaultReadQuery) Fetch(clients Clients, opts *QueryOptions,
 	return respWithMetadata(d.secret)
 }
 
-func (d *VaultReadQuery) fetchSecret(clients Clients, opts *QueryOptions,
-) error {
-	opts = opts.Merge(&QueryOptions{})
+func (d *VaultReadQuery) fetchSecret(clients Clients) error {
+	opts := d.opts.Merge(&QueryOptions{})
 	vaultSecret, err := d.readSecret(clients, opts)
 	if err == nil {
 		printVaultWarnings(d, vaultSecret.Warnings)
@@ -162,6 +161,10 @@ func (d *VaultReadQuery) readSecret(clients Clients, opts *QueryOptions) (*api.S
 		return nil, fmt.Errorf("no secret exists at %s", d.secretPath)
 	}
 	return vaultSecret, nil
+}
+
+func (d *VaultReadQuery) SetOptions(opts QueryOptions) {
+	d.opts = opts
 }
 
 func deletedKVv2(s *api.Secret) bool {

@@ -7,7 +7,7 @@ import (
 
 var (
 	// Ensure implements
-	_ Dependency = (*VaultTokenQuery)(nil)
+	_ isDependency = (*VaultTokenQuery)(nil)
 )
 
 // VaultTokenQuery is the dependency to Vault for a secret
@@ -35,8 +35,7 @@ func NewVaultTokenQuery(token string) (*VaultTokenQuery, error) {
 }
 
 // Fetch queries the Vault API
-func (d *VaultTokenQuery) Fetch(clients Clients, opts *QueryOptions,
-) (interface{}, *ResponseMetadata, error) {
+func (d *VaultTokenQuery) Fetch(clients Clients) (interface{}, *ResponseMetadata, error) {
 	select {
 	case <-d.stopCh:
 		return nil, nil, ErrStopped
@@ -75,3 +74,5 @@ func (d *VaultTokenQuery) Stop() {
 func (d *VaultTokenQuery) String() string {
 	return "vault.token"
 }
+
+func (d *VaultTokenQuery) SetOptions(opts QueryOptions) {}

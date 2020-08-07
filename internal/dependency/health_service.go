@@ -25,7 +25,7 @@ const (
 
 var (
 	// Ensure implements
-	_ Dependency = (*HealthServiceQuery)(nil)
+	_ isDependency = (*HealthServiceQuery)(nil)
 
 	// HealthServiceQueryRe is the regular expression to use.
 	HealthServiceQueryRe = regexp.MustCompile(`\A` + tagRe + serviceNameRe + dcRe + nearRe + filterRe + `\z`)
@@ -64,6 +64,7 @@ type HealthServiceQuery struct {
 	near    string
 	tag     string
 	connect bool
+	opts    QueryOptions
 }
 
 // NewHealthServiceQuery processes the strings to build a service dependency.
@@ -119,14 +120,14 @@ func healthServiceQuery(s string, connect bool) (*HealthServiceQuery, error) {
 
 // Fetch queries the Consul API defined by the given client and returns a slice
 // of HealthService objects.
-func (d *HealthServiceQuery) Fetch(clients Clients, opts *QueryOptions) (interface{}, *ResponseMetadata, error) {
+func (d *HealthServiceQuery) Fetch(clients Clients) (interface{}, *ResponseMetadata, error) {
 	select {
 	case <-d.stopCh:
 		return nil, nil, ErrStopped
 	default:
 	}
 
-	opts = opts.Merge(&QueryOptions{
+	opts := d.opts.Merge(&QueryOptions{
 		Datacenter: d.dc,
 		Near:       d.near,
 	})
@@ -236,6 +237,10 @@ func (d *HealthServiceQuery) String() string {
 		name = name + "|" + strings.Join(d.filters, ",")
 	}
 	return fmt.Sprintf("health.service(%s)", name)
+}
+
+func (d *HealthServiceQuery) SetOptions(opts QueryOptions) {
+	d.opts = opts
 }
 
 // acceptStatus allows us to check if a slice of health checks pass this filter.

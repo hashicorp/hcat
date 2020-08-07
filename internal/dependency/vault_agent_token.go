@@ -11,7 +11,7 @@ import (
 
 var (
 	// Ensure implements
-	_ Dependency = (*VaultAgentTokenQuery)(nil)
+	_ isDependency = (*VaultAgentTokenQuery)(nil)
 )
 
 const (
@@ -39,7 +39,7 @@ func NewVaultAgentTokenQuery(path string) (*VaultAgentTokenQuery, error) {
 
 // Fetch retrieves this dependency and returns the result or any errors that
 // occur in the process.
-func (d *VaultAgentTokenQuery) Fetch(clients Clients, opts *QueryOptions) (interface{}, *ResponseMetadata, error) {
+func (d *VaultAgentTokenQuery) Fetch(clients Clients) (interface{}, *ResponseMetadata, error) {
 	//log.Printf("[TRACE] %s: READ %s", d, d.path)
 
 	select {
@@ -79,6 +79,8 @@ func (d *VaultAgentTokenQuery) Stop() {
 func (d *VaultAgentTokenQuery) String() string {
 	return "vault-agent.token"
 }
+
+func (d *VaultAgentTokenQuery) SetOptions(opts QueryOptions) {}
 
 // watch watches the file for changes
 func (d *VaultAgentTokenQuery) watch(lastStat os.FileInfo) <-chan *watchResult {

@@ -92,7 +92,7 @@ func TestVaultWriteSecretKV_Fetch(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		_, _, err = wq.Fetch(clients, &QueryOptions{})
+		_, _, err = wq.Fetch(clients)
 		if err != nil {
 			fmt.Println(err)
 		}
@@ -126,7 +126,7 @@ func TestVaultWriteSecretKV_Fetch(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		_, _, err = wq.Fetch(clients, &QueryOptions{})
+		_, _, err = wq.Fetch(clients)
 		if err != nil {
 			fmt.Println(err)
 		}
@@ -198,7 +198,7 @@ func TestVaultWriteQuery_Fetch(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			act, _, err := d.Fetch(clients, nil)
+			act, _, err := d.Fetch(clients)
 			if (err != nil) != tc.err {
 				t.Fatal(err)
 			}
@@ -229,7 +229,7 @@ func TestVaultWriteQuery_Fetch(t *testing.T) {
 		errCh := make(chan error, 1)
 		go func() {
 			for {
-				data, _, err := d.Fetch(clients, nil)
+				data, _, err := d.Fetch(clients)
 				if err != nil {
 					errCh <- err
 					return
@@ -267,7 +267,8 @@ func TestVaultWriteQuery_Fetch(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		_, qm, err := d.Fetch(clients, nil)
+		//_, qm, err := d.Fetch(clients, nil)
+		_, _, err = d.Fetch(clients)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -276,7 +277,8 @@ func TestVaultWriteQuery_Fetch(t *testing.T) {
 		errCh := make(chan error, 1)
 		go func() {
 			for {
-				data, _, err := d.Fetch(clients, &QueryOptions{WaitIndex: qm.LastIndex})
+				//data, _, err := d.Fetch(clients, &QueryOptions{WaitIndex: qm.LastIndex})
+				data, _, err := d.Fetch(clients)
 				if err != nil {
 					errCh <- err
 					return
@@ -302,15 +304,16 @@ func TestVaultWriteQuery_Fetch(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		_, qm, err := d.Fetch(clients, nil)
+		//_, qm, err := d.Fetch(clients)
+		_, _, err = d.Fetch(clients)
 		if err != nil {
 			t.Fatal(err)
 		}
 
 		errCh := make(chan error, 1)
 		go func() {
-			_, _, err := d.Fetch(clients,
-				&QueryOptions{WaitIndex: qm.LastIndex})
+			_, _, err := d.Fetch(clients)
+			//&QueryOptions{WaitIndex: qm.LastIndex})
 			if err != nil {
 				errCh <- err
 			}

@@ -10,7 +10,7 @@ import (
 
 var (
 	// Ensure implements
-	_ Dependency = (*CatalogDatacentersQuery)(nil)
+	_ isDependency = (*CatalogDatacentersQuery)(nil)
 
 	// CatalogDatacentersQuerySleepTime is the amount of time to sleep between
 	// queries, since the endpoint does not support blocking queries.
@@ -22,6 +22,7 @@ type CatalogDatacentersQuery struct {
 	isConsul
 	ignoreFailing bool
 	stopCh        chan struct{}
+	opts          QueryOptions
 }
 
 // NewCatalogDatacentersQuery creates a new datacenter dependency.
@@ -34,8 +35,8 @@ func NewCatalogDatacentersQuery(ignoreFailing bool) (*CatalogDatacentersQuery, e
 
 // Fetch queries the Consul API defined by the given client and returns a slice
 // of strings representing the datacenters
-func (d *CatalogDatacentersQuery) Fetch(clients Clients, opts *QueryOptions) (interface{}, *ResponseMetadata, error) {
-	opts = opts.Merge(&QueryOptions{})
+func (d *CatalogDatacentersQuery) Fetch(clients Clients) (interface{}, *ResponseMetadata, error) {
+	opts := d.opts.Merge(&QueryOptions{})
 
 	//log.Printf("[TRACE] %s: GET %s", d, &url.URL{
 	//	Path:     "/v1/catalog/datacenters",
@@ -102,4 +103,8 @@ func (d *CatalogDatacentersQuery) String() string {
 // Stop terminates this dependency's fetch.
 func (d *CatalogDatacentersQuery) Stop() {
 	close(d.stopCh)
+}
+
+func (d *CatalogDatacentersQuery) SetOptions(opts QueryOptions) {
+	d.opts = opts
 }

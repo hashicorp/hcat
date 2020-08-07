@@ -11,7 +11,7 @@ import (
 
 var (
 	// Ensure implements
-	_ Dependency = (*CatalogNodesQuery)(nil)
+	_ isDependency = (*CatalogNodesQuery)(nil)
 
 	// CatalogNodesQueryRe is the regular expression to use.
 	CatalogNodesQueryRe = regexp.MustCompile(`\A` + dcRe + nearRe + `\z`)
@@ -38,6 +38,7 @@ type CatalogNodesQuery struct {
 
 	dc   string
 	near string
+	opts QueryOptions
 }
 
 // NewCatalogNodesQuery parses the given string into a dependency. If the name is
@@ -57,14 +58,14 @@ func NewCatalogNodesQuery(s string) (*CatalogNodesQuery, error) {
 
 // Fetch queries the Consul API defined by the given client and returns a slice
 // of Node objects
-func (d *CatalogNodesQuery) Fetch(clients Clients, opts *QueryOptions) (interface{}, *ResponseMetadata, error) {
+func (d *CatalogNodesQuery) Fetch(clients Clients) (interface{}, *ResponseMetadata, error) {
 	select {
 	case <-d.stopCh:
 		return nil, nil, ErrStopped
 	default:
 	}
 
-	opts = opts.Merge(&QueryOptions{
+	opts := d.opts.Merge(&QueryOptions{
 		Datacenter: d.dc,
 		Near:       d.near,
 	})
@@ -141,4 +142,8 @@ func (s ByNode) Less(i, j int) bool {
 		return s[i].Address <= s[j].Address
 	}
 	return s[i].Node <= s[j].Node
+}
+
+func (d *CatalogNodesQuery) SetOptions(opts QueryOptions) {
+	d.opts = opts
 }
