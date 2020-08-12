@@ -258,7 +258,7 @@ func (v *view) fetch(doneCh, successCh chan<- struct{}, errCh chan<- error) {
 			continue
 		}
 
-		if data == nil && rm.Block {
+		if _, ok := v.dependency.(blockingQuery); ok && data == nil {
 			//log.Printf("[TRACE] (view) %s asked for blocking query", v.dependency)
 			v.dataLock.Unlock()
 			continue

@@ -6,7 +6,8 @@ import (
 
 var (
 	// Ensure implements
-	_ isDependency = (*ConnectCAQuery)(nil)
+	_ isDependency  = (*ConnectCAQuery)(nil)
+	_ BlockingQuery = (*ConnectCAQuery)(nil)
 )
 
 type ConnectCAQuery struct {
@@ -14,6 +15,8 @@ type ConnectCAQuery struct {
 	stopCh chan struct{}
 	opts   QueryOptions
 }
+
+func (*ConnectCAQuery) isBlocking() {}
 
 func NewConnectCAQuery() *ConnectCAQuery {
 	return &ConnectCAQuery{
@@ -48,7 +51,6 @@ func (d *ConnectCAQuery) Fetch(clients Clients) (
 	rm := &ResponseMetadata{
 		LastIndex:   md.LastIndex,
 		LastContact: md.LastContact,
-		Block:       true,
 	}
 
 	return certs.Roots, rm, nil

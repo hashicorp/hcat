@@ -7,3 +7,8 @@ import dep "github.com/hashicorp/hcat/internal/dependency"
 // the internal module.
 
 type Dependency dep.Dependency
+// used to help shoehorn the dependency setup into hashicat
+// until I get a chance to rework it
+type queryOptionsSetter dep.QueryOptionsSetter
+type queryOptions = dep.QueryOptions
+type blockingQuery = dep.BlockingQuery

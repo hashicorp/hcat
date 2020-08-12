@@ -44,9 +44,14 @@ type Dependency interface {
 	Stop()
 }
 
-// Used in hashicat to assert/access option setting
+// Used to assert/access option setting
 type QueryOptionsSetter interface {
 	SetOptions(QueryOptions)
+}
+
+// Indicate/type blocking dependency queries
+type BlockingQuery interface {
+	isBlocking()
 }
 
 // This specifies all the fields internally required by dependencies.
@@ -164,7 +169,6 @@ func (q *QueryOptions) String() string {
 type ResponseMetadata struct {
 	LastIndex   uint64
 	LastContact time.Duration
-	Block       bool
 }
 
 // deepCopyAndSortTags deep copies the tags in the given string slice and then

@@ -8,7 +8,8 @@ import (
 
 var (
 	// Ensure implements
-	_ isDependency = (*ConnectLeafQuery)(nil)
+	_ isDependency  = (*ConnectLeafQuery)(nil)
+	_ BlockingQuery = (*ConnectCAQuery)(nil)
 )
 
 type ConnectLeafQuery struct {
@@ -18,6 +19,8 @@ type ConnectLeafQuery struct {
 	service string
 	opts    QueryOptions
 }
+
+func (d *ConnectLeafQuery) isBlocking() {}
 
 func NewConnectLeafQuery(service string) *ConnectLeafQuery {
 	return &ConnectLeafQuery{
@@ -51,7 +54,6 @@ func (d *ConnectLeafQuery) Fetch(clients Clients) (
 	rm := &ResponseMetadata{
 		LastIndex:   md.LastIndex,
 		LastContact: md.LastContact,
-		Block:       true,
 	}
 
 	return cert, rm, nil

@@ -262,11 +262,10 @@ func TestTemplate_Execute(t *testing.T) {
 			},
 			func() *Store {
 				st := NewStore()
-				d, err := dep.NewKVGetQuery("key")
+				d, err := dep.NewKVGetBlockingQuery("key")
 				if err != nil {
 					t.Fatal(err)
 				}
-				d.EnableBlocking()
 				st.Save(d.String(), "5")
 				return st
 			}(),
@@ -994,11 +993,10 @@ func TestTemplate_Execute(t *testing.T) {
 			},
 			func() *Store {
 				st := NewStore()
-				d, err := dep.NewKVGetQuery("foo")
+				d, err := dep.NewKVGetBlockingQuery("foo")
 				if err != nil {
 					t.Fatal(err)
 				}
-				d.EnableBlocking()
 				st.Save(d.String(), "bar")
 				return st
 			}(),
@@ -1012,11 +1010,10 @@ func TestTemplate_Execute(t *testing.T) {
 			},
 			func() *Store {
 				st := NewStore()
-				d, err := dep.NewKVGetQuery("foo")
+				d, err := dep.NewKVGetBlockingQuery("foo")
 				if err != nil {
 					t.Fatal(err)
 				}
-				d.EnableBlocking()
 				st.Save(d.String(), "bar")
 				return st
 			}(),

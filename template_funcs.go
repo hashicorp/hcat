@@ -146,11 +146,10 @@ func keyFunc(r Recaller, used, missing *DepSet) func(string) (string, error) {
 			return "", nil
 		}
 
-		d, err := dep.NewKVGetQuery(s)
+		d, err := dep.NewKVGetBlockingQuery(s)
 		if err != nil {
 			return "", err
 		}
-		d.EnableBlocking()
 
 		used.Add(d)
 

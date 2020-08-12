@@ -8,6 +8,31 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestNewKVGetBlockingQuery(t *testing.T) {
+	t.Run("blocking_query", func(t *testing.T) {
+		q, err := NewKVGetBlockingQuery("")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, ok := interface{}(q).(BlockingQuery); !ok {
+			t.Fatal("should be blocking")
+		}
+	})
+	t.Run("blocking_query_options", func(t *testing.T) {
+		q, err := NewKVGetBlockingQuery("")
+		if err != nil {
+			t.Fatal(err)
+		}
+		q.SetOptions(QueryOptions{WaitIndex: 100, WaitTime: 100})
+		if q.opts.WaitIndex != 0 {
+			t.Fatal("WaitIndex should be zero")
+		}
+		if q.opts.WaitTime != 0 {
+			t.Fatal("WaitTime should be zero")
+		}
+	})
+}
+
 func TestNewKVGetQuery(t *testing.T) {
 	t.Parallel()
 

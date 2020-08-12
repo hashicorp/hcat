@@ -9,7 +9,8 @@ import (
 
 var (
 	// Ensure implements
-	_ isDependency = (*KVGetQuery)(nil)
+	_ isDependency  = (*KVGetQuery)(nil)
+	_ BlockingQuery = (*ConnectCAQuery)(nil)
 
 	// KVGetQueryRe is the regular expression to use.
 	KVGetQueryRe = regexp.MustCompile(`\A` + keyRe + dcRe + `\z`)
@@ -20,13 +21,39 @@ type KVGetQuery struct {
 	isConsul
 	stopCh chan struct{}
 
-	dc    string
-	key   string
-	block bool
-	opts  QueryOptions
+	dc   string
+	key  string
+	opts QueryOptions
+}
+
+// KVGetBlockingQuery uses a blocking query with the KV store for key lookup.
+type KVGetBlockingQuery struct {
+	KVGetQuery
+}
+
+func (KVGetBlockingQuery) isBlocking() {}
+func (d *KVGetBlockingQuery) SetOptions(opts QueryOptions) {
+	opts.WaitIndex = 0
+	opts.WaitTime = 0
+	d.opts = opts
+}
+func (d *KVGetBlockingQuery) String() string {
+	key := d.key
+	if d.dc != "" {
+		key = key + "@" + d.dc
+	}
+	return fmt.Sprintf("kv.block(%s)", key)
 }
 
 // NewKVGetQuery parses a string into a dependency.
+func NewKVGetBlockingQuery(s string) (*KVGetBlockingQuery, error) {
+	q, err := NewKVGetQuery(s)
+	if err != nil {
+		return nil, err
+	}
+	return &KVGetBlockingQuery{*q}, nil
+}
+
 func NewKVGetQuery(s string) (*KVGetQuery, error) {
 	if s != "" && !KVGetQueryRe.MatchString(s) {
 		return nil, fmt.Errorf("kv.get: invalid format: %q", s)
@@ -65,7 +92,6 @@ func (d *KVGetQuery) Fetch(clients Clients) (interface{}, *ResponseMetadata, err
 	rm := &ResponseMetadata{
 		LastIndex:   qm.LastIndex,
 		LastContact: qm.LastContact,
-		Block:       d.block,
 	}
 
 	if pair == nil {
@@ -76,11 +102,6 @@ func (d *KVGetQuery) Fetch(clients Clients) (interface{}, *ResponseMetadata, err
 	value := string(pair.Value)
 	//log.Printf("[TRACE] %s: returned %q", d, value)
 	return value, rm, nil
-}
-
-// EnableBlocking turns this into a blocking KV query.
-func (d *KVGetQuery) EnableBlocking() {
-	d.block = true
 }
 
 // CanShare returns a boolean if this dependency is shareable.
@@ -95,9 +116,6 @@ func (d *KVGetQuery) String() string {
 		key = key + "@" + d.dc
 	}
 
-	if d.block {
-		return fmt.Sprintf("kv.block(%s)", key)
-	}
 	return fmt.Sprintf("kv.get(%s)", key)
 }
 
