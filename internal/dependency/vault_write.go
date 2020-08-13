@@ -126,7 +126,7 @@ func (d *VaultWriteQuery) String() string {
 // information.
 func sha1Map(m map[string]interface{}) string {
 	keys := make([]string, 0, len(m))
-	for k, _ := range m {
+	for k := range m {
 		keys = append(keys, k)
 	}
 	sort.Strings(keys)
