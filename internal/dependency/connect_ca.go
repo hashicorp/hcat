@@ -12,11 +12,10 @@ var (
 
 type ConnectCAQuery struct {
 	isConsul
+	isBlocking
 	stopCh chan struct{}
 	opts   QueryOptions
 }
-
-func (*ConnectCAQuery) isBlocking() {}
 
 func NewConnectCAQuery() *ConnectCAQuery {
 	return &ConnectCAQuery{

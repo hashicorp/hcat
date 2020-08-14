@@ -9,18 +9,17 @@ import (
 var (
 	// Ensure implements
 	_ isDependency  = (*ConnectLeafQuery)(nil)
-	_ BlockingQuery = (*ConnectCAQuery)(nil)
+	_ BlockingQuery = (*ConnectLeafQuery)(nil)
 )
 
 type ConnectLeafQuery struct {
 	isConsul
+	isBlocking
 	stopCh chan struct{}
 
 	service string
 	opts    QueryOptions
 }
-
-func (d *ConnectLeafQuery) isBlocking() {}
 
 func NewConnectLeafQuery(service string) *ConnectLeafQuery {
 	return &ConnectLeafQuery{

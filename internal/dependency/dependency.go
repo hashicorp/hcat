@@ -51,8 +51,11 @@ type QueryOptionsSetter interface {
 
 // Indicate/type blocking dependency queries
 type BlockingQuery interface {
-	isBlocking()
+	blockingQuery()
 }
+type isBlocking struct{}
+
+func (isBlocking) blockingQuery() {}
 
 // This specifies all the fields internally required by dependencies.
 // The public ones + private ones used internally by hashicat.

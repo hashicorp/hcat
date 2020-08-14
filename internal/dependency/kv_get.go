@@ -10,7 +10,7 @@ import (
 var (
 	// Ensure implements
 	_ isDependency  = (*KVGetQuery)(nil)
-	_ BlockingQuery = (*ConnectCAQuery)(nil)
+	_ BlockingQuery = (*KVGetBlockingQuery)(nil)
 
 	// KVGetQueryRe is the regular expression to use.
 	KVGetQueryRe = regexp.MustCompile(`\A` + keyRe + dcRe + `\z`)
@@ -29,9 +29,9 @@ type KVGetQuery struct {
 // KVGetBlockingQuery uses a blocking query with the KV store for key lookup.
 type KVGetBlockingQuery struct {
 	KVGetQuery
+	isBlocking
 }
 
-func (KVGetBlockingQuery) isBlocking() {}
 func (d *KVGetBlockingQuery) SetOptions(opts QueryOptions) {
 	opts.WaitIndex = 0
 	opts.WaitTime = 0
@@ -51,7 +51,7 @@ func NewKVGetBlockingQuery(s string) (*KVGetBlockingQuery, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &KVGetBlockingQuery{*q}, nil
+	return &KVGetBlockingQuery{KVGetQuery: *q}, nil
 }
 
 func NewKVGetQuery(s string) (*KVGetQuery, error) {
