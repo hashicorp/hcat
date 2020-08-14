@@ -7,14 +7,15 @@ import (
 	"sync"
 	"time"
 
-	dep "github.com/hashicorp/hcat/internal/dependency"
+	"github.com/hashicorp/hcat/dep"
+	idep "github.com/hashicorp/hcat/internal/dependency"
 )
 
 // view is a representation of a Dependency and the most recent data it has
 // received from Consul.
 type view struct {
 	// dependency is the dependency that is associated with this view
-	dependency Dependency
+	dependency dep.Dependency
 
 	// clients is the list of clients to communicate upstream. This is passed
 	// directly to the dependency.
@@ -47,7 +48,7 @@ type view struct {
 // NewViewInput is used as input to the NewView function.
 type newViewInput struct {
 	// Dependency is the dependency to associate with the new view.
-	Dependency Dependency
+	Dependency dep.Dependency
 
 	// Clients is the list of clients to communicate upstream. This is passed
 	// directly to the dependency.
@@ -78,7 +79,7 @@ func newView(i *newViewInput) *view {
 }
 
 // Dependency returns the dependency attached to this view.
-func (v *view) Dependency() Dependency {
+func (v *view) Dependency() dep.Dependency {
 	return v.dependency
 }
 
@@ -191,8 +192,8 @@ func (v *view) fetch(doneCh, successCh chan<- struct{}, errCh chan<- error) {
 
 		start := time.Now() // for rateLimiter below
 
-		if dep, ok := v.dependency.(queryOptionsSetter); ok {
-			dep.SetOptions(queryOptions{
+		if d, ok := v.dependency.(idep.QueryOptionsSetter); ok {
+			d.SetOptions(idep.QueryOptions{
 				AllowStale:   allowStale,
 				WaitTime:     v.blockWaitTime,
 				WaitIndex:    v.lastIndex,
@@ -258,8 +259,9 @@ func (v *view) fetch(doneCh, successCh chan<- struct{}, errCh chan<- error) {
 			continue
 		}
 
-		if _, ok := v.dependency.(blockingQuery); ok && data == nil {
+		if _, ok := v.dependency.(idep.BlockingQuery); ok && data == nil {
 			//log.Printf("[TRACE] (view) %s asked for blocking query", v.dependency)
+			fmt.Println("Blocking!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
 			v.dataLock.Unlock()
 			continue
 		}

@@ -1,6 +1,7 @@
 package dependency
 
 import (
+	"github.com/hashicorp/hcat/dep"
 	"github.com/pkg/errors"
 )
 
@@ -23,8 +24,8 @@ func NewConnectCAQuery() *ConnectCAQuery {
 	}
 }
 
-func (d *ConnectCAQuery) Fetch(clients Clients) (
-	interface{}, *ResponseMetadata, error,
+func (d *ConnectCAQuery) Fetch(clients dep.Clients) (
+	interface{}, *dep.ResponseMetadata, error,
 ) {
 	select {
 	case <-d.stopCh:
@@ -47,7 +48,7 @@ func (d *ConnectCAQuery) Fetch(clients Clients) (
 	//log.Printf("[TRACE] %s: returned %d results", d, len(certs.Roots))
 	//log.Printf("[TRACE] %s: %#v ", d, md)
 
-	rm := &ResponseMetadata{
+	rm := &dep.ResponseMetadata{
 		LastIndex:   md.LastIndex,
 		LastContact: md.LastContact,
 	}

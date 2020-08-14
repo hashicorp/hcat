@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/hcat/dep"
 	"github.com/pkg/errors"
 )
 
@@ -39,7 +40,7 @@ func NewVaultAgentTokenQuery(path string) (*VaultAgentTokenQuery, error) {
 
 // Fetch retrieves this dependency and returns the result or any errors that
 // occur in the process.
-func (d *VaultAgentTokenQuery) Fetch(clients Clients) (interface{}, *ResponseMetadata, error) {
+func (d *VaultAgentTokenQuery) Fetch(clients dep.Clients) (interface{}, *dep.ResponseMetadata, error) {
 	//log.Printf("[TRACE] %s: READ %s", d, d.path)
 
 	select {

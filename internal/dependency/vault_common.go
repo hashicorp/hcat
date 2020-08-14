@@ -8,6 +8,7 @@ import (
 
 	"encoding/json"
 
+	"github.com/hashicorp/hcat/dep"
 	"github.com/hashicorp/vault/api"
 )
 
@@ -67,12 +68,12 @@ type SecretWrapInfo struct {
 
 //
 type renewer interface {
-	Dependency
+	dep.Dependency
 	stopChan() chan struct{}
 	secrets() (*Secret, *api.Secret)
 }
 
-func renewSecret(clients Clients, d renewer) error {
+func renewSecret(clients dep.Clients, d renewer) error {
 	//log.Printf("[TRACE] %s: starting renewer", d)
 
 	secret, vaultSecret := d.secrets()
@@ -163,7 +164,7 @@ func leaseCheckWait(s *Secret) time.Duration {
 }
 
 // printVaultWarnings prints warnings for a given dependency.
-func printVaultWarnings(d Dependency, warnings []string) {
+func printVaultWarnings(d dep.Dependency, warnings []string) {
 	//for _, w := range warnings {
 	//log.Printf("[WARN] %s: %s", d, w)
 	//}

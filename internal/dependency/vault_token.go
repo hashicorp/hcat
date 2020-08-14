@@ -1,6 +1,7 @@
 package dependency
 
 import (
+	"github.com/hashicorp/hcat/dep"
 	"github.com/hashicorp/vault/api"
 	"github.com/pkg/errors"
 )
@@ -35,7 +36,7 @@ func NewVaultTokenQuery(token string) (*VaultTokenQuery, error) {
 }
 
 // Fetch queries the Vault API
-func (d *VaultTokenQuery) Fetch(clients Clients) (interface{}, *ResponseMetadata, error) {
+func (d *VaultTokenQuery) Fetch(clients dep.Clients) (interface{}, *dep.ResponseMetadata, error) {
 	select {
 	case <-d.stopCh:
 		return nil, nil, ErrStopped

@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"sort"
 
+	"github.com/hashicorp/hcat/dep"
 	"github.com/pkg/errors"
 )
 
@@ -66,7 +67,7 @@ func NewCatalogNodeQuery(s string) (*CatalogNodeQuery, error) {
 
 // Fetch queries the Consul API defined by the given client and returns a
 // of CatalogNode object.
-func (d *CatalogNodeQuery) Fetch(clients Clients) (interface{}, *ResponseMetadata, error) {
+func (d *CatalogNodeQuery) Fetch(clients dep.Clients) (interface{}, *dep.ResponseMetadata, error) {
 	select {
 	case <-d.stopCh:
 		return nil, nil, ErrStopped
@@ -100,7 +101,7 @@ func (d *CatalogNodeQuery) Fetch(clients Clients) (interface{}, *ResponseMetadat
 
 	//log.Printf("[TRACE] %s: returned response", d)
 
-	rm := &ResponseMetadata{
+	rm := &dep.ResponseMetadata{
 		LastIndex:   qm.LastIndex,
 		LastContact: qm.LastContact,
 	}

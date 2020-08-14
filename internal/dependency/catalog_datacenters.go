@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/consul/api"
+	"github.com/hashicorp/hcat/dep"
 	"github.com/pkg/errors"
 )
 
@@ -35,7 +36,7 @@ func NewCatalogDatacentersQuery(ignoreFailing bool) (*CatalogDatacentersQuery, e
 
 // Fetch queries the Consul API defined by the given client and returns a slice
 // of strings representing the datacenters
-func (d *CatalogDatacentersQuery) Fetch(clients Clients) (interface{}, *ResponseMetadata, error) {
+func (d *CatalogDatacentersQuery) Fetch(clients dep.Clients) (interface{}, *dep.ResponseMetadata, error) {
 	opts := d.opts.Merge(&QueryOptions{})
 
 	//log.Printf("[TRACE] %s: GET %s", d, &url.URL{

@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/consul/api"
+	"github.com/hashicorp/hcat/dep"
 	"github.com/pkg/errors"
 )
 
@@ -120,7 +121,7 @@ func healthServiceQuery(s string, connect bool) (*HealthServiceQuery, error) {
 
 // Fetch queries the Consul API defined by the given client and returns a slice
 // of HealthService objects.
-func (d *HealthServiceQuery) Fetch(clients Clients) (interface{}, *ResponseMetadata, error) {
+func (d *HealthServiceQuery) Fetch(clients dep.Clients) (interface{}, *dep.ResponseMetadata, error) {
 	select {
 	case <-d.stopCh:
 		return nil, nil, ErrStopped
@@ -203,7 +204,7 @@ func (d *HealthServiceQuery) Fetch(clients Clients) (interface{}, *ResponseMetad
 		sort.Stable(ByNodeThenID(list))
 	}
 
-	rm := &ResponseMetadata{
+	rm := &dep.ResponseMetadata{
 		LastIndex:   qm.LastIndex,
 		LastContact: qm.LastContact,
 	}

@@ -5,6 +5,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/hashicorp/hcat/dep"
 	"github.com/pkg/errors"
 )
 
@@ -41,7 +42,7 @@ func NewKVKeysQuery(s string) (*KVKeysQuery, error) {
 }
 
 // Fetch queries the Consul API defined by the given client.
-func (d *KVKeysQuery) Fetch(clients Clients) (interface{}, *ResponseMetadata, error) {
+func (d *KVKeysQuery) Fetch(clients dep.Clients) (interface{}, *dep.ResponseMetadata, error) {
 	select {
 	case <-d.stopCh:
 		return nil, nil, ErrStopped
@@ -71,7 +72,7 @@ func (d *KVKeysQuery) Fetch(clients Clients) (interface{}, *ResponseMetadata, er
 
 	//log.Printf("[TRACE] %s: returned %d results", d, len(list))
 
-	rm := &ResponseMetadata{
+	rm := &dep.ResponseMetadata{
 		LastIndex:   qm.LastIndex,
 		LastContact: qm.LastContact,
 	}

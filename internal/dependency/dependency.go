@@ -8,6 +8,7 @@ import (
 	"time"
 
 	consulapi "github.com/hashicorp/consul/api"
+	"github.com/hashicorp/hcat/dep"
 )
 
 const (
@@ -21,52 +22,43 @@ const (
 	tagRe         = `((?P<tag>[[:word:]=:\.\-\_]+)\.)?`
 )
 
-type VaultType interface {
-	isVault()
-}
+// Type aliases to simplify things as we refactor
+//type QueryOptions = dep.QueryOptions
+type ResponseMetadata = dep.ResponseMetadata
 
-type ConsulType interface {
-	isConsul()
-}
-
-type isConsul struct{}
-type isVault struct{}
-
-func (isConsul) isConsul() {}
-func (isVault) isVault()   {}
-
-// Dependency is an interface for a dependency that can be monitored.
-// This is the public/external interface.
-type Dependency interface {
-	Fetch(Clients) (interface{}, *ResponseMetadata, error)
-	//CanShare() bool
-	String() string
-	Stop()
-}
-
-// Used to assert/access option setting
-type QueryOptionsSetter interface {
-	SetOptions(QueryOptions)
-}
-
-// Indicate/type blocking dependency queries
+// Using interfaces for type annotations
+// see hashicat/dep/ for interface definitions.
 type BlockingQuery interface {
 	blockingQuery()
 }
+type VaultType interface {
+	isVault()
+}
+type ConsulType interface {
+	isConsul()
+}
+type isConsul struct{}
+type isVault struct{}
 type isBlocking struct{}
 
+func (isConsul) isConsul()        {}
+func (isVault) isVault()          {}
 func (isBlocking) blockingQuery() {}
 
 // This specifies all the fields internally required by dependencies.
 // The public ones + private ones used internally by hashicat.
 // Used to validate interface implementations in each dependency file.
 type isDependency interface {
-	Dependency
+	dep.Dependency
 	QueryOptionsSetter
 }
 
-// ServiceTags is a slice of tags assigned to a Service
-type ServiceTags []string
+// used to help shoehorn the dependency setup into hashicat
+// until I get a chance to rework it
+// Used to assert/access option setting
+type QueryOptionsSetter interface {
+	SetOptions(QueryOptions)
+}
 
 // QueryOptions is a list of options to send with the query. These options are
 // client-agnostic, and the dependency determines which, if any, of the options
@@ -167,12 +159,8 @@ func (q *QueryOptions) String() string {
 	return u.Encode()
 }
 
-// ResponseMetadata is a struct that contains metadata about the response. This
-// is returned from a Fetch function call.
-type ResponseMetadata struct {
-	LastIndex   uint64
-	LastContact time.Duration
-}
+// ServiceTags is a slice of tags assigned to a Service
+type ServiceTags []string
 
 // deepCopyAndSortTags deep copies the tags in the given string slice and then
 // sorts and returns the copied result.
@@ -187,8 +175,8 @@ func deepCopyAndSortTags(tags []string) []string {
 
 // respWithMetadata is a short wrapper to return the given interface with fake
 // response metadata for non-Consul dependencies.
-func respWithMetadata(i interface{}) (interface{}, *ResponseMetadata, error) {
-	return i, &ResponseMetadata{
+func respWithMetadata(i interface{}) (interface{}, *dep.ResponseMetadata, error) {
+	return i, &dep.ResponseMetadata{
 		LastContact: 0,
 		LastIndex:   uint64(time.Now().Unix()),
 	}, nil

@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/hcat/dep"
 	"github.com/pkg/errors"
 )
 
@@ -42,7 +43,7 @@ func NewFileQuery(s string) (*FileQuery, error) {
 
 // Fetch retrieves this dependency and returns the result or any errors that
 // occur in the process.
-func (d *FileQuery) Fetch(clients Clients) (interface{}, *ResponseMetadata, error) {
+func (d *FileQuery) Fetch(clients dep.Clients) (interface{}, *dep.ResponseMetadata, error) {
 	//log.Printf("[TRACE] %s: READ %s", d, d.path)
 
 	select {

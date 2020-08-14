@@ -1,5 +1,7 @@
 package hcat
 
+import "github.com/hashicorp/hcat/dep"
+
 // Runner responsible rendering Templates and invoking Commands.
 // Empty but reserving the space for future use.
 type Resolver struct{}
@@ -28,9 +30,9 @@ func NewResolver() *Resolver {
 // The interface is used to make the used/required API explicit.
 type Watcherer interface {
 	Recaller
-	Add(Dependency) bool
+	Add(dep.Dependency) bool
 	Changed(tmplID string) bool
-	Register(tmplID string, deps ...Dependency)
+	Register(tmplID string, deps ...dep.Dependency)
 }
 
 // Templater the interface the Template provides.

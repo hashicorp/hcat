@@ -4,7 +4,8 @@ import (
 	"sync"
 	"time"
 
-	dep "github.com/hashicorp/hcat/internal/dependency"
+	"github.com/hashicorp/hcat/dep"
+	idep "github.com/hashicorp/hcat/internal/dependency"
 	"github.com/pkg/errors"
 )
 
@@ -120,7 +121,7 @@ const vaultTokenDummyTemplateID = "dummy.watcher.vault-token.id"
 func (w *Watcher) WatchVaultToken(token string) error {
 	// Start a watcher for the Vault renew if that config was specified
 	if token != "" {
-		vt, err := dep.NewVaultTokenQuery(token)
+		vt, err := idep.NewVaultTokenQuery(token)
 		if err != nil {
 			return errors.Wrap(err, "watcher")
 		}
@@ -216,7 +217,7 @@ func (w *Watcher) cleanDeps(done chan struct{}) {
 // Register is used to tell the Watcher which dependencies are used by
 // which templates. This is used to enable a you to check to see if a template
 // needs to be updated by checking if any of its dependencies have Changed().
-func (w *Watcher) Register(tmplID string, deps ...Dependency) {
+func (w *Watcher) Register(tmplID string, deps ...dep.Dependency) {
 	if len(deps) > 0 {
 		w.depTracker.update(tmplID, deps...)
 	}
@@ -243,7 +244,7 @@ func (w *Watcher) Changed(tmplID string) bool {
 //
 // If the Dependency already existed, it this function will return false. If the
 // view was successfully created, it will return true.
-func (w *Watcher) Add(d Dependency) bool {
+func (w *Watcher) Add(d dep.Dependency) bool {
 	w.depViewMapMx.Lock()
 	defer w.depViewMapMx.Unlock()
 
@@ -257,9 +258,9 @@ func (w *Watcher) Add(d Dependency) bool {
 	// Choose the correct retry function based off of the dependency's type.
 	var retryFunc RetryFunc
 	switch d.(type) {
-	case dep.ConsulType:
+	case idep.ConsulType:
 		retryFunc = w.retryFuncConsul
-	case dep.VaultType:
+	case idep.VaultType:
 		retryFunc = w.retryFuncVault
 	}
 
@@ -377,7 +378,7 @@ func newTracker() *tracker {
 	}
 }
 
-func (t *tracker) update(tmplID string, deps ...Dependency) {
+func (t *tracker) update(tmplID string, deps ...dep.Dependency) {
 	t.clear(tmplID)
 	t.Lock()
 	defer t.Unlock()

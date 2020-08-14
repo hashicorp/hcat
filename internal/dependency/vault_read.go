@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/hcat/dep"
 	"github.com/hashicorp/vault/api"
 	"github.com/pkg/errors"
 )
@@ -54,7 +55,7 @@ func NewVaultReadQuery(s string) (*VaultReadQuery, error) {
 }
 
 // Fetch queries the Vault API
-func (d *VaultReadQuery) Fetch(clients Clients) (interface{}, *ResponseMetadata, error) {
+func (d *VaultReadQuery) Fetch(clients dep.Clients) (interface{}, *dep.ResponseMetadata, error) {
 	select {
 	case <-d.stopCh:
 		return nil, nil, ErrStopped
@@ -89,7 +90,7 @@ func (d *VaultReadQuery) Fetch(clients Clients) (interface{}, *ResponseMetadata,
 	return respWithMetadata(d.secret)
 }
 
-func (d *VaultReadQuery) fetchSecret(clients Clients) error {
+func (d *VaultReadQuery) fetchSecret(clients dep.Clients) error {
 	opts := d.opts.Merge(&QueryOptions{})
 	vaultSecret, err := d.readSecret(clients, opts)
 	if err == nil {
@@ -127,7 +128,7 @@ func (d *VaultReadQuery) String() string {
 	return fmt.Sprintf("vault.read(%s)", d.rawPath)
 }
 
-func (d *VaultReadQuery) readSecret(clients Clients, opts *QueryOptions) (*api.Secret, error) {
+func (d *VaultReadQuery) readSecret(clients dep.Clients, opts *QueryOptions) (*api.Secret, error) {
 	vaultClient := clients.Vault()
 
 	// Check whether this secret refers to a KV v2 entry if we haven't yet.

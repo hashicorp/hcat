@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"sync"
 	"time"
+
+	"github.com/hashicorp/hcat/dep"
 )
 
 ////////////
@@ -12,10 +14,10 @@ type FakeDep struct {
 	Name string
 }
 
-func (d *FakeDep) Fetch(Clients) (interface{}, *ResponseMetadata, error) {
+func (d *FakeDep) Fetch(dep.Clients) (interface{}, *dep.ResponseMetadata, error) {
 	time.Sleep(time.Microsecond)
 	data := d.Name
-	rm := &ResponseMetadata{LastIndex: 1}
+	rm := &dep.ResponseMetadata{LastIndex: 1}
 	return data, rm, nil
 }
 
@@ -38,10 +40,10 @@ type FakeListDep struct {
 	Data []string
 }
 
-func (d *FakeListDep) Fetch(Clients) (interface{}, *ResponseMetadata, error) {
+func (d *FakeListDep) Fetch(dep.Clients) (interface{}, *dep.ResponseMetadata, error) {
 	time.Sleep(time.Microsecond)
 	data := d.Data
-	rm := &ResponseMetadata{LastIndex: 1}
+	rm := &dep.ResponseMetadata{LastIndex: 1}
 	return data, rm, nil
 }
 
@@ -64,19 +66,19 @@ type FakeDepStale struct {
 }
 
 // Fetch is used to implement the dependency interface.
-func (d *FakeDepStale) Fetch(clients Clients) (interface{}, *ResponseMetadata, error) {
+func (d *FakeDepStale) Fetch(clients dep.Clients) (interface{}, *dep.ResponseMetadata, error) {
 	time.Sleep(time.Microsecond)
 
 	opts := &QueryOptions{}
 
 	if opts.AllowStale {
 		data := "this is some stale data"
-		rm := &ResponseMetadata{LastIndex: 1, LastContact: 50 * time.Millisecond}
+		rm := &dep.ResponseMetadata{LastIndex: 1, LastContact: 50 * time.Millisecond}
 		return data, rm, nil
 	}
 
 	data := "this is some fresh data"
-	rm := &ResponseMetadata{LastIndex: 1}
+	rm := &dep.ResponseMetadata{LastIndex: 1}
 	return data, rm, nil
 }
 
@@ -97,7 +99,7 @@ type FakeDepFetchError struct {
 	Name string
 }
 
-func (d *FakeDepFetchError) Fetch(Clients) (interface{}, *ResponseMetadata, error) {
+func (d *FakeDepFetchError) Fetch(dep.Clients) (interface{}, *dep.ResponseMetadata, error) {
 	time.Sleep(time.Microsecond)
 	return nil, nil, fmt.Errorf("failed to contact server")
 }
@@ -118,8 +120,8 @@ var _ isDependency = (*FakeDepSameIndex)(nil)
 
 type FakeDepSameIndex struct{}
 
-func (d *FakeDepSameIndex) Fetch(Clients) (interface{}, *ResponseMetadata, error) {
-	meta := &ResponseMetadata{LastIndex: 100}
+func (d *FakeDepSameIndex) Fetch(dep.Clients) (interface{}, *dep.ResponseMetadata, error) {
+	meta := &dep.ResponseMetadata{LastIndex: 100}
 	return nil, meta, nil
 }
 
@@ -143,7 +145,7 @@ type FakeDepRetry struct {
 	retried bool
 }
 
-func (d *FakeDepRetry) Fetch(Clients) (interface{}, *ResponseMetadata, error) {
+func (d *FakeDepRetry) Fetch(dep.Clients) (interface{}, *dep.ResponseMetadata, error) {
 	time.Sleep(time.Microsecond)
 
 	d.Lock()
@@ -151,7 +153,7 @@ func (d *FakeDepRetry) Fetch(Clients) (interface{}, *ResponseMetadata, error) {
 
 	if d.retried {
 		data := "this is some data"
-		rm := &ResponseMetadata{LastIndex: 1}
+		rm := &dep.ResponseMetadata{LastIndex: 1}
 		return data, rm, nil
 	}
 

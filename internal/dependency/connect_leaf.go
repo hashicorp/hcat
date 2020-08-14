@@ -3,6 +3,7 @@ package dependency
 import (
 	"fmt"
 
+	"github.com/hashicorp/hcat/dep"
 	"github.com/pkg/errors"
 )
 
@@ -28,8 +29,8 @@ func NewConnectLeafQuery(service string) *ConnectLeafQuery {
 	}
 }
 
-func (d *ConnectLeafQuery) Fetch(clients Clients) (
-	interface{}, *ResponseMetadata, error,
+func (d *ConnectLeafQuery) Fetch(clients dep.Clients) (
+	interface{}, *dep.ResponseMetadata, error,
 ) {
 	select {
 	case <-d.stopCh:
@@ -50,7 +51,7 @@ func (d *ConnectLeafQuery) Fetch(clients Clients) (
 
 	//log.Printf("[TRACE] %s: returned response", d)
 
-	rm := &ResponseMetadata{
+	rm := &dep.ResponseMetadata{
 		LastIndex:   md.LastIndex,
 		LastContact: md.LastContact,
 	}

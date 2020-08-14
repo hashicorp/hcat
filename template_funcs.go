@@ -22,7 +22,8 @@ import (
 	"github.com/BurntSushi/toml"
 	"github.com/hashicorp/consul/api"
 	socktmpl "github.com/hashicorp/go-sockaddr/template"
-	dep "github.com/hashicorp/hcat/internal/dependency"
+	"github.com/hashicorp/hcat/dep"
+	idep "github.com/hashicorp/hcat/internal/dependency"
 	"github.com/pkg/errors"
 	yaml "gopkg.in/yaml.v2"
 )
@@ -53,7 +54,7 @@ func datacentersFunc(r Recaller, used, missing *DepSet) func(ignore ...bool) ([]
 				", but got %d", len(i))
 		}
 
-		d, err := dep.NewCatalogDatacentersQuery(ignore)
+		d, err := idep.NewCatalogDatacentersQuery(ignore)
 		if err != nil {
 			return result, err
 		}
@@ -119,7 +120,7 @@ func fileFunc(r Recaller, used, missing *DepSet, sandboxPath string) func(string
 		if err != nil {
 			return "", err
 		}
-		d, err := dep.NewFileQuery(s)
+		d, err := idep.NewFileQuery(s)
 		if err != nil {
 			return "", err
 		}
@@ -146,7 +147,7 @@ func keyFunc(r Recaller, used, missing *DepSet) func(string) (string, error) {
 			return "", nil
 		}
 
-		d, err := dep.NewKVGetQuery(s)
+		d, err := idep.NewKVGetQuery(s)
 		if err != nil {
 			return "", err
 		}
@@ -173,7 +174,7 @@ func keyExistsFunc(r Recaller, used, missing *DepSet) func(string) (bool, error)
 			return false, nil
 		}
 
-		d, err := dep.NewKVGetQuery(s)
+		d, err := idep.NewKVGetQuery(s)
 		if err != nil {
 			return false, err
 		}
@@ -198,7 +199,7 @@ func keyWithDefaultFunc(r Recaller, used, missing *DepSet) func(string, string) 
 			return def, nil
 		}
 
-		d, err := dep.NewKVGetQuery(s)
+		d, err := idep.NewKVGetQuery(s)
 		if err != nil {
 			return "", err
 		}
@@ -218,21 +219,21 @@ func keyWithDefaultFunc(r Recaller, used, missing *DepSet) func(string, string) 
 	}
 }
 
-func safeLsFunc(r Recaller, used, missing *DepSet) func(string) ([]*dep.KeyPair, error) {
+func safeLsFunc(r Recaller, used, missing *DepSet) func(string) ([]*idep.KeyPair, error) {
 	// call lsFunc but explicitly mark that empty data set returned on monitored KV prefix is NOT safe
 	return lsFunc(r, used, missing, false)
 }
 
 // lsFunc returns or accumulates keyPrefix dependencies.
-func lsFunc(r Recaller, used, missing *DepSet, emptyIsSafe bool) func(string) ([]*dep.KeyPair, error) {
-	return func(s string) ([]*dep.KeyPair, error) {
-		result := []*dep.KeyPair{}
+func lsFunc(r Recaller, used, missing *DepSet, emptyIsSafe bool) func(string) ([]*idep.KeyPair, error) {
+	return func(s string) ([]*idep.KeyPair, error) {
+		result := []*idep.KeyPair{}
 
 		if len(s) == 0 {
 			return result, nil
 		}
 
-		d, err := dep.NewKVListQuery(s)
+		d, err := idep.NewKVListQuery(s)
 		if err != nil {
 			return result, err
 		}
@@ -241,7 +242,7 @@ func lsFunc(r Recaller, used, missing *DepSet, emptyIsSafe bool) func(string) ([
 
 		// Only return non-empty top-level keys
 		if value, ok := r.Recall(d.String()); ok {
-			for _, pair := range value.([]*dep.KeyPair) {
+			for _, pair := range value.([]*idep.KeyPair) {
 				if pair.Key != "" && !strings.Contains(pair.Key, "/") {
 					result = append(result, pair)
 				}
@@ -272,10 +273,10 @@ func lsFunc(r Recaller, used, missing *DepSet, emptyIsSafe bool) func(string) ([
 }
 
 // nodeFunc returns or accumulates catalog node dependency.
-func nodeFunc(r Recaller, used, missing *DepSet) func(...string) (*dep.CatalogNode, error) {
-	return func(s ...string) (*dep.CatalogNode, error) {
+func nodeFunc(r Recaller, used, missing *DepSet) func(...string) (*idep.CatalogNode, error) {
+	return func(s ...string) (*idep.CatalogNode, error) {
 
-		d, err := dep.NewCatalogNodeQuery(strings.Join(s, ""))
+		d, err := idep.NewCatalogNodeQuery(strings.Join(s, ""))
 		if err != nil {
 			return nil, err
 		}
@@ -283,7 +284,7 @@ func nodeFunc(r Recaller, used, missing *DepSet) func(...string) (*dep.CatalogNo
 		used.Add(d)
 
 		if value, ok := r.Recall(d.String()); ok {
-			return value.(*dep.CatalogNode), nil
+			return value.(*idep.CatalogNode), nil
 		}
 
 		missing.Add(d)
@@ -293,11 +294,11 @@ func nodeFunc(r Recaller, used, missing *DepSet) func(...string) (*dep.CatalogNo
 }
 
 // nodesFunc returns or accumulates catalog node dependencies.
-func nodesFunc(r Recaller, used, missing *DepSet) func(...string) ([]*dep.Node, error) {
-	return func(s ...string) ([]*dep.Node, error) {
-		result := []*dep.Node{}
+func nodesFunc(r Recaller, used, missing *DepSet) func(...string) ([]*idep.Node, error) {
+	return func(s ...string) ([]*idep.Node, error) {
+		result := []*idep.Node{}
 
-		d, err := dep.NewCatalogNodesQuery(strings.Join(s, ""))
+		d, err := idep.NewCatalogNodesQuery(strings.Join(s, ""))
 		if err != nil {
 			return nil, err
 		}
@@ -305,7 +306,7 @@ func nodesFunc(r Recaller, used, missing *DepSet) func(...string) ([]*dep.Node, 
 		used.Add(d)
 
 		if value, ok := r.Recall(d.String()); ok {
-			return value.([]*dep.Node), nil
+			return value.([]*idep.Node), nil
 		}
 
 		missing.Add(d)
@@ -315,9 +316,9 @@ func nodesFunc(r Recaller, used, missing *DepSet) func(...string) ([]*dep.Node, 
 }
 
 // secretFunc returns or accumulates secret dependencies from Vault.
-func secretFunc(r Recaller, used, missing *DepSet) func(...string) (*dep.Secret, error) {
-	return func(s ...string) (*dep.Secret, error) {
-		var result *dep.Secret
+func secretFunc(r Recaller, used, missing *DepSet) func(...string) (*idep.Secret, error) {
+	return func(s ...string) (*idep.Secret, error) {
+		var result *idep.Secret
 
 		if len(s) == 0 {
 			return result, nil
@@ -336,13 +337,13 @@ func secretFunc(r Recaller, used, missing *DepSet) func(...string) (*dep.Secret,
 			data[k] = v
 		}
 
-		var d Dependency
+		var d dep.Dependency
 		var err error
 
 		if len(rest) == 0 {
-			d, err = dep.NewVaultReadQuery(path)
+			d, err = idep.NewVaultReadQuery(path)
 		} else {
-			d, err = dep.NewVaultWriteQuery(path, data)
+			d, err = idep.NewVaultWriteQuery(path, data)
 		}
 
 		if err != nil {
@@ -352,7 +353,7 @@ func secretFunc(r Recaller, used, missing *DepSet) func(...string) (*dep.Secret,
 		used.Add(d)
 
 		if value, ok := r.Recall(d.String()); ok {
-			result = value.(*dep.Secret)
+			result = value.(*idep.Secret)
 			return result, nil
 		}
 
@@ -371,7 +372,7 @@ func secretsFunc(r Recaller, used, missing *DepSet) func(string) ([]string, erro
 			return result, nil
 		}
 
-		d, err := dep.NewVaultListQuery(s)
+		d, err := idep.NewVaultListQuery(s)
 		if err != nil {
 			return nil, err
 		}
@@ -390,7 +391,7 @@ func secretsFunc(r Recaller, used, missing *DepSet) func(string) ([]string, erro
 }
 
 // byMeta returns Services grouped by one or many ServiceMeta fields.
-func byMeta(meta string, services []*dep.HealthService) (groups map[string][]*dep.HealthService, err error) {
+func byMeta(meta string, services []*idep.HealthService) (groups map[string][]*idep.HealthService, err error) {
 	re := regexp.MustCompile("[^a-zA-Z0-9_-]")
 	normalize := func(x string) string {
 		return re.ReplaceAllString(x, "_")
@@ -408,7 +409,7 @@ func byMeta(meta string, services []*dep.HealthService) (groups map[string][]*de
 
 	metas := strings.Split(meta, ",")
 
-	groups = make(map[string][]*dep.HealthService)
+	groups = make(map[string][]*idep.HealthService)
 
 	for _, s := range services {
 		sm := s.ServiceMeta
@@ -433,15 +434,15 @@ func byMeta(meta string, services []*dep.HealthService) (groups map[string][]*de
 }
 
 // serviceFunc returns or accumulates health service dependencies.
-func serviceFunc(r Recaller, used, missing *DepSet) func(...string) ([]*dep.HealthService, error) {
-	return func(s ...string) ([]*dep.HealthService, error) {
-		result := []*dep.HealthService{}
+func serviceFunc(r Recaller, used, missing *DepSet) func(...string) ([]*idep.HealthService, error) {
+	return func(s ...string) ([]*idep.HealthService, error) {
+		result := []*idep.HealthService{}
 
 		if len(s) == 0 || s[0] == "" {
 			return result, nil
 		}
 
-		d, err := dep.NewHealthServiceQuery(strings.Join(s, "|"))
+		d, err := idep.NewHealthServiceQuery(strings.Join(s, "|"))
 		if err != nil {
 			return nil, err
 		}
@@ -449,7 +450,7 @@ func serviceFunc(r Recaller, used, missing *DepSet) func(...string) ([]*dep.Heal
 		used.Add(d)
 
 		if value, ok := r.Recall(d.String()); ok {
-			return value.([]*dep.HealthService), nil
+			return value.([]*idep.HealthService), nil
 		}
 
 		missing.Add(d)
@@ -459,11 +460,11 @@ func serviceFunc(r Recaller, used, missing *DepSet) func(...string) ([]*dep.Heal
 }
 
 // servicesFunc returns or accumulates catalog services dependencies.
-func servicesFunc(r Recaller, used, missing *DepSet) func(...string) ([]*dep.CatalogSnippet, error) {
-	return func(s ...string) ([]*dep.CatalogSnippet, error) {
-		result := []*dep.CatalogSnippet{}
+func servicesFunc(r Recaller, used, missing *DepSet) func(...string) ([]*idep.CatalogSnippet, error) {
+	return func(s ...string) ([]*idep.CatalogSnippet, error) {
+		result := []*idep.CatalogSnippet{}
 
-		d, err := dep.NewCatalogServicesQuery(strings.Join(s, ""))
+		d, err := idep.NewCatalogServicesQuery(strings.Join(s, ""))
 		if err != nil {
 			return nil, err
 		}
@@ -471,7 +472,7 @@ func servicesFunc(r Recaller, used, missing *DepSet) func(...string) ([]*dep.Cat
 		used.Add(d)
 
 		if value, ok := r.Recall(d.String()); ok {
-			return value.([]*dep.CatalogSnippet), nil
+			return value.([]*idep.CatalogSnippet), nil
 		}
 
 		missing.Add(d)
@@ -481,15 +482,15 @@ func servicesFunc(r Recaller, used, missing *DepSet) func(...string) ([]*dep.Cat
 }
 
 // connectFunc returns or accumulates health connect dependencies.
-func connectFunc(r Recaller, used, missing *DepSet) func(...string) ([]*dep.HealthService, error) {
-	return func(s ...string) ([]*dep.HealthService, error) {
-		result := []*dep.HealthService{}
+func connectFunc(r Recaller, used, missing *DepSet) func(...string) ([]*idep.HealthService, error) {
+	return func(s ...string) ([]*idep.HealthService, error) {
+		result := []*idep.HealthService{}
 
 		if len(s) == 0 || s[0] == "" {
 			return result, nil
 		}
 
-		d, err := dep.NewHealthConnectQuery(strings.Join(s, "|"))
+		d, err := idep.NewHealthConnectQuery(strings.Join(s, "|"))
 		if err != nil {
 			return nil, err
 		}
@@ -497,7 +498,7 @@ func connectFunc(r Recaller, used, missing *DepSet) func(...string) ([]*dep.Heal
 		used.Add(d)
 
 		if value, ok := r.Recall(d.String()); ok {
-			return value.([]*dep.HealthService), nil
+			return value.([]*idep.HealthService), nil
 		}
 
 		missing.Add(d)
@@ -509,7 +510,7 @@ func connectFunc(r Recaller, used, missing *DepSet) func(...string) ([]*dep.Heal
 func connectCARootsFunc(r Recaller, used, missing *DepSet,
 ) func(...string) ([]*api.CARoot, error) {
 	return func(...string) ([]*api.CARoot, error) {
-		d := dep.NewConnectCAQuery()
+		d := idep.NewConnectCAQuery()
 		used.Add(d)
 		if value, ok := r.Recall(d.String()); ok {
 			return value.([]*api.CARoot), nil
@@ -525,7 +526,7 @@ func connectLeafFunc(r Recaller, used, missing *DepSet,
 		if len(s) == 0 || s[0] == "" {
 			return nil, nil
 		}
-		d := dep.NewConnectLeafQuery(s[0])
+		d := idep.NewConnectLeafQuery(s[0])
 		used.Add(d)
 		if value, ok := r.Recall(d.String()); ok {
 			return value.(*api.LeafCert), nil
@@ -536,22 +537,22 @@ func connectLeafFunc(r Recaller, used, missing *DepSet,
 	}
 }
 
-func safeTreeFunc(r Recaller, used, missing *DepSet) func(string) ([]*dep.KeyPair, error) {
+func safeTreeFunc(r Recaller, used, missing *DepSet) func(string) ([]*idep.KeyPair, error) {
 	// call treeFunc but explicitly mark that empty data set returned on
 	// monitored KV prefix is NOT safe
 	return treeFunc(r, used, missing, false)
 }
 
 // treeFunc returns or accumulates keyPrefix dependencies.
-func treeFunc(r Recaller, used, missing *DepSet, emptyIsSafe bool) func(string) ([]*dep.KeyPair, error) {
-	return func(s string) ([]*dep.KeyPair, error) {
-		result := []*dep.KeyPair{}
+func treeFunc(r Recaller, used, missing *DepSet, emptyIsSafe bool) func(string) ([]*idep.KeyPair, error) {
+	return func(s string) ([]*idep.KeyPair, error) {
+		result := []*idep.KeyPair{}
 
 		if len(s) == 0 {
 			return result, nil
 		}
 
-		d, err := dep.NewKVListQuery(s)
+		d, err := idep.NewKVListQuery(s)
 		if err != nil {
 			return result, err
 		}
@@ -560,7 +561,7 @@ func treeFunc(r Recaller, used, missing *DepSet, emptyIsSafe bool) func(string) 
 
 		// Only return non-empty top-level keys
 		if value, ok := r.Recall(d.String()); ok {
-			for _, pair := range value.([]*dep.KeyPair) {
+			for _, pair := range value.([]*idep.KeyPair) {
 				parts := strings.Split(pair.Key, "/")
 				if parts[len(parts)-1] != "" {
 					result = append(result, pair)
@@ -636,8 +637,8 @@ func base64URLEncode(s string) (string, error) {
 //
 // Note that the top-most key is stripped from the Key value. Keys that have no
 // prefix after stripping are removed from the list.
-func byKey(pairs []*dep.KeyPair) (map[string]map[string]*dep.KeyPair, error) {
-	m := make(map[string]map[string]*dep.KeyPair)
+func byKey(pairs []*idep.KeyPair) (map[string]map[string]*idep.KeyPair, error) {
+	m := make(map[string]map[string]*idep.KeyPair)
 	for _, pair := range pairs {
 		parts := strings.Split(pair.Key, "/")
 		top := parts[0]
@@ -649,7 +650,7 @@ func byKey(pairs []*dep.KeyPair) (map[string]map[string]*dep.KeyPair, error) {
 		}
 
 		if _, ok := m[top]; !ok {
-			m[top] = make(map[string]*dep.KeyPair)
+			m[top] = make(map[string]*idep.KeyPair)
 		}
 
 		newPair := *pair
@@ -670,19 +671,19 @@ func byTag(in interface{}) (map[string][]interface{}, error) {
 
 	switch typed := in.(type) {
 	case nil:
-	case []*dep.CatalogSnippet:
+	case []*idep.CatalogSnippet:
 		for _, s := range typed {
 			for _, t := range s.Tags {
 				m[t] = append(m[t], s)
 			}
 		}
-	case []*dep.CatalogService:
+	case []*idep.CatalogService:
 		for _, s := range typed {
 			for _, t := range s.ServiceTags {
 				m[t] = append(m[t], s)
 			}
 		}
-	case []*dep.HealthService:
+	case []*idep.HealthService:
 		for _, s := range typed {
 			for _, t := range s.Tags {
 				m[t] = append(m[t], s)
@@ -725,7 +726,7 @@ func containsSomeFunc(retTrue, invert bool) func([]interface{}, interface{}) (bo
 }
 
 // explode is used to expand a list of keypairs into a deeply-nested hash.
-func explode(pairs []*dep.KeyPair) (map[string]interface{}, error) {
+func explode(pairs []*idep.KeyPair) (map[string]interface{}, error) {
 	m := make(map[string]interface{})
 	for _, pair := range pairs {
 		if err := explodeHelper(m, pair.Key, pair.Value, pair.Key); err != nil {

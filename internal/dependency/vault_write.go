@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/hcat/dep"
 	"github.com/hashicorp/vault/api"
 	"github.com/pkg/errors"
 )
@@ -51,7 +52,7 @@ func NewVaultWriteQuery(s string, d map[string]interface{}) (*VaultWriteQuery, e
 }
 
 // Fetch queries the Vault API
-func (d *VaultWriteQuery) Fetch(clients Clients) (interface{}, *ResponseMetadata, error) {
+func (d *VaultWriteQuery) Fetch(clients dep.Clients) (interface{}, *dep.ResponseMetadata, error) {
 	select {
 	case <-d.stopCh:
 		return nil, nil, ErrStopped
@@ -145,7 +146,7 @@ func (d *VaultWriteQuery) printWarnings(warnings []string) {
 	//	}
 }
 
-func (d *VaultWriteQuery) writeSecret(clients Clients, opts *QueryOptions) (*api.Secret, error) {
+func (d *VaultWriteQuery) writeSecret(clients dep.Clients, opts *QueryOptions) (*api.Secret, error) {
 	//log.Printf("[TRACE] %s: PUT %s", d, &url.URL{
 	//	Path:     "/v1/" + d.path,
 	//	RawQuery: opts.String(),

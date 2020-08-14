@@ -6,7 +6,8 @@ import (
 	"testing"
 	"time"
 
-	dep "github.com/hashicorp/hcat/internal/dependency"
+	"github.com/hashicorp/hcat/dep"
+	idep "github.com/hashicorp/hcat/internal/dependency"
 	"github.com/pkg/errors"
 )
 
@@ -15,7 +16,7 @@ func TestWatcherAdd(t *testing.T) {
 		w := newWatcher(t)
 		defer w.Stop()
 
-		d := &dep.FakeDep{}
+		d := &idep.FakeDep{}
 		if added := w.Add(d); !added {
 			t.Fatal("expected add to return true")
 		}
@@ -28,7 +29,7 @@ func TestWatcherAdd(t *testing.T) {
 		w := newWatcher(t)
 		defer w.Stop()
 
-		d := &dep.FakeDep{}
+		d := &idep.FakeDep{}
 		if added := w.Add(d); !added {
 			t.Errorf("expected add to return true")
 		}
@@ -40,7 +41,7 @@ func TestWatcherAdd(t *testing.T) {
 		w := newWatcher(t)
 		defer w.Stop()
 
-		if added := w.Add(&dep.FakeDep{}); !added {
+		if added := w.Add(&idep.FakeDep{}); !added {
 			t.Errorf("expected add to return true")
 		}
 
@@ -58,7 +59,7 @@ func TestWatcherWatching(t *testing.T) {
 		w := newWatcher(t)
 		defer w.Stop()
 
-		d := &dep.FakeDep{}
+		d := &idep.FakeDep{}
 		if w.Watching(d.String()) == true {
 			t.Errorf("expected to not be Watching")
 		}
@@ -68,7 +69,7 @@ func TestWatcherWatching(t *testing.T) {
 		w := newWatcher(t)
 		defer w.Stop()
 
-		d := &dep.FakeDep{}
+		d := &idep.FakeDep{}
 		w.Add(d)
 
 		if w.Watching(d.String()) == false {
@@ -82,7 +83,7 @@ func TestWatcherRemove(t *testing.T) {
 		w := newWatcher(t)
 		defer w.Stop()
 
-		d := &dep.FakeDep{}
+		d := &idep.FakeDep{}
 		w.Add(d)
 
 		removed := w.remove(d.String())
@@ -99,7 +100,7 @@ func TestWatcherRemove(t *testing.T) {
 		w := newWatcher(t)
 		defer w.Stop()
 
-		var fd dep.FakeDep
+		var fd idep.FakeDep
 		removed := w.remove(fd.String())
 		if removed != false {
 			t.Fatal("expected Remove to return false")
@@ -126,7 +127,7 @@ func TestWatcherVaultToken(t *testing.T) {
 		if err != nil {
 			t.Fatal("Didn't expect and error:", err)
 		}
-		test_id := (&dep.VaultTokenQuery{}).String()
+		test_id := (&idep.VaultTokenQuery{}).String()
 
 		if !w.Watching(test_id) {
 			t.Fatal("token dep not added to watcher")
@@ -139,7 +140,7 @@ func TestWatcherVaultToken(t *testing.T) {
 		if err != nil {
 			t.Fatal("Didn't expect and error:", err)
 		}
-		test_id := (&dep.VaultTokenQuery{}).String()
+		test_id := (&idep.VaultTokenQuery{}).String()
 		if !w.Watching(test_id) {
 			t.Fatal("token dep not added to watcher")
 		}
@@ -166,7 +167,7 @@ func TestWatcherSize(t *testing.T) {
 		defer w.Stop()
 
 		for i := 0; i < 10; i++ {
-			d := &dep.FakeDep{Name: fmt.Sprintf("%d", i)}
+			d := &idep.FakeDep{Name: fmt.Sprintf("%d", i)}
 			w.Add(d)
 		}
 
@@ -220,7 +221,7 @@ func TestWatcherWait(t *testing.T) {
 	t.Run("remove-old-dependency", func(t *testing.T) {
 		w := newWatcher(t)
 		defer w.Stop()
-		d := &dep.FakeDep{}
+		d := &idep.FakeDep{}
 		w.Add(d)
 		if !w.Watching(d.String()) {
 			t.Error("expected dependency to be present")
@@ -234,7 +235,7 @@ func TestWatcherWait(t *testing.T) {
 	t.Run("simple-update", func(t *testing.T) {
 		w := newWatcher(t)
 		defer w.Stop()
-		foodep := &dep.FakeDep{Name: "foo"}
+		foodep := &idep.FakeDep{Name: "foo"}
 		view := newView(&newViewInput{
 			Dependency: foodep,
 		})
@@ -248,10 +249,10 @@ func TestWatcherWait(t *testing.T) {
 	t.Run("multi-update", func(t *testing.T) {
 		w := newWatcher(t)
 		defer w.Stop()
-		deps := make([]Dependency, 5)
+		deps := make([]dep.Dependency, 5)
 		views := make([]*view, 5)
 		for i := 0; i < 5; i++ {
-			deps[i] = &dep.FakeDep{Name: strconv.Itoa(i)}
+			deps[i] = &idep.FakeDep{Name: strconv.Itoa(i)}
 			views[i] = newView(&newViewInput{
 				Dependency: deps[i],
 			})
@@ -274,7 +275,7 @@ func TestWatcherWait(t *testing.T) {
 	t.Run("simple-updated-tracking", func(t *testing.T) {
 		w := newWatcher(t)
 		defer w.Stop()
-		foodep := &dep.FakeDep{Name: "foo"}
+		foodep := &idep.FakeDep{Name: "foo"}
 		view := newView(&newViewInput{
 			Dependency: foodep,
 		})
@@ -287,10 +288,10 @@ func TestWatcherWait(t *testing.T) {
 	t.Run("multi-updated-tracking", func(t *testing.T) {
 		w := newWatcher(t)
 		defer w.Stop()
-		deps := make([]Dependency, 5)
+		deps := make([]dep.Dependency, 5)
 		views := make([]*view, 5)
 		for i := 0; i < 5; i++ {
-			deps[i] = &dep.FakeDep{Name: strconv.Itoa(i)}
+			deps[i] = &idep.FakeDep{Name: strconv.Itoa(i)}
 			views[i] = newView(&newViewInput{
 				Dependency: deps[i],
 			})
@@ -309,7 +310,7 @@ func TestWatcherWait(t *testing.T) {
 		w := newWatcher(t)
 		defer w.Stop()
 		for i := 0; i < 2; i++ {
-			foodep := &dep.FakeDep{Name: "foo"}
+			foodep := &idep.FakeDep{Name: "foo"}
 			view := newView(&newViewInput{
 				Dependency: foodep,
 			})
@@ -323,7 +324,7 @@ func TestWatcherWait(t *testing.T) {
 	t.Run("wait-channel", func(t *testing.T) {
 		w := newWatcher(t)
 		defer w.Stop()
-		foodep := &dep.FakeDep{Name: "foo"}
+		foodep := &idep.FakeDep{Name: "foo"}
 		view := newView(&newViewInput{
 			Dependency: foodep,
 		})

@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/hcat/dep"
 	"github.com/pkg/errors"
 )
 
@@ -38,7 +39,7 @@ func NewVaultListQuery(s string) (*VaultListQuery, error) {
 }
 
 // Fetch queries the Vault API
-func (d *VaultListQuery) Fetch(clients Clients) (interface{}, *ResponseMetadata, error) {
+func (d *VaultListQuery) Fetch(clients dep.Clients) (interface{}, *dep.ResponseMetadata, error) {
 	select {
 	case <-d.stopCh:
 		return nil, nil, ErrStopped

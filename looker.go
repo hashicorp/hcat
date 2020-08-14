@@ -6,7 +6,8 @@ import (
 	"sync"
 	"time"
 
-	dep "github.com/hashicorp/hcat/internal/dependency"
+	"github.com/hashicorp/hcat/dep"
+	idep "github.com/hashicorp/hcat/internal/dependency"
 )
 
 // Looker is an interface for looking up data from Consul, Vault and the
@@ -21,7 +22,7 @@ type Looker interface {
 // at this point so we extend it here to include environment variables to meet
 // the looker interface.
 type ClientSet struct {
-	*dep.ClientSet
+	*idep.ClientSet
 
 	// map of client-structs to retry functions
 	injectedEnv   []string
@@ -32,7 +33,7 @@ type ClientSet struct {
 // Fulfills the Looker interface.
 func NewClientSet() *ClientSet {
 	return &ClientSet{
-		ClientSet: dep.NewClientSet(),
+		ClientSet: idep.NewClientSet(),
 
 		RWMutex:     &sync.RWMutex{},
 		injectedEnv: []string{},
@@ -92,8 +93,8 @@ type VaultInput struct {
 	HttpClient *http.Client
 }
 
-func (i VaultInput) toInternal() *dep.CreateClientInput {
-	cci := &dep.CreateClientInput{
+func (i VaultInput) toInternal() *idep.CreateClientInput {
+	cci := &idep.CreateClientInput{
 		Address:     i.Address,
 		Namespace:   i.Namespace,
 		Token:       i.Token,
@@ -115,8 +116,8 @@ type ConsulInput struct {
 	HttpClient *http.Client
 }
 
-func (i ConsulInput) toInternal() *dep.CreateClientInput {
-	cci := &dep.CreateClientInput{
+func (i ConsulInput) toInternal() *idep.CreateClientInput {
+	cci := &idep.CreateClientInput{
 		Address:      i.Address,
 		Namespace:    i.Namespace,
 		Token:        i.Token,
@@ -146,7 +147,7 @@ type TransportInput struct {
 	TLSHandshakeTimeout time.Duration
 }
 
-func (i TransportInput) toInternal(cci *dep.CreateClientInput) *dep.CreateClientInput {
+func (i TransportInput) toInternal(cci *idep.CreateClientInput) *idep.CreateClientInput {
 	cci.SSLEnabled = i.SSLEnabled
 	cci.SSLVerify = i.SSLVerify
 	cci.SSLCert = i.SSLCert

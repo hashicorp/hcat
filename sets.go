@@ -3,6 +3,8 @@ package hcat
 import (
 	"fmt"
 	"sync"
+
+	"github.com/hashicorp/hcat/dep"
 )
 
 // stringSet is a simple string set implementation used
@@ -60,19 +62,19 @@ func (s stringSet) Clear() {
 // rendering interface. Relative ordering is preserved.
 type DepSet struct {
 	stringSet
-	list []Dependency
+	list []dep.Dependency
 }
 
 // NewDepSet returns an initialized DepSet (set of dependencies).
 func NewDepSet() *DepSet {
 	return &DepSet{
-		list:      make([]Dependency, 0, 8),
+		list:      make([]dep.Dependency, 0, 8),
 		stringSet: newStringSet(),
 	}
 }
 
 // Add adds a new element to the set if it does not already exist.
-func (s *DepSet) Add(d Dependency) bool {
+func (s *DepSet) Add(d dep.Dependency) bool {
 	s.Lock()
 	defer s.Unlock()
 	if _, ok := s.stringSet.set[d.String()]; !ok {
@@ -84,7 +86,7 @@ func (s *DepSet) Add(d Dependency) bool {
 }
 
 // List returns the insertion-ordered list of dependencies.
-func (s *DepSet) List() []Dependency {
+func (s *DepSet) List() []dep.Dependency {
 	s.RLock()
 	defer s.RUnlock()
 	return s.list
