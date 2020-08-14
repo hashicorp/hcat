@@ -2,15 +2,25 @@ package dependency
 
 import (
 	"fmt"
+	"reflect"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 )
 
-func TestNewKVGetBlockingQuery(t *testing.T) {
+func TestNewKVGetQuery_Blocking(t *testing.T) {
+	t.Run("non-blocking_query", func(t *testing.T) {
+		q, err := NewKVExistsQuery("")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, ok := interface{}(q).(BlockingQuery); ok {
+			t.Fatal("should NOT be blocking")
+		}
+	})
 	t.Run("blocking_query", func(t *testing.T) {
-		q, err := NewKVGetBlockingQuery("")
+		q, err := NewKVGetQuery("")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -18,8 +28,24 @@ func TestNewKVGetBlockingQuery(t *testing.T) {
 			t.Fatal("should be blocking")
 		}
 	})
-	t.Run("blocking_query_options", func(t *testing.T) {
-		q, err := NewKVGetBlockingQuery("")
+}
+
+func TestKVGetQuery_SetOptions(t *testing.T) {
+	t.Run("get_query_options", func(t *testing.T) {
+		q, err := NewKVGetQuery("")
+		if err != nil {
+			t.Fatal(err)
+		}
+		q.SetOptions(QueryOptions{WaitIndex: 100, WaitTime: 100})
+		if q.opts.WaitIndex != 100 {
+			t.Fatal("WaitIndex should be zero")
+		}
+		if q.opts.WaitTime != 100 {
+			t.Fatal("WaitTime should be zero")
+		}
+	})
+	t.Run("exists_query_options", func(t *testing.T) {
+		q, err := NewKVExistsQuery("")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -39,13 +65,13 @@ func TestNewKVGetQuery(t *testing.T) {
 	cases := []struct {
 		name string
 		i    string
-		exp  *KVGetQuery
+		exp  *KVExistsQuery
 		err  bool
 	}{
 		{
 			"empty",
 			"",
-			&KVGetQuery{},
+			&KVExistsQuery{},
 			false,
 		},
 
@@ -58,7 +84,7 @@ func TestNewKVGetQuery(t *testing.T) {
 		{
 			"key",
 			"key",
-			&KVGetQuery{
+			&KVExistsQuery{
 				key: "key",
 			},
 			false,
@@ -66,7 +92,7 @@ func TestNewKVGetQuery(t *testing.T) {
 		{
 			"dc",
 			"key@dc1",
-			&KVGetQuery{
+			&KVExistsQuery{
 				key: "key",
 				dc:  "dc1",
 			},
@@ -75,7 +101,7 @@ func TestNewKVGetQuery(t *testing.T) {
 		{
 			"dots",
 			"key.with.dots",
-			&KVGetQuery{
+			&KVExistsQuery{
 				key: "key.with.dots",
 			},
 			false,
@@ -83,7 +109,7 @@ func TestNewKVGetQuery(t *testing.T) {
 		{
 			"slashes",
 			"key/with/slashes",
-			&KVGetQuery{
+			&KVExistsQuery{
 				key: "key/with/slashes",
 			},
 			false,
@@ -91,7 +117,7 @@ func TestNewKVGetQuery(t *testing.T) {
 		{
 			"dashes",
 			"key-with-dashes",
-			&KVGetQuery{
+			&KVExistsQuery{
 				key: "key-with-dashes",
 			},
 			false,
@@ -99,7 +125,7 @@ func TestNewKVGetQuery(t *testing.T) {
 		{
 			"leading_slash",
 			"/leading/slash",
-			&KVGetQuery{
+			&KVExistsQuery{
 				key: "leading/slash",
 			},
 			false,
@@ -107,7 +133,7 @@ func TestNewKVGetQuery(t *testing.T) {
 		{
 			"trailing_slash",
 			"trailing/slash/",
-			&KVGetQuery{
+			&KVExistsQuery{
 				key: "trailing/slash/",
 			},
 			false,
@@ -115,7 +141,7 @@ func TestNewKVGetQuery(t *testing.T) {
 		{
 			"underscores",
 			"key_with_underscores",
-			&KVGetQuery{
+			&KVExistsQuery{
 				key: "key_with_underscores",
 			},
 			false,
@@ -123,7 +149,7 @@ func TestNewKVGetQuery(t *testing.T) {
 		{
 			"special_characters",
 			"config/facet:größe-lf-si",
-			&KVGetQuery{
+			&KVExistsQuery{
 				key: "config/facet:größe-lf-si",
 			},
 			false,
@@ -131,7 +157,7 @@ func TestNewKVGetQuery(t *testing.T) {
 		{
 			"splat",
 			"config/*/timeouts/",
-			&KVGetQuery{
+			&KVExistsQuery{
 				key: "config/*/timeouts/",
 			},
 			false,
@@ -140,7 +166,7 @@ func TestNewKVGetQuery(t *testing.T) {
 
 	for i, tc := range cases {
 		t.Run(fmt.Sprintf("%d_%s", i, tc.name), func(t *testing.T) {
-			act, err := NewKVGetQuery(tc.i)
+			act, err := NewKVExistsQuery(tc.i)
 			if (err != nil) != tc.err {
 				t.Fatal(err)
 			}
@@ -279,22 +305,38 @@ func TestKVGetQuery_String(t *testing.T) {
 		name string
 		i    string
 		exp  string
+		f    interface{}
 	}{
 		{
 			"key",
 			"key",
 			"kv.get(key)",
+			NewKVGetQuery,
 		},
 		{
 			"dc",
 			"key@dc1",
 			"kv.get(key@dc1)",
+			NewKVGetQuery,
+		},
+		{
+			"dc",
+			"key@dc1",
+			"kv.exists(key@dc1)",
+			NewKVExistsQuery,
 		},
 	}
 
 	for i, tc := range cases {
 		t.Run(fmt.Sprintf("%d_%s", i, tc.name), func(t *testing.T) {
-			d, err := NewKVGetQuery(tc.i)
+			var d fmt.Stringer
+			var err error
+			switch pv := reflect.ValueOf(tc.f); pv {
+			case reflect.ValueOf(NewKVGetQuery):
+				d, err = NewKVGetQuery(tc.i)
+			case reflect.ValueOf(NewKVExistsQuery):
+				d, err = NewKVExistsQuery(tc.i)
+			}
 			if err != nil {
 				t.Fatal(err)
 			}

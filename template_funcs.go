@@ -146,7 +146,7 @@ func keyFunc(r Recaller, used, missing *DepSet) func(string) (string, error) {
 			return "", nil
 		}
 
-		d, err := dep.NewKVGetBlockingQuery(s)
+		d, err := dep.NewKVGetQuery(s)
 		if err != nil {
 			return "", err
 		}

@@ -57,7 +57,7 @@ func TestResolverRun(t *testing.T) {
 		w := blindWatcher(t)
 		defer w.Stop()
 
-		d, _ := dep.NewKVGetBlockingQuery("foo")
+		d, _ := dep.NewKVGetQuery("foo")
 		// seed the cache and the dependency tracking
 		w.cache.Save(d.String(), "bar")
 		r, err := rv.Run(tt, w)

@@ -10,14 +10,14 @@ import (
 var (
 	// Ensure implements
 	_ isDependency  = (*KVGetQuery)(nil)
-	_ BlockingQuery = (*KVGetBlockingQuery)(nil)
+	_ BlockingQuery = (*KVGetQuery)(nil)
 
 	// KVGetQueryRe is the regular expression to use.
 	KVGetQueryRe = regexp.MustCompile(`\A` + keyRe + dcRe + `\z`)
 )
 
-// KVGetQuery queries the KV store for a single key.
-type KVGetQuery struct {
+// KVExistsQuery uses a non-blocking query with the KV store for key lookup.
+type KVExistsQuery struct {
 	isConsul
 	stopCh chan struct{}
 
@@ -26,45 +26,46 @@ type KVGetQuery struct {
 	opts QueryOptions
 }
 
-// KVGetBlockingQuery uses a blocking query with the KV store for key lookup.
-type KVGetBlockingQuery struct {
-	KVGetQuery
+// KVGetQuery queries the KV store for a single key.
+type KVGetQuery struct {
+	KVExistsQuery
 	isBlocking
 }
 
-func (d *KVGetBlockingQuery) SetOptions(opts QueryOptions) {
+func (d *KVExistsQuery) SetOptions(opts QueryOptions) {
 	opts.WaitIndex = 0
 	opts.WaitTime = 0
 	d.opts = opts
 }
-func (d *KVGetBlockingQuery) String() string {
+func (d *KVExistsQuery) String() string {
 	key := d.key
 	if d.dc != "" {
 		key = key + "@" + d.dc
 	}
-	return fmt.Sprintf("kv.block(%s)", key)
+	return fmt.Sprintf("kv.exists(%s)", key)
 }
 
-// NewKVGetQuery parses a string into a dependency.
-func NewKVGetBlockingQuery(s string) (*KVGetBlockingQuery, error) {
-	q, err := NewKVGetQuery(s)
-	if err != nil {
-		return nil, err
-	}
-	return &KVGetBlockingQuery{KVGetQuery: *q}, nil
-}
-
-func NewKVGetQuery(s string) (*KVGetQuery, error) {
+// NewKVGetQuery parses a string into a KV lookup.
+func NewKVExistsQuery(s string) (*KVExistsQuery, error) {
 	if s != "" && !KVGetQueryRe.MatchString(s) {
 		return nil, fmt.Errorf("kv.get: invalid format: %q", s)
 	}
 
 	m := regexpMatch(KVGetQueryRe, s)
-	return &KVGetQuery{
+	return &KVExistsQuery{
 		stopCh: make(chan struct{}, 1),
 		dc:     m["dc"],
 		key:    m["key"],
 	}, nil
+}
+
+// NewKVGetQuery parses a string into a (non-blocking) KV lookup.
+func NewKVGetQuery(s string) (*KVGetQuery, error) {
+	q, err := NewKVExistsQuery(s)
+	if err != nil {
+		return nil, err
+	}
+	return &KVGetQuery{KVExistsQuery: *q}, nil
 }
 
 // Fetch queries the Consul API defined by the given client.
