@@ -173,19 +173,21 @@ func TestHealthConnectServiceQuery_Fetch(t *testing.T) {
 			"foo",
 			[]*HealthService{
 				&HealthService{
-					Name:        "foo-sidecar-proxy",
-					ID:          "foo",
-					Port:        21999,
-					Status:      "passing",
-					Address:     "127.0.0.1",
-					NodeAddress: "127.0.0.1",
-					Tags:        ServiceTags([]string{}),
+					Name:           "foo-sidecar-proxy",
+					ID:             "foo",
+					Port:           21999,
+					Status:         "passing",
+					Address:        "127.0.0.1",
+					NodeAddress:    "127.0.0.1",
+					NodeDatacenter: "dc1",
+					Tags:           ServiceTags([]string{}),
 					NodeMeta: map[string]string{
 						"consul-network-segment": ""},
 					Weights: api.AgentWeights{
 						Passing: 1,
 						Warning: 1,
 					},
+					Namespace: "",
 				},
 			},
 		},
@@ -231,8 +233,9 @@ func TestHealthServiceQuery_Fetch(t *testing.T) {
 			"consul",
 			[]*HealthService{
 				&HealthService{
-					Node:        testConsul.Config.NodeName,
-					NodeAddress: testConsul.Config.Bind,
+					Node:           testConsul.Config.NodeName,
+					NodeAddress:    testConsul.Config.Bind,
+					NodeDatacenter: "dc1",
 					NodeTaggedAddresses: map[string]string{
 						"lan": "127.0.0.1",
 						"wan": "127.0.0.1",
@@ -251,6 +254,7 @@ func TestHealthServiceQuery_Fetch(t *testing.T) {
 						Passing: 1,
 						Warning: 1,
 					},
+					Namespace: "",
 				},
 			},
 		},
@@ -264,8 +268,9 @@ func TestHealthServiceQuery_Fetch(t *testing.T) {
 			"consul|warning,passing",
 			[]*HealthService{
 				&HealthService{
-					Node:        testConsul.Config.NodeName,
-					NodeAddress: testConsul.Config.Bind,
+					Node:           testConsul.Config.NodeName,
+					NodeAddress:    testConsul.Config.Bind,
+					NodeDatacenter: "dc1",
 					NodeTaggedAddresses: map[string]string{
 						"lan": "127.0.0.1",
 						"wan": "127.0.0.1",
@@ -284,6 +289,7 @@ func TestHealthServiceQuery_Fetch(t *testing.T) {
 						Passing: 1,
 						Warning: 1,
 					},
+					Namespace: "",
 				},
 			},
 		},
@@ -292,8 +298,9 @@ func TestHealthServiceQuery_Fetch(t *testing.T) {
 			"service-meta",
 			[]*HealthService{
 				&HealthService{
-					Node:        testConsul.Config.NodeName,
-					NodeAddress: testConsul.Config.Bind,
+					Node:           testConsul.Config.NodeName,
+					NodeAddress:    testConsul.Config.Bind,
+					NodeDatacenter: "dc1",
 					NodeTaggedAddresses: map[string]string{
 						"lan": "127.0.0.1",
 						"wan": "127.0.0.1",
@@ -313,6 +320,7 @@ func TestHealthServiceQuery_Fetch(t *testing.T) {
 						Passing: 1,
 						Warning: 1,
 					},
+					Namespace: "",
 				},
 			},
 		},

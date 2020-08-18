@@ -41,6 +41,7 @@ type HealthService struct {
 	Node                string
 	NodeID              string
 	NodeAddress         string
+	NodeDatacenter      string
 	NodeTaggedAddresses map[string]string
 	NodeMeta            map[string]string
 	ServiceMeta         map[string]string
@@ -52,6 +53,7 @@ type HealthService struct {
 	Status              string
 	Port                int
 	Weights             api.AgentWeights
+	Namespace           string
 }
 
 // HealthServiceQuery is the representation of all a service query in Consul.
@@ -182,6 +184,7 @@ func (d *HealthServiceQuery) Fetch(clients dep.Clients) (interface{}, *dep.Respo
 			Node:                entry.Node.Node,
 			NodeID:              entry.Node.ID,
 			NodeAddress:         entry.Node.Address,
+			NodeDatacenter:      entry.Node.Datacenter,
 			NodeTaggedAddresses: entry.Node.TaggedAddresses,
 			NodeMeta:            entry.Node.Meta,
 			ServiceMeta:         entry.Service.Meta,
@@ -190,10 +193,11 @@ func (d *HealthServiceQuery) Fetch(clients dep.Clients) (interface{}, *dep.Respo
 			Name:                entry.Service.Service,
 			Tags: ServiceTags(
 				deepCopyAndSortTags(entry.Service.Tags)),
-			Status:  status,
-			Checks:  entry.Checks,
-			Port:    entry.Service.Port,
-			Weights: entry.Service.Weights,
+			Status:    status,
+			Checks:    entry.Checks,
+			Port:      entry.Service.Port,
+			Weights:   entry.Service.Weights,
+			Namespace: entry.Service.Namespace,
 		})
 	}
 
