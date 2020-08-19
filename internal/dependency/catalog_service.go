@@ -36,6 +36,7 @@ type CatalogService struct {
 	ServiceTags     ServiceTags
 	ServiceMeta     map[string]string
 	ServicePort     int
+	Namespace       string
 }
 
 // CatalogServiceQuery is the representation of a requested catalog services
@@ -114,6 +115,7 @@ func (d *CatalogServiceQuery) Fetch(clients dep.Clients) (interface{}, *dep.Resp
 			ServiceTags:     ServiceTags(deepCopyAndSortTags(s.ServiceTags)),
 			ServiceMeta:     s.ServiceMeta,
 			ServicePort:     s.ServicePort,
+			Namespace:       s.Namespace,
 		})
 	}
 
