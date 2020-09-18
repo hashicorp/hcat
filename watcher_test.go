@@ -339,7 +339,49 @@ func TestWatcherWait(t *testing.T) {
 			t.Fatal("failed update")
 		}
 	})
+	t.Run("wait-cancel", func(t *testing.T) {
+		w := newWatcher(t)
+		defer w.Stop()
 
+		errCh := make(chan error)
+		ctx, cancel := context.WithCancel(context.Background())
+		go func() {
+			err := w.Wait(ctx, time.Minute)
+			if err != nil {
+				errCh <- err
+			}
+		}()
+		cancel()
+		err := <-errCh
+		if ctx.Err() != context.Canceled {
+			t.Fatal("unexpected context error:", ctx.Err())
+		}
+		if err != ctx.Err() {
+			t.Fatal("unexpected wait error:", err)
+		}
+	})
+	t.Run("wait-channel-cancel", func(t *testing.T) {
+		w := newWatcher(t)
+		defer w.Stop()
+
+		errCh := make(chan error)
+		ctx, cancel := context.WithCancel(context.Background())
+		go func() {
+			select {
+			case err := <-w.WaitCh(ctx, time.Minute):
+				errCh <- err
+			case <-errCh:
+			}
+		}()
+		cancel()
+		err := <-errCh
+		if ctx.Err() != context.Canceled {
+			t.Fatal("unexpected context error:", ctx.Err())
+		}
+		if err != ctx.Err() {
+			t.Fatal("unexpected wait error:", err)
+		}
+	})
 }
 
 func newWatcher(t *testing.T) *Watcher {
