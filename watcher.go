@@ -1,6 +1,7 @@
 package hcat
 
 import (
+	"context"
 	"sync"
 	"time"
 
@@ -134,16 +135,16 @@ func (w *Watcher) WatchVaultToken(token string) error {
 
 // WaitCh returns an error channel and runs Wait sending the result down
 // the channel. Sugur for when you need to use Wait in a select block.
-func (w *Watcher) WaitCh(timeout time.Duration) <-chan error {
+func (w *Watcher) WaitCh(ctx context.Context, timeout time.Duration) <-chan error {
 	errCh := make(chan error)
 	go func() {
-		errCh <- w.Wait(timeout)
+		errCh <- w.Wait(ctx, timeout)
 	}()
 	return errCh
 }
 
 // Wait blocks until new a watched value changes
-func (w *Watcher) Wait(timeout time.Duration) error {
+func (w *Watcher) Wait(ctx context.Context, timeout time.Duration) error {
 	var timer <-chan time.Time
 	if timeout > 0 {
 		timer = time.After(timeout)
@@ -170,7 +171,7 @@ func (w *Watcher) Wait(timeout time.Duration) error {
 			dataUpdate(view)
 			// Drain all dependency data. Prevents re-rendering templates over
 			// and over when a large batch of dependencies are updated.
-			// See GH-168 for background.
+			// See consul-template GH-168 for background.
 			for {
 				select {
 				case view := <-w.dataCh:
@@ -188,6 +189,8 @@ func (w *Watcher) Wait(timeout time.Duration) error {
 			// Push the error back up the stack
 			return err
 
+		case <-ctx.Done():
+			return ctx.Err()
 		}
 	}
 }

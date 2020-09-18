@@ -1,6 +1,7 @@
 package hcat
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 	"testing"
@@ -182,7 +183,7 @@ func TestWatcherWait(t *testing.T) {
 		w := newWatcher(t)
 		defer w.Stop()
 		t1 := time.Now()
-		err := w.Wait(time.Microsecond * 100)
+		err := w.Wait(context.Background(), time.Microsecond*100)
 		if err != nil {
 			t.Fatal("Error not expected")
 		}
@@ -200,7 +201,7 @@ func TestWatcherWait(t *testing.T) {
 			time.Sleep(time.Microsecond * 100)
 			w.errCh <- testerr
 		}()
-		w.Wait(0)
+		w.Wait(context.Background(), 0)
 		dur := time.Now().Sub(t1)
 		if dur < time.Microsecond*100 || dur > time.Millisecond*10 {
 			t.Fatal("Wait call was off;", dur)
@@ -213,7 +214,7 @@ func TestWatcherWait(t *testing.T) {
 		go func() {
 			w.errCh <- testerr
 		}()
-		err := w.Wait(0)
+		err := w.Wait(context.Background(), 0)
 		if err != testerr {
 			t.Fatal("None or Unexpected Error;", err)
 		}
@@ -240,7 +241,7 @@ func TestWatcherWait(t *testing.T) {
 			Dependency: foodep,
 		})
 		w.dataCh <- view
-		w.Wait(0)
+		w.Wait(context.Background(), 0)
 		store := w.cache.(*Store)
 		if _, ok := store.data[foodep.String()]; !ok {
 			t.Fatal("failed update")
@@ -262,7 +263,7 @@ func TestWatcherWait(t *testing.T) {
 				w.dataCh <- v
 			}
 		}()
-		w.Wait(0)
+		w.Wait(context.Background(), 0)
 		store := w.cache.(*Store)
 		if len(store.data) != 5 {
 			t.Fatal("failed update")
@@ -280,7 +281,7 @@ func TestWatcherWait(t *testing.T) {
 			Dependency: foodep,
 		})
 		w.dataCh <- view
-		w.Wait(0)
+		w.Wait(context.Background(), 0)
 		if w.changed.Len() != 1 {
 			t.Fatal("failed to track updated dependency")
 		}
@@ -301,7 +302,7 @@ func TestWatcherWait(t *testing.T) {
 				w.dataCh <- v
 			}
 		}()
-		w.Wait(0)
+		w.Wait(context.Background(), 0)
 		if w.changed.Len() != 5 {
 			t.Fatal("failed to track updated dependency")
 		}
@@ -316,7 +317,7 @@ func TestWatcherWait(t *testing.T) {
 			})
 			w.dataCh <- view
 		}
-		w.Wait(0)
+		w.Wait(context.Background(), 0)
 		if w.changed.Len() != 1 {
 			t.Fatal("failed to track updated dependency")
 		}
@@ -329,7 +330,7 @@ func TestWatcherWait(t *testing.T) {
 			Dependency: foodep,
 		})
 		w.dataCh <- view
-		err := <-w.WaitCh(0)
+		err := <-w.WaitCh(context.Background(), 0)
 		if err != nil {
 			t.Fatal("wait error:", err)
 		}
