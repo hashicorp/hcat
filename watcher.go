@@ -134,21 +134,18 @@ func (w *Watcher) WatchVaultToken(token string) error {
 }
 
 // WaitCh returns an error channel and runs Wait sending the result down
-// the channel. Sugur for when you need to use Wait in a select block.
-func (w *Watcher) WaitCh(ctx context.Context, timeout time.Duration) <-chan error {
+// the channel. Useful for when you need to use Wait in a select block.
+func (w *Watcher) WaitCh(ctx context.Context) <-chan error {
 	errCh := make(chan error)
 	go func() {
-		errCh <- w.Wait(ctx, timeout)
+		errCh <- w.Wait(ctx)
 	}()
 	return errCh
 }
 
-// Wait blocks until new a watched value changes
-func (w *Watcher) Wait(ctx context.Context, timeout time.Duration) error {
-	var timer <-chan time.Time
-	if timeout > 0 {
-		timer = time.After(timeout)
-	}
+// Wait blocks until new a watched value changes or until context is closed
+// or exceeds its deadline.
+func (w *Watcher) Wait(ctx context.Context) error {
 	w.changed.Clear() // clear old updates before waiting on new ones
 
 	cleanStop := make(chan struct{})
@@ -165,8 +162,6 @@ func (w *Watcher) Wait(ctx context.Context, timeout time.Duration) error {
 	}
 	for {
 		select {
-		case <-timer:
-			return nil
 		case view := <-w.dataCh:
 			dataUpdate(view)
 			// Drain all dependency data. Prevents re-rendering templates over
@@ -190,6 +185,11 @@ func (w *Watcher) Wait(ctx context.Context, timeout time.Duration) error {
 			return err
 
 		case <-ctx.Done():
+			// No changes detected is not considered an error when deadline passes or
+			// timeout is reached
+			if ctx.Err() == context.DeadlineExceeded {
+				return nil
+			}
 			return ctx.Err()
 		}
 	}
