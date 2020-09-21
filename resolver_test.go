@@ -1,6 +1,7 @@
 package hcat
 
 import (
+	"context"
 	"strings"
 	"testing"
 	"text/template"
@@ -91,7 +92,8 @@ func TestResolverRun(t *testing.T) {
 		if r.missing == false {
 			t.Fatal("missing should be true")
 		}
-		w.Wait(0) // wait for (fake/instantaneous) dependency resolution
+		ctx := context.Background()
+		w.Wait(ctx) // wait for (fake/instantaneous) dependency resolution
 
 		r, err = rv.Run(tt, w)
 		if err != nil {
@@ -124,7 +126,8 @@ func TestResolverRun(t *testing.T) {
 		if r.missing == false {
 			t.Fatal("missing should be true")
 		}
-		w.Wait(0) // wait for (fake/instantaneous) dependency resolution
+		ctx := context.Background()
+		w.Wait(ctx) // wait for (fake/instantaneous) dependency resolution
 
 		// Run 2, 'echo foo' is missing
 		r, err = rv.Run(tt, w)
@@ -134,7 +137,7 @@ func TestResolverRun(t *testing.T) {
 		if r.missing == false {
 			t.Fatal("missing should be true")
 		}
-		w.Wait(0)
+		w.Wait(ctx)
 
 		// Run 3, 'echo bar' is missing
 		r, err = rv.Run(tt, w)
@@ -144,7 +147,7 @@ func TestResolverRun(t *testing.T) {
 		if r.missing == false {
 			t.Fatal("missing should be true")
 		}
-		w.Wait(0)
+		w.Wait(ctx)
 
 		// Run 4, complete
 		r, err = rv.Run(tt, w)

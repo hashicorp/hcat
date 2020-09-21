@@ -1,6 +1,7 @@
 package hcat
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 	"testing"
@@ -182,13 +183,52 @@ func TestWatcherWait(t *testing.T) {
 		w := newWatcher(t)
 		defer w.Stop()
 		t1 := time.Now()
-		err := w.Wait(time.Microsecond * 100)
+		ctx, cancel := context.WithTimeout(context.Background(), time.Microsecond*100)
+		defer cancel()
+		err := w.Wait(ctx)
 		if err != nil {
 			t.Fatal("Error not expected")
 		}
 		dur := time.Now().Sub(t1)
 		if dur < time.Microsecond*100 || dur > time.Millisecond*10 {
 			t.Fatal("Wait call was off;", dur)
+		}
+	})
+	t.Run("deadline", func(t *testing.T) {
+		w := newWatcher(t)
+		defer w.Stop()
+		t1 := time.Now()
+		ctx, cancel := context.WithDeadline(context.Background(),
+			time.Now().Add(time.Microsecond*100))
+		defer cancel()
+		err := w.Wait(ctx)
+		if err != nil {
+			t.Fatal("Error not expected")
+		}
+		dur := time.Now().Sub(t1)
+		if dur < time.Microsecond*100 || dur > time.Millisecond*10 {
+			t.Fatal("Wait call was off;", dur)
+		}
+	})
+	t.Run("cancel", func(t *testing.T) {
+		w := newWatcher(t)
+		defer w.Stop()
+
+		errCh := make(chan error)
+		ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+		go func() {
+			err := w.Wait(ctx)
+			if err != nil {
+				errCh <- err
+			}
+		}()
+		cancel()
+		err := <-errCh
+		if ctx.Err() != context.Canceled {
+			t.Fatal("unexpected context error:", ctx.Err())
+		}
+		if err != ctx.Err() {
+			t.Fatal("unexpected wait error:", err)
 		}
 	})
 	t.Run("0-timeout", func(t *testing.T) {
@@ -200,7 +240,7 @@ func TestWatcherWait(t *testing.T) {
 			time.Sleep(time.Microsecond * 100)
 			w.errCh <- testerr
 		}()
-		w.Wait(0)
+		w.Wait(context.Background())
 		dur := time.Now().Sub(t1)
 		if dur < time.Microsecond*100 || dur > time.Millisecond*10 {
 			t.Fatal("Wait call was off;", dur)
@@ -213,7 +253,7 @@ func TestWatcherWait(t *testing.T) {
 		go func() {
 			w.errCh <- testerr
 		}()
-		err := w.Wait(0)
+		err := w.Wait(context.Background())
 		if err != testerr {
 			t.Fatal("None or Unexpected Error;", err)
 		}
@@ -240,7 +280,7 @@ func TestWatcherWait(t *testing.T) {
 			Dependency: foodep,
 		})
 		w.dataCh <- view
-		w.Wait(0)
+		w.Wait(context.Background())
 		store := w.cache.(*Store)
 		if _, ok := store.data[foodep.String()]; !ok {
 			t.Fatal("failed update")
@@ -262,7 +302,7 @@ func TestWatcherWait(t *testing.T) {
 				w.dataCh <- v
 			}
 		}()
-		w.Wait(0)
+		w.Wait(context.Background())
 		store := w.cache.(*Store)
 		if len(store.data) != 5 {
 			t.Fatal("failed update")
@@ -280,7 +320,7 @@ func TestWatcherWait(t *testing.T) {
 			Dependency: foodep,
 		})
 		w.dataCh <- view
-		w.Wait(0)
+		w.Wait(context.Background())
 		if w.changed.Len() != 1 {
 			t.Fatal("failed to track updated dependency")
 		}
@@ -301,7 +341,7 @@ func TestWatcherWait(t *testing.T) {
 				w.dataCh <- v
 			}
 		}()
-		w.Wait(0)
+		w.Wait(context.Background())
 		if w.changed.Len() != 5 {
 			t.Fatal("failed to track updated dependency")
 		}
@@ -316,7 +356,7 @@ func TestWatcherWait(t *testing.T) {
 			})
 			w.dataCh <- view
 		}
-		w.Wait(0)
+		w.Wait(context.Background())
 		if w.changed.Len() != 1 {
 			t.Fatal("failed to track updated dependency")
 		}
@@ -329,7 +369,7 @@ func TestWatcherWait(t *testing.T) {
 			Dependency: foodep,
 		})
 		w.dataCh <- view
-		err := <-w.WaitCh(0)
+		err := <-w.WaitCh(context.Background())
 		if err != nil {
 			t.Fatal("wait error:", err)
 		}
@@ -338,7 +378,28 @@ func TestWatcherWait(t *testing.T) {
 			t.Fatal("failed update")
 		}
 	})
+	t.Run("wait-channel-cancel", func(t *testing.T) {
+		w := newWatcher(t)
+		defer w.Stop()
 
+		errCh := make(chan error)
+		ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+		go func() {
+			select {
+			case err := <-w.WaitCh(ctx):
+				errCh <- err
+			case <-errCh:
+			}
+		}()
+		cancel()
+		err := <-errCh
+		if ctx.Err() != context.Canceled {
+			t.Fatal("unexpected context error:", ctx.Err())
+		}
+		if err != ctx.Err() {
+			t.Fatal("unexpected wait error:", err)
+		}
+	})
 }
 
 func newWatcher(t *testing.T) *Watcher {

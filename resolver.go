@@ -2,12 +2,12 @@ package hcat
 
 import "github.com/hashicorp/hcat/dep"
 
-// Runner responsible rendering Templates and invoking Commands.
+// Resolver is responsible rendering Templates and invoking Commands.
 // Empty but reserving the space for future use.
 type Resolver struct{}
 
-// RenderEvent captures the time and events that occurred for a template
-// rendering.
+// ResolveEvent captures the whether the template dependencies have all been
+// resolved and rendered in memory.
 type ResolveEvent struct {
 	// Complete is true if all dependencies have values and the template
 	// is is fully rendered.

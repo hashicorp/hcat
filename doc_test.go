@@ -1,6 +1,7 @@
 package hcat
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"strings"
@@ -33,6 +34,7 @@ func RenderExampleOnce(addr string) string {
 		Cache:   NewStore(),
 	})
 
+	ctx := context.Background()
 	r := NewResolver()
 	for {
 		re, err := r.Run(tmpl, w)
@@ -43,7 +45,7 @@ func RenderExampleOnce(addr string) string {
 			return string(re.Contents)
 		}
 		// Wait pauses until new data has been received
-		err = w.Wait(0) // 0 == no timeout
+		err = w.Wait(ctx)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -65,6 +67,7 @@ func RenderMultipleOnce(addr string) string {
 		Cache:   NewStore(),
 	})
 
+	ctx, _ := context.WithTimeout(context.Background(), time.Second)
 	results := []string{}
 	r := NewResolver()
 	for {
@@ -81,7 +84,7 @@ func RenderMultipleOnce(addr string) string {
 			break
 		}
 		// Wait pauses until new data has been received
-		err := w.Wait(time.Second)
+		err := w.Wait(ctx)
 		if err != nil {
 			log.Fatal(err)
 		}
