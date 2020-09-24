@@ -67,7 +67,8 @@ func RenderMultipleOnce(addr string) string {
 		Cache:   NewStore(),
 	})
 
-	ctx, _ := context.WithTimeout(context.Background(), time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
 	results := []string{}
 	r := NewResolver()
 	for {
