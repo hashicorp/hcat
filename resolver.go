@@ -32,6 +32,7 @@ type Watcherer interface {
 	Recaller
 	Add(dep.Dependency) bool
 	Changed(tmplID string) bool
+	Buffer(tmplID string) bool
 	Register(tmplID string, deps ...dep.Dependency)
 }
 
@@ -50,6 +51,10 @@ func (r *Resolver) Run(tmpl Templater, w Watcherer) (ResolveEvent, error) {
 	// if not, don't waste time re-rendering it.
 	if !w.Changed(tmpl.ID()) {
 		return ResolveEvent{}, nil
+	}
+
+	if w.Buffer(tmpl.ID()) {
+		return ResolveEvent{Complete: false}, nil
 	}
 
 	// Attempt to render the template, returning any missing dependencies and

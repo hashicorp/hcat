@@ -54,6 +54,13 @@ type Watcher struct {
 	depViewMap   map[string]*view
 	depViewMapMx sync.Mutex
 
+	// bufferTemplates manages the buffer period per template to accumulate
+	// dependency changes.
+	bufferTemplates *timers
+	// bufferTrigger is the notification channel for template IDs that have
+	// completed their active buffer period.
+	bufferTrigger chan string
+
 	// Consul related
 	retryFuncConsul RetryFunc
 	// blockWaitTime is how long to block on consul's blocking queries
@@ -111,6 +118,7 @@ func NewWatcher(i WatcherInput) *Watcher {
 		clients = NewClientSet()
 	}
 
+	bufferTriggerCh := make(chan string, dataBufferSize/2)
 	w := &Watcher{
 		clients:         clients,
 		cache:           cache,
@@ -122,12 +130,16 @@ func NewWatcher(i WatcherInput) *Watcher {
 		changed:         newStringSet(),
 		depTracker:      newTracker(),
 		depViewMap:      make(map[string]*view),
+		bufferTrigger:   bufferTriggerCh,
+		bufferTemplates: newTimers(),
 		retryFuncConsul: i.ConsulRetryFunc,
 		maxStale:        i.ConsulMaxStale,
 		blockWaitTime:   i.ConsulBlockWait,
 		retryFuncVault:  i.VaultRetryFunc,
 		defaultLease:    i.VaultDefaultLease,
 	}
+
+	go w.bufferTemplates.Run(bufferTriggerCh)
 
 	return w
 }
@@ -202,6 +214,18 @@ func (w *Watcher) Wait(ctx context.Context) error {
 				}
 			}
 
+		case <-w.bufferTrigger:
+			// A template is now ready to be rendered, though there might be a
+			// few ready around the same time if they have the same dependencies.
+			// Drain the channel similar for the dataCh above.
+			for {
+				select {
+				case <-w.bufferTrigger:
+				case <-time.After(time.Microsecond):
+					return nil
+				}
+			}
+
 		case <-w.stopCh:
 			return nil
 
@@ -263,12 +287,35 @@ func (w *Watcher) Changed(tmplID string) bool {
 	if !initialized { // first pass, always return true
 		return true
 	}
+
+	// Check if the template was buffering and is now finished. We'll return
+	// true since the template had changed at an earlier point but was not ready
+	// then to render then. The cache is not checked because it may have been
+	// cleared by now.
+	if w.bufferTemplates.Buffered(tmplID) {
+		return true
+	}
+
 	for depID := range w.changed.Map() {
 		if _, ok := deps[depID]; ok {
 			return true
 		}
 	}
 	return false
+}
+
+// Buffer sets the template to activate buffer and accumulate changes for a
+// period. If the template has not been initalized or a buffer period is not
+// configured for the template, it will skip the buffering.
+// period.
+func (w *Watcher) Buffer(tmplID string) bool {
+	// first pass skips buffering.
+	_, initialized := w.depTracker.templateDeps(tmplID)
+	if !initialized {
+		return false
+	}
+
+	return w.bufferTemplates.Buffer(tmplID)
 }
 
 // Add the given dependency to the list of monitored dependencies and start the
@@ -317,11 +364,21 @@ func (w *Watcher) Recall(id string) (interface{}, bool) {
 	return w.cache.Recall(id)
 }
 
+// SetBufferPeriod sets a buffer period to accumulate dependency changes for
+// a template.
+func (w *Watcher) SetBufferPeriod(min, max time.Duration, tmplIDs ...string) {
+	for _, id := range tmplIDs {
+		w.bufferTemplates.Add(min, max, id)
+	}
+}
+
 // Stop halts this watcher and any currently polling views immediately. If a
 // view was in the middle of a poll, no data will be returned.
 func (w *Watcher) Stop() {
 	w.depViewMapMx.Lock()
 	defer w.depViewMapMx.Unlock()
+
+	w.bufferTemplates.Stop()
 
 	//log.Printf("[DEBUG] (watcher) stopping all views")
 
