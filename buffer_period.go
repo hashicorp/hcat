@@ -61,10 +61,6 @@ func (t *timers) Stop() {
 		timer.timer.Stop()
 		delete(t.timers, id)
 	}
-
-	// Close the channel after stopping timers to avoid timers writing to a
-	// closed channel.
-	close(t.ch)
 }
 
 // Add a new timer and returns if the timer was added.
