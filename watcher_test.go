@@ -383,12 +383,11 @@ func TestWatcherWait(t *testing.T) {
 		defer w.Stop()
 
 		errCh := make(chan error)
-		ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+		ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond)
 		go func() {
 			select {
 			case err := <-w.WaitCh(ctx):
 				errCh <- err
-			case <-errCh:
 			}
 		}()
 		cancel()
@@ -399,6 +398,48 @@ func TestWatcherWait(t *testing.T) {
 		if err != ctx.Err() {
 			t.Fatal("unexpected wait error:", err)
 		}
+	})
+	t.Run("wait-stop-leak", func(t *testing.T) {
+		w := newWatcher(t)
+		errCh := make(chan error)
+		go func() {
+			errCh <- w.Wait(context.Background())
+		}()
+		leaked := make(chan bool, 1)
+		defer close(leaked)
+		<-w.waitingCh
+		w.Stop()
+		select {
+		case <-errCh:
+			leaked <- false
+		case <-time.After(time.Millisecond):
+			leaked <- true
+		}
+		if ok := <-leaked; ok {
+			t.Fatal("goroutine leak")
+		}
+	})
+	t.Run("wait-stop-order", func(t *testing.T) {
+		w := newWatcher(t)
+		// can Stop can be run before Wait and have Wait work correctly
+		w.Stop()
+		errCh := make(chan error)
+		go func() {
+			errCh <- w.Wait(context.Background())
+		}()
+		bad_stop := make(chan bool, 1)
+		defer close(bad_stop)
+		<-w.waitingCh
+		select {
+		case <-errCh:
+			bad_stop <- true
+		case <-time.After(time.Millisecond):
+			bad_stop <- false
+		}
+		if ok := <-bad_stop; ok {
+			t.Fatal("Stop->Wait shouldn't stop Wait")
+		}
+		w.Stop()
 	})
 }
 

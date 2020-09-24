@@ -37,13 +37,18 @@ type Watcher struct {
 	dataCh chan *view
 	// errCh is the chan where any errors will be published.
 	errCh chan error
-	// olddepCh is the chan where no longer used dependencies are sent.
-	olddepCh chan string
+
+	// stopCh is the chan used internally to notify of Stop calls
+	stopCh drainableChan
+	// waitingCh is used internally to test when Wait is waiting
+	waitingCh chan struct{}
 
 	// changed is a list of deps that have been changed since last check
 	changed stringSet
 	// tracker tracks template<->dependencies (see bottom of this file)
 	depTracker *tracker
+	// olddepCh is the chan where no longer used dependencies are sent.
+	olddepCh chan string
 
 	// depViewMap is a map of Dependency-IDs to Views.
 	depViewMap   map[string]*view
@@ -83,6 +88,18 @@ type WatcherInput struct {
 	ConsulRetryFunc RetryFunc
 }
 
+type drainableChan chan struct{}
+
+func (s drainableChan) drain() {
+	for {
+		select {
+		case <-s:
+		default:
+			return
+		}
+	}
+}
+
 // NewWatcher creates a new watcher using the given API client.
 func NewWatcher(i WatcherInput) *Watcher {
 	cache := i.Cache
@@ -100,6 +117,8 @@ func NewWatcher(i WatcherInput) *Watcher {
 		dataCh:          make(chan *view, dataBufferSize),
 		errCh:           make(chan error),
 		olddepCh:        make(chan string, dataBufferSize),
+		waitingCh:       make(chan struct{}),
+		stopCh:          make(chan struct{}, 1),
 		changed:         newStringSet(),
 		depTracker:      newTracker(),
 		depViewMap:      make(map[string]*view),
@@ -147,12 +166,19 @@ func (w *Watcher) WaitCh(ctx context.Context) <-chan error {
 // or exceeds its deadline.
 func (w *Watcher) Wait(ctx context.Context) error {
 	w.changed.Clear() // clear old updates before waiting on new ones
+	w.stopCh.drain()  // in case Stop was already called
 
 	cleanStop := make(chan struct{})
 	defer close(cleanStop) // only run while waiting
 	go func() {
 		w.cleanDeps(cleanStop)
 	}()
+
+	// send waiting notification, only used for testing
+	select {
+	case w.waitingCh <- struct{}{}:
+	default:
+	}
 
 	// combine cache and changed updates so we don't forget one
 	dataUpdate := func(v *view) {
@@ -175,6 +201,9 @@ func (w *Watcher) Wait(ctx context.Context) error {
 					return nil
 				}
 			}
+
+		case <-w.stopCh:
+			return nil
 
 		// olddepCh outputs deps that need to be removed
 		case d := <-w.olddepCh:
@@ -306,6 +335,9 @@ func (w *Watcher) Stop() {
 
 	// Reset the map to have no views
 	w.depViewMap = make(map[string]*view)
+
+	w.stopCh.drain() // So calling Stop twice doesn't block
+	w.stopCh <- struct{}{}
 
 	// Empty cache
 	if w.cache != nil {
