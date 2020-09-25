@@ -58,7 +58,7 @@ func (t *timers) Stop() {
 	defer t.mux.Unlock()
 
 	for id, timer := range t.timers {
-		timer.timer.Stop()
+		timer.stop()
 		delete(t.timers, id)
 	}
 }
@@ -111,6 +111,12 @@ func newTimer(ch chan string, min, max time.Duration, id string) *timer {
 		min: min,
 		max: max,
 		ch:  ch,
+	}
+}
+
+func (t *timer) stop() {
+	if t.timer != nil {
+		t.timer.Stop()
 	}
 }
 

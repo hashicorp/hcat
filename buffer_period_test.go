@@ -126,4 +126,15 @@ func TestBufferPeriod(t *testing.T) {
 		case <-completed:
 		}
 	})
+
+	t.Run("stop unused timers", func(t *testing.T) {
+		t.Parallel()
+
+		triggerCh := make(chan string, 5)
+		bufferPeriods := newTimers()
+		go bufferPeriods.Run(triggerCh)
+
+		bufferPeriods.Add(time.Second, 2*time.Second, "unused")
+		bufferPeriods.Stop()
+	})
 }
