@@ -3,7 +3,8 @@ package dependency
 import (
 	"testing"
 
-	"github.com/hashicorp/vault/api"
+	capi "github.com/hashicorp/consul/api"
+	vapi "github.com/hashicorp/vault/api"
 )
 
 func TestClientSet_unwrapVaultToken(t *testing.T) {
@@ -18,7 +19,7 @@ func TestClientSet_unwrapVaultToken(t *testing.T) {
 	})
 	defer vault.SetWrappingLookupFunc(nil)
 
-	wrappedToken, err := vault.Auth().Token().Create(&api.TokenCreateRequest{
+	wrappedToken, err := vault.Auth().Token().Create(&vapi.TokenCreateRequest{
 		Lease: "1h",
 	})
 	if err != nil {
@@ -34,5 +35,24 @@ func TestClientSet_unwrapVaultToken(t *testing.T) {
 
 	if _, err := vault.Auth().Token().LookupSelf(); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestClientSet_hasLeader(t *testing.T) {
+	// good
+	var err error
+	client := testClients.Consul()
+	if err = hasLeader(client); err != nil {
+		t.Fatal("unexpected hasLeader error:", err)
+	}
+	// bad
+	cconf := capi.DefaultConfig()
+	cconf.Address = "bad.host:8500"
+	client, err = capi.NewClient(cconf)
+	if err != nil {
+		t.Fatal("client create error:", err)
+	}
+	if err = hasLeader(client); err == nil {
+		t.Fatal("hasLeader should have returned an error")
 	}
 }

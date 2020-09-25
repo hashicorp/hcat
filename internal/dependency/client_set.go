@@ -112,6 +112,10 @@ func (c *ClientSet) CreateConsulClient(i *CreateClientInput) error {
 		return fmt.Errorf("client set: consul: %s", err)
 	}
 
+	if err := hasLeader(client); err != nil {
+		return err
+	}
+
 	// Save the data on ourselves
 	c.Lock()
 	c.consul = &consulClient{
@@ -121,6 +125,30 @@ func (c *ClientSet) CreateConsulClient(i *CreateClientInput) error {
 	c.Unlock()
 
 	return nil
+}
+
+func hasLeader(client *consulapi.Client) error {
+	// spin until Consul cluster has a leader
+	retryTime := time.Second
+	for {
+		leader, err := client.Status().Leader()
+		switch e := err.(type) {
+		case net.Error:
+			if e.Temporary() {
+				continue
+			}
+			return e
+		default:
+		}
+		if leader != "" { // will contain the url of leader if good
+			return nil
+		}
+		retryTime = retryTime * 2
+		if retryTime > time.Minute {
+			return fmt.Errorf("client set: no consul leader detected")
+		}
+		time.Sleep(retryTime)
+	}
 }
 
 func (c *ClientSet) CreateVaultClient(i *CreateClientInput) error {
