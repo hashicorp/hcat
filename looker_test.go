@@ -1,15 +1,33 @@
 package hcat
 
 import (
+	"fmt"
+	"net"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"testing"
 )
 
 func TestClientSet(t *testing.T) {
 	t.Run("client-api-init", func(t *testing.T) {
+		ts := httptest.NewUnstartedServer(http.HandlerFunc(
+			func(w http.ResponseWriter, r *http.Request) {
+				fmt.Fprint(w, `"test"`)
+			}))
+		ts.Listener, _ = net.Listen("tcp", "127.0.0.1:8500")
+		ts.Start()
+		defer ts.Close()
+		// ^ fake consul
 		cs := NewClientSet()
-		cs.AddConsul(ConsulInput{})
-		cs.AddVault(VaultInput{})
+		err := cs.AddConsul(ConsulInput{})
+		if err != nil {
+			t.Fatal(err)
+		}
+		err = cs.AddVault(VaultInput{})
+		if err != nil {
+			t.Fatal(err)
+		}
 		defer cs.Stop()
 		if c := cs.Consul(); c == nil {
 			t.Fatal("Consul Client failed to load.")

@@ -218,6 +218,9 @@ func (c *ClientSet) CreateVaultClient(i *CreateClientInput) error {
 func (c *ClientSet) Consul() *consulapi.Client {
 	c.RLock()
 	defer c.RUnlock()
+	if c == nil || c.consul == nil {
+		return nil
+	}
 	return c.consul.client
 }
 
@@ -225,6 +228,9 @@ func (c *ClientSet) Consul() *consulapi.Client {
 func (c *ClientSet) Vault() *vaultapi.Client {
 	c.RLock()
 	defer c.RUnlock()
+	if c == nil || c.vault == nil {
+		return nil
+	}
 	return c.vault.client
 }
 
