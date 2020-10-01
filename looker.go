@@ -41,15 +41,13 @@ func NewClientSet() *ClientSet {
 }
 
 // AddConsul creates a Consul client and adds to the client set
-func (cs *ClientSet) AddConsul(i ConsulInput) *ClientSet {
-	cs.CreateConsulClient(i.toInternal())
-	return cs
+func (cs *ClientSet) AddConsul(i ConsulInput) error {
+	return cs.CreateConsulClient(i.toInternal())
 }
 
 // AddVault creates a Vault client and adds to the client set
-func (cs *ClientSet) AddVault(i VaultInput) *ClientSet {
-	cs.CreateVaultClient(i.toInternal())
-	return cs
+func (cs *ClientSet) AddVault(i VaultInput) error {
+	return cs.CreateVaultClient(i.toInternal())
 }
 
 // Stop closes all idle connections for any attached clients and clears
