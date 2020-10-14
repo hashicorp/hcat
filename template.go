@@ -187,12 +187,10 @@ type funcMapInput struct {
 
 // funcMap is the map of template functions to their respective functions.
 func funcMap(i *funcMapInput) template.FuncMap {
-	var scrat scratch
 
 	r := template.FuncMap{
 		// API functions
 		"datacenters":  datacentersFunc(i.store, i.used, i.missing),
-		"file":         fileFunc(i.store, i.used, i.missing, i.sandboxPath),
 		"key":          keyFunc(i.store, i.used, i.missing),
 		"keyExists":    keyExistsFunc(i.store, i.used, i.missing),
 		"keyOrDefault": keyWithDefaultFunc(i.store, i.used, i.missing),
@@ -210,60 +208,12 @@ func funcMap(i *funcMapInput) template.FuncMap {
 		"caRoots":      connectCARootsFunc(i.store, i.used, i.missing),
 		"caLeaf":       connectLeafFunc(i.store, i.used, i.missing),
 
-		// scratch
-		"scratch": func() *scratch { return &scrat },
-
-		// Helper functions
-		"base64Decode":    base64Decode,
-		"base64Encode":    base64Encode,
-		"base64URLDecode": base64URLDecode,
-		"base64URLEncode": base64URLEncode,
-		"byKey":           byKey,
-		"byTag":           byTag,
-		"contains":        contains,
-		"containsAll":     containsSomeFunc(true, true),
-		"containsAny":     containsSomeFunc(false, false),
-		"containsNone":    containsSomeFunc(true, false),
-		"containsNotAll":  containsSomeFunc(false, true),
-		"env":             envFunc(i.env),
-		"executeTemplate": executeTemplateFunc(i.t),
-		"explode":         explode,
-		"explodeMap":      explodeMap,
-		"in":              in,
-		"indent":          indent,
-		"loop":            loop,
-		"join":            join,
-		"trimSpace":       trimSpace,
-		"parseBool":       parseBool,
-		"parseFloat":      parseFloat,
-		"parseInt":        parseInt,
-		"parseJSON":       parseJSON,
-		"parseUint":       parseUint,
-		"parseYAML":       parseYAML,
-		"plugin":          plugin,
-		"regexReplaceAll": regexReplaceAll,
-		"regexMatch":      regexMatch,
-		"replaceAll":      replaceAll,
-		"sha256Hex":       sha256Hex,
-		"timestamp":       timestamp,
-		"toLower":         toLower,
-		"toJSON":          toJSON,
-		"toJSONPretty":    toJSONPretty,
-		"toTitle":         toTitle,
-		"toTOML":          toTOML,
-		"toUpper":         toUpper,
-		"toYAML":          toYAML,
-		"split":           split,
-		"byMeta":          byMeta,
-		"sockaddr":        sockaddr,
-		// Math functions
-		"add":      add,
-		"subtract": subtract,
-		"multiply": multiply,
-		"divide":   divide,
-		"modulo":   modulo,
-		"minimum":  minimum,
-		"maximum":  maximum,
+		// ???
+		"file":   fileFunc(i.store, i.used, i.missing, i.sandboxPath),
+		"byKey":  byKey,
+		"byTag":  byTag,
+		"byMeta": byMeta,
+		"env":    envFunc(i.env),
 	}
 
 	for k, v := range i.funcMapMerge {
