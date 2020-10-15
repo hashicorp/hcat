@@ -11,7 +11,8 @@ import (
 	"time"
 
 	"github.com/hashicorp/consul/api"
-	dep "github.com/hashicorp/hcat/internal/dependency"
+	"github.com/hashicorp/hcat/dep"
+	idep "github.com/hashicorp/hcat/internal/dependency"
 )
 
 func TestNewTemplate(t *testing.T) {
@@ -211,7 +212,7 @@ func TestTemplate_Execute(t *testing.T) {
 			},
 			func() *Store {
 				st := NewStore()
-				d, err := dep.NewCatalogDatacentersQuery(false)
+				d, err := idep.NewCatalogDatacentersQuery(false)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -228,7 +229,7 @@ func TestTemplate_Execute(t *testing.T) {
 			},
 			func() *Store {
 				st := NewStore()
-				d, err := dep.NewCatalogDatacentersQuery(true)
+				d, err := idep.NewCatalogDatacentersQuery(true)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -245,7 +246,7 @@ func TestTemplate_Execute(t *testing.T) {
 			},
 			func() *Store {
 				st := NewStore()
-				d, err := dep.NewFileQuery("/path/to/file")
+				d, err := idep.NewFileQuery("/path/to/file")
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -262,7 +263,7 @@ func TestTemplate_Execute(t *testing.T) {
 			},
 			func() *Store {
 				st := NewStore()
-				d, err := dep.NewKVGetQuery("key")
+				d, err := idep.NewKVGetQuery("key")
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -279,7 +280,7 @@ func TestTemplate_Execute(t *testing.T) {
 			},
 			func() *Store {
 				st := NewStore()
-				d, err := dep.NewKVGetQuery("key")
+				d, err := idep.NewKVGetQuery("key")
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -296,7 +297,7 @@ func TestTemplate_Execute(t *testing.T) {
 			},
 			func() *Store {
 				st := NewStore()
-				d, err := dep.NewKVGetQuery("key")
+				d, err := idep.NewKVGetQuery("key")
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -313,7 +314,7 @@ func TestTemplate_Execute(t *testing.T) {
 			},
 			func() *Store {
 				st := NewStore()
-				d, err := dep.NewKVListQuery("list")
+				d, err := idep.NewKVListQuery("list")
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -334,7 +335,7 @@ func TestTemplate_Execute(t *testing.T) {
 			},
 			func() *Store {
 				st := NewStore()
-				d, err := dep.NewCatalogNodeQuery("")
+				d, err := idep.NewCatalogNodeQuery("")
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -358,7 +359,7 @@ func TestTemplate_Execute(t *testing.T) {
 			},
 			func() *Store {
 				st := NewStore()
-				d, err := dep.NewCatalogNodesQuery("")
+				d, err := idep.NewCatalogNodesQuery("")
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -378,7 +379,7 @@ func TestTemplate_Execute(t *testing.T) {
 			},
 			func() *Store {
 				st := NewStore()
-				d, err := dep.NewVaultReadQuery("secret/foo")
+				d, err := idep.NewVaultReadQuery("secret/foo")
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -400,14 +401,14 @@ func TestTemplate_Execute(t *testing.T) {
 			},
 			func() *Store {
 				st := NewStore()
-				d, err := dep.NewVaultReadQuery("secret/foo")
+				d, err := idep.NewVaultReadQuery("secret/foo")
 				if err != nil {
 					t.Fatal(err)
 				}
 				st.Save(d.String(), &dep.Secret{
 					Data: map[string]interface{}{"zip": "zap"},
 				})
-				d1, err := dep.NewVaultReadQuery("secret/foo?version=1")
+				d1, err := idep.NewVaultReadQuery("secret/foo?version=1")
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -448,7 +449,7 @@ func TestTemplate_Execute(t *testing.T) {
 			},
 			func() *Store {
 				st := NewStore()
-				d, err := dep.NewVaultWriteQuery("transit/encrypt/foo", map[string]interface{}{
+				d, err := idep.NewVaultWriteQuery("transit/encrypt/foo", map[string]interface{}{
 					"plaintext": "a",
 				})
 				if err != nil {
@@ -505,7 +506,7 @@ func TestTemplate_Execute(t *testing.T) {
 			},
 			func() *Store {
 				st := NewStore()
-				d, err := dep.NewVaultListQuery("secret/")
+				d, err := idep.NewVaultListQuery("secret/")
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -555,7 +556,7 @@ func TestTemplate_Execute(t *testing.T) {
 			},
 			func() *Store {
 				st := NewStore()
-				d, err := dep.NewHealthServiceQuery("webapp")
+				d, err := idep.NewHealthServiceQuery("webapp")
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -581,7 +582,7 @@ func TestTemplate_Execute(t *testing.T) {
 			},
 			func() *Store {
 				st := NewStore()
-				d, err := dep.NewHealthServiceQuery("webapp|passing,any")
+				d, err := idep.NewHealthServiceQuery("webapp|passing,any")
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -607,7 +608,7 @@ func TestTemplate_Execute(t *testing.T) {
 			},
 			func() *Store {
 				st := NewStore()
-				d, err := dep.NewCatalogServicesQuery("")
+				d, err := idep.NewCatalogServicesQuery("")
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -631,7 +632,7 @@ func TestTemplate_Execute(t *testing.T) {
 			},
 			func() *Store {
 				st := NewStore()
-				d, err := dep.NewKVListQuery("key")
+				d, err := idep.NewKVListQuery("key")
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -702,7 +703,7 @@ func TestTemplate_Execute(t *testing.T) {
 			},
 			func() *Store {
 				st := NewStore()
-				d, err := dep.NewKVListQuery("list")
+				d, err := idep.NewKVListQuery("list")
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -723,7 +724,7 @@ func TestTemplate_Execute(t *testing.T) {
 			},
 			func() *Store {
 				st := NewStore()
-				d, err := dep.NewHealthServiceQuery("webapp")
+				d, err := idep.NewHealthServiceQuery("webapp")
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -749,7 +750,7 @@ func TestTemplate_Execute(t *testing.T) {
 			},
 			func() *Store {
 				st := NewStore()
-				d, err := dep.NewHealthServiceQuery("webapp")
+				d, err := idep.NewHealthServiceQuery("webapp")
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -775,7 +776,7 @@ func TestTemplate_Execute(t *testing.T) {
 			},
 			func() *Store {
 				st := NewStore()
-				d, err := dep.NewHealthServiceQuery("webapp")
+				d, err := idep.NewHealthServiceQuery("webapp")
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -801,7 +802,7 @@ func TestTemplate_Execute(t *testing.T) {
 			},
 			func() *Store {
 				st := NewStore()
-				d, err := dep.NewHealthServiceQuery("webapp")
+				d, err := idep.NewHealthServiceQuery("webapp")
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -827,7 +828,7 @@ func TestTemplate_Execute(t *testing.T) {
 			},
 			func() *Store {
 				st := NewStore()
-				d, err := dep.NewHealthServiceQuery("webapp")
+				d, err := idep.NewHealthServiceQuery("webapp")
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -853,7 +854,7 @@ func TestTemplate_Execute(t *testing.T) {
 			},
 			func() *Store {
 				st := NewStore()
-				d, err := dep.NewHealthServiceQuery("webapp")
+				d, err := idep.NewHealthServiceQuery("webapp")
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -879,7 +880,7 @@ func TestTemplate_Execute(t *testing.T) {
 			},
 			func() *Store {
 				st := NewStore()
-				d, err := dep.NewHealthServiceQuery("webapp")
+				d, err := idep.NewHealthServiceQuery("webapp")
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -905,7 +906,7 @@ func TestTemplate_Execute(t *testing.T) {
 			},
 			func() *Store {
 				st := NewStore()
-				d, err := dep.NewHealthServiceQuery("webapp")
+				d, err := idep.NewHealthServiceQuery("webapp")
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -931,7 +932,7 @@ func TestTemplate_Execute(t *testing.T) {
 			},
 			func() *Store {
 				st := NewStore()
-				d, err := dep.NewHealthServiceQuery("webapp")
+				d, err := idep.NewHealthServiceQuery("webapp")
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -957,7 +958,7 @@ func TestTemplate_Execute(t *testing.T) {
 			},
 			func() *Store {
 				st := NewStore()
-				d, err := dep.NewHealthServiceQuery("webapp")
+				d, err := idep.NewHealthServiceQuery("webapp")
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -993,7 +994,7 @@ func TestTemplate_Execute(t *testing.T) {
 			},
 			func() *Store {
 				st := NewStore()
-				d, err := dep.NewKVGetQuery("foo")
+				d, err := idep.NewKVGetQuery("foo")
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -1010,7 +1011,7 @@ func TestTemplate_Execute(t *testing.T) {
 			},
 			func() *Store {
 				st := NewStore()
-				d, err := dep.NewKVGetQuery("foo")
+				d, err := idep.NewKVGetQuery("foo")
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -1027,7 +1028,7 @@ func TestTemplate_Execute(t *testing.T) {
 			},
 			func() *Store {
 				st := NewStore()
-				d, err := dep.NewKVListQuery("list")
+				d, err := idep.NewKVListQuery("list")
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -1057,7 +1058,7 @@ func TestTemplate_Execute(t *testing.T) {
 			},
 			func() *Store {
 				st := NewStore()
-				d, err := dep.NewHealthServiceQuery("webapp")
+				d, err := idep.NewHealthServiceQuery("webapp")
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -1455,7 +1456,7 @@ func TestTemplate_Execute(t *testing.T) {
 					`{{.CertPEM}}{{.PrivateKeyPEM}}{{end}}`,
 			},
 			func() *Store {
-				d := dep.NewConnectLeafQuery("foo")
+				d := idep.NewConnectLeafQuery("foo")
 				st := NewStore()
 				st.Save(d.String(), &api.LeafCert{
 					Service:       "foo",
@@ -1473,7 +1474,7 @@ func TestTemplate_Execute(t *testing.T) {
 				Contents: `{{range caRoots}}{{.RootCertPEM}}{{end}}`,
 			},
 			func() *Store {
-				d := dep.NewConnectCAQuery()
+				d := idep.NewConnectCAQuery()
 				st := NewStore()
 				st.Save(d.String(), []*api.CARoot{
 					{
@@ -1494,7 +1495,7 @@ func TestTemplate_Execute(t *testing.T) {
 			},
 			func() *Store {
 				st := NewStore()
-				d, err := dep.NewHealthConnectQuery("webapp")
+				d, err := idep.NewHealthConnectQuery("webapp")
 				if err != nil {
 					t.Fatal(err)
 				}
