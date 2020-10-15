@@ -183,23 +183,6 @@ func TestTemplate_Execute(t *testing.T) {
 			false,
 		},
 		{
-			"func_file",
-			TemplateInput{
-				Contents: `{{ file "/path/to/file" }}`,
-			},
-			func() *Store {
-				st := NewStore()
-				d, err := idep.NewFileQuery("/path/to/file")
-				if err != nil {
-					t.Fatal(err)
-				}
-				st.Save(d.String(), "content")
-				return st
-			}(),
-			"content",
-			false,
-		},
-		{
 			"func_key",
 			TemplateInput{
 				Contents: `{{ key "key" }}`,
@@ -590,64 +573,6 @@ func TestTemplate_Execute(t *testing.T) {
 			"admin/port=1134maxconns=5minconns=2",
 			false,
 		},
-		// helpers
-		{
-			"helper_by_key",
-			TemplateInput{
-				Contents: `{{ range $key, $pairs := tree "list" | byKey }}{{ $key }}:{{ range $pairs }}{{ .Key }}={{ .Value }}{{ end }}{{ end }}`,
-			},
-			func() *Store {
-				st := NewStore()
-				d, err := idep.NewKVListQuery("list")
-				if err != nil {
-					t.Fatal(err)
-				}
-				st.Save(d.String(), []*dep.KeyPair{
-					{Key: "", Value: ""},
-					{Key: "foo/bar", Value: "a"},
-					{Key: "zip/zap", Value: "b"},
-				})
-				return st
-			}(),
-			"foo:bar=azip:zap=b",
-			false,
-		},
-		{
-			"helper_by_tag",
-			TemplateInput{
-				Contents: `{{ range $tag, $services := service "webapp" | byTag }}{{ $tag }}:{{ range $services }}{{ .Address }}{{ end }}{{ end }}`,
-			},
-			func() *Store {
-				st := NewStore()
-				d, err := idep.NewHealthServiceQuery("webapp")
-				if err != nil {
-					t.Fatal(err)
-				}
-				st.Save(d.String(), []*dep.HealthService{
-					{
-						Address: "1.2.3.4",
-						Tags:    []string{"prod", "staging"},
-					},
-					{
-						Address: "5.6.7.8",
-						Tags:    []string{"staging"},
-					},
-				})
-				return st
-			}(),
-			"prod:1.2.3.4staging:1.2.3.45.6.7.8",
-			false,
-		},
-		{
-			"helper_env",
-			TemplateInput{
-				// CT_TEST set above
-				Contents: `{{ env "CT_TEST" }}`,
-			},
-			NewStore(),
-			"1",
-			false,
-		},
 		{
 			"leaf_cert",
 			TemplateInput{
@@ -726,9 +651,6 @@ func TestTemplate_Execute(t *testing.T) {
 	for i, tc := range cases {
 		t.Run(fmt.Sprintf("%d_%s", i, tc.name), func(t *testing.T) {
 			tpl := NewTemplate(tc.ti)
-			if err != nil {
-				t.Fatal(err)
-			}
 
 			a, err := tpl.Execute(tc.i)
 			if (err != nil) != tc.err {

@@ -2,10 +2,6 @@ package hcat
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
-	"regexp"
-	"strconv"
 	"strings"
 	"time"
 
@@ -55,52 +51,6 @@ func datacentersFunc(r Recaller, used, missing *DepSet) func(ignore ...bool) ([]
 		missing.Add(d)
 
 		return result, nil
-	}
-}
-
-// envFunc returns a function which checks the value of an environment variable.
-// Invokers can specify their own environment, which takes precedences over any
-// real environment variables
-func envFunc(env []string) func(string) (string, error) {
-	return func(s string) (string, error) {
-		for _, e := range env {
-			split := strings.SplitN(e, "=", 2)
-			k, v := split[0], split[1]
-			if k == s {
-				return v, nil
-			}
-		}
-		return os.Getenv(s), nil
-	}
-}
-
-// fileFunc returns or accumulates file dependencies.
-func fileFunc(r Recaller, used, missing *DepSet, sandboxPath string) func(string) (string, error) {
-	return func(s string) (string, error) {
-		if len(s) == 0 {
-			return "", nil
-		}
-		err := pathInSandbox(sandboxPath, s)
-		if err != nil {
-			return "", err
-		}
-		d, err := idep.NewFileQuery(s)
-		if err != nil {
-			return "", err
-		}
-
-		used.Add(d)
-
-		if value, ok := r.Recall(d.String()); ok {
-			if value == nil {
-				return "", nil
-			}
-			return value.(string), nil
-		}
-
-		missing.Add(d)
-
-		return "", nil
 	}
 }
 
@@ -354,49 +304,6 @@ func secretsFunc(r Recaller, used, missing *DepSet) func(string) ([]string, erro
 	}
 }
 
-// byMeta returns Services grouped by one or many ServiceMeta fields.
-func byMeta(meta string, services []*dep.HealthService) (groups map[string][]*dep.HealthService, err error) {
-	re := regexp.MustCompile("[^a-zA-Z0-9_-]")
-	normalize := func(x string) string {
-		return re.ReplaceAllString(x, "_")
-	}
-	getOrDefault := func(m map[string]string, key string) string {
-		realKey := strings.TrimSuffix(key, "|int")
-		if val := m[realKey]; val != "" {
-			return val
-		}
-		if strings.HasSuffix(key, "|int") {
-			return "0"
-		}
-		return fmt.Sprintf("_no_%s_", realKey)
-	}
-
-	metas := strings.Split(meta, ",")
-
-	groups = make(map[string][]*dep.HealthService)
-
-	for _, s := range services {
-		sm := s.ServiceMeta
-		keyParts := []string{}
-		for _, meta := range metas {
-			value := getOrDefault(sm, meta)
-			if strings.HasSuffix(meta, "|int") {
-				value = getOrDefault(sm, meta)
-				i, err := strconv.Atoi(value)
-				if err != nil {
-					return nil, errors.Wrap(err, fmt.Sprintf("cannot parse %v as number ", value))
-				}
-				value = fmt.Sprintf("%05d", i)
-			}
-			keyParts = append(keyParts, normalize(value))
-		}
-		key := strings.Join(keyParts, "_")
-		groups[key] = append(groups[key], s)
-	}
-
-	return groups, nil
-}
-
 // serviceFunc returns or accumulates health service dependencies.
 func serviceFunc(r Recaller, used, missing *DepSet) func(...string) ([]*dep.HealthService, error) {
 	return func(s ...string) ([]*dep.HealthService, error) {
@@ -554,98 +461,4 @@ func treeFunc(r Recaller, used, missing *DepSet, emptyIsSafe bool) func(string) 
 
 		return result, nil
 	}
-}
-
-// byKey accepts a slice of KV pairs and returns a map of the top-level
-// key to all its subkeys. For example:
-//
-//		elasticsearch/a //=> "1"
-//		elasticsearch/b //=> "2"
-//		redis/a/b //=> "3"
-//
-// Passing the result from Consul through byTag would yield:
-//
-// 		map[string]map[string]string{
-//	  	"elasticsearch": &dep.KeyPair{"a": "1"}, &dep.KeyPair{"b": "2"},
-//			"redis": &dep.KeyPair{"a/b": "3"}
-//		}
-//
-// Note that the top-most key is stripped from the Key value. Keys that have no
-// prefix after stripping are removed from the list.
-func byKey(pairs []*dep.KeyPair) (map[string]map[string]*dep.KeyPair, error) {
-	m := make(map[string]map[string]*dep.KeyPair)
-	for _, pair := range pairs {
-		parts := strings.Split(pair.Key, "/")
-		top := parts[0]
-		key := strings.Join(parts[1:], "/")
-
-		if key == "" {
-			// Do not add a key if it has no prefix after stripping.
-			continue
-		}
-
-		if _, ok := m[top]; !ok {
-			m[top] = make(map[string]*dep.KeyPair)
-		}
-
-		newPair := *pair
-		newPair.Key = key
-		m[top][key] = &newPair
-	}
-
-	return m, nil
-}
-
-// byTag is a template func that takes the provided services and
-// produces a map based on Service tags.
-//
-// The map key is a string representing the service tag. The map value is a
-// slice of Services which have the tag assigned.
-func byTag(in interface{}) (map[string][]interface{}, error) {
-	m := make(map[string][]interface{})
-
-	switch typed := in.(type) {
-	case nil:
-	case []*dep.CatalogSnippet:
-		for _, s := range typed {
-			for _, t := range s.Tags {
-				m[t] = append(m[t], s)
-			}
-		}
-	case []*idep.CatalogService:
-		for _, s := range typed {
-			for _, t := range s.ServiceTags {
-				m[t] = append(m[t], s)
-			}
-		}
-	case []*dep.HealthService:
-		for _, s := range typed {
-			for _, t := range s.Tags {
-				m[t] = append(m[t], s)
-			}
-		}
-	default:
-		return nil, fmt.Errorf("byTag: wrong argument type %T", in)
-	}
-
-	return m, nil
-}
-
-// pathInSandbox returns an error if the provided path doesn't fall within the
-// sandbox or if the file can't be evaluated (missing, invalid symlink, etc.)
-func pathInSandbox(sandbox, path string) error {
-	if sandbox != "" {
-		s, err := filepath.EvalSymlinks(path)
-		if err != nil {
-			return err
-		}
-		s, err = filepath.Rel(sandbox, s)
-		if err != nil {
-			return err
-		}
-		if strings.HasPrefix(s, "..") {
-			return fmt.Errorf("'%s' is outside of sandbox", path)
-		}
-	}
-	return nil
 }

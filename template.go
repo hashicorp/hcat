@@ -189,7 +189,6 @@ type funcMapInput struct {
 func funcMap(i *funcMapInput) template.FuncMap {
 
 	r := template.FuncMap{
-		// API functions
 		"datacenters":  datacentersFunc(i.store, i.used, i.missing),
 		"key":          keyFunc(i.store, i.used, i.missing),
 		"keyExists":    keyExistsFunc(i.store, i.used, i.missing),
@@ -207,13 +206,6 @@ func funcMap(i *funcMapInput) template.FuncMap {
 		"safeTree":     safeTreeFunc(i.store, i.used, i.missing),
 		"caRoots":      connectCARootsFunc(i.store, i.used, i.missing),
 		"caLeaf":       connectLeafFunc(i.store, i.used, i.missing),
-
-		// ???
-		"file":   fileFunc(i.store, i.used, i.missing, i.sandboxPath),
-		"byKey":  byKey,
-		"byTag":  byTag,
-		"byMeta": byMeta,
-		"env":    envFunc(i.env),
 	}
 
 	for k, v := range i.funcMapMerge {
