@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/consul/api"
+	"github.com/hashicorp/hcat/dep"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -166,13 +167,13 @@ func TestHealthConnectServiceQuery_Fetch(t *testing.T) {
 	cases := []struct {
 		name string
 		in   string
-		exp  []*HealthService
+		exp  []*dep.HealthService
 	}{
 		{
 			"connect-service",
 			"foo",
-			[]*HealthService{
-				&HealthService{
+			[]*dep.HealthService{
+				&dep.HealthService{
 					Name:           "foo-sidecar-proxy",
 					ID:             "foo",
 					Port:           21999,
@@ -180,7 +181,7 @@ func TestHealthConnectServiceQuery_Fetch(t *testing.T) {
 					Address:        "127.0.0.1",
 					NodeAddress:    "127.0.0.1",
 					NodeDatacenter: "dc1",
-					Tags:           ServiceTags([]string{}),
+					Tags:           dep.ServiceTags([]string{}),
 					NodeMeta: map[string]string{
 						"consul-network-segment": ""},
 					Weights: api.AgentWeights{
@@ -205,8 +206,8 @@ func TestHealthConnectServiceQuery_Fetch(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			var act []*HealthService
-			if act = res.([]*HealthService); len(act) != 1 {
+			var act []*dep.HealthService
+			if act = res.([]*dep.HealthService); len(act) != 1 {
 				t.Fatal("Expected 1 result, got ", len(act))
 			}
 			// blank out fields we don't want to test
@@ -226,13 +227,13 @@ func TestHealthServiceQuery_Fetch(t *testing.T) {
 	cases := []struct {
 		name string
 		i    string
-		exp  []*HealthService
+		exp  []*dep.HealthService
 	}{
 		{
 			"consul",
 			"consul",
-			[]*HealthService{
-				&HealthService{
+			[]*dep.HealthService{
+				&dep.HealthService{
 					Node:           testConsul.Config.NodeName,
 					NodeAddress:    testConsul.Config.Bind,
 					NodeDatacenter: "dc1",
@@ -261,13 +262,13 @@ func TestHealthServiceQuery_Fetch(t *testing.T) {
 		{
 			"filters",
 			"consul|warning",
-			[]*HealthService{},
+			[]*dep.HealthService{},
 		},
 		{
 			"multifilter",
 			"consul|warning,passing",
-			[]*HealthService{
-				&HealthService{
+			[]*dep.HealthService{
+				&dep.HealthService{
 					Node:           testConsul.Config.NodeName,
 					NodeAddress:    testConsul.Config.Bind,
 					NodeDatacenter: "dc1",
@@ -296,8 +297,8 @@ func TestHealthServiceQuery_Fetch(t *testing.T) {
 		{
 			"service-meta",
 			"service-meta",
-			[]*HealthService{
-				&HealthService{
+			[]*dep.HealthService{
+				&dep.HealthService{
 					Node:           testConsul.Config.NodeName,
 					NodeAddress:    testConsul.Config.Bind,
 					NodeDatacenter: "dc1",
@@ -339,7 +340,7 @@ func TestHealthServiceQuery_Fetch(t *testing.T) {
 			}
 
 			if act != nil {
-				for _, v := range act.([]*HealthService) {
+				for _, v := range act.([]*dep.HealthService) {
 					v.NodeID = ""
 					v.Checks = nil
 					// delete any version data from ServiceMeta

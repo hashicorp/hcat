@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/hcat/dep"
 	"github.com/hashicorp/vault/api"
 	"github.com/stretchr/testify/assert"
 )
@@ -175,7 +176,7 @@ func TestVaultWriteQuery_Fetch(t *testing.T) {
 			map[string]interface{}{
 				"plaintext": b64("test"),
 			},
-			&Secret{
+			&dep.Secret{
 				Data: map[string]interface{}{
 					"ciphertext": "",
 				},
@@ -204,12 +205,12 @@ func TestVaultWriteQuery_Fetch(t *testing.T) {
 			}
 
 			if act != nil {
-				act.(*Secret).RequestID = ""
-				act.(*Secret).LeaseID = ""
-				act.(*Secret).LeaseDuration = 0
-				act.(*Secret).Renewable = false
-				if act.(*Secret).Data["ciphertext"] != "" {
-					act.(*Secret).Data["ciphertext"] = ""
+				act.(*dep.Secret).RequestID = ""
+				act.(*dep.Secret).LeaseID = ""
+				act.(*dep.Secret).LeaseDuration = 0
+				act.(*dep.Secret).Renewable = false
+				if act.(*dep.Secret).Data["ciphertext"] != "" {
+					act.(*dep.Secret).Data["ciphertext"] = ""
 				}
 			}
 

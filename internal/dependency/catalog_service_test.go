@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/hashicorp/hcat/dep"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -169,7 +170,7 @@ func TestCatalogServiceQuery_Fetch(t *testing.T) {
 					ServiceID:      "consul",
 					ServiceName:    "consul",
 					ServiceAddress: "",
-					ServiceTags:    ServiceTags([]string{}),
+					ServiceTags:    dep.ServiceTags([]string{}),
 					ServiceMeta:    map[string]string{},
 					ServicePort:    testConsul.Config.Ports.Server,
 				},
@@ -193,7 +194,7 @@ func TestCatalogServiceQuery_Fetch(t *testing.T) {
 					ServiceID:      "service-meta",
 					ServiceName:    "service-meta",
 					ServiceAddress: "",
-					ServiceTags:    ServiceTags([]string{"tag1"}),
+					ServiceTags:    dep.ServiceTags([]string{"tag1"}),
 					ServiceMeta:    map[string]string{"meta1": "value1"},
 				},
 			},

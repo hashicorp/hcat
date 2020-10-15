@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/hashicorp/hcat/dep"
 	"github.com/hashicorp/vault/api"
 	"github.com/stretchr/testify/assert"
 )
@@ -19,8 +20,8 @@ func TestNewVaultTokenQuery(t *testing.T) {
 		{
 			"default",
 			&VaultTokenQuery{
-				secret: &Secret{
-					Auth: &SecretAuth{
+				secret: &dep.Secret{
+					Auth: &dep.SecretAuth{
 						ClientToken:   "my-token",
 						Renewable:     true,
 						LeaseDuration: 1,

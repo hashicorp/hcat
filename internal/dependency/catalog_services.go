@@ -19,13 +19,7 @@ var (
 )
 
 func init() {
-	gob.Register([]*CatalogSnippet{})
-}
-
-// CatalogSnippet is a catalog entry in Consul.
-type CatalogSnippet struct {
-	Name string
-	Tags ServiceTags
+	gob.Register([]*dep.CatalogSnippet{})
 }
 
 // CatalogServicesQuery is the representation of a requested catalog service
@@ -76,11 +70,11 @@ func (d *CatalogServicesQuery) Fetch(clients dep.Clients) (interface{}, *dep.Res
 
 	//log.Printf("[TRACE] %s: returned %d results", d, len(entries))
 
-	var catalogServices []*CatalogSnippet
+	var catalogServices []*dep.CatalogSnippet
 	for name, tags := range entries {
-		catalogServices = append(catalogServices, &CatalogSnippet{
+		catalogServices = append(catalogServices, &dep.CatalogSnippet{
 			Name: name,
-			Tags: ServiceTags(deepCopyAndSortTags(tags)),
+			Tags: dep.ServiceTags(deepCopyAndSortTags(tags)),
 		})
 	}
 
@@ -117,7 +111,7 @@ func (d *CatalogServicesQuery) SetOptions(opts QueryOptions) {
 }
 
 // ByName is a sortable slice of CatalogService structs.
-type ByName []*CatalogSnippet
+type ByName []*dep.CatalogSnippet
 
 func (s ByName) Len() int      { return len(s) }
 func (s ByName) Swap(i, j int) { s[i], s[j] = s[j], s[i] }

@@ -27,7 +27,7 @@ type VaultWriteQuery struct {
 	path     string
 	data     map[string]interface{}
 	dataHash string
-	secret   *Secret
+	secret   *dep.Secret
 	opts     QueryOptions
 
 	// vaultSecret is the actual Vault secret which we are renewing
@@ -103,7 +103,7 @@ func (d *VaultWriteQuery) stopChan() chan struct{} {
 	return d.stopCh
 }
 
-func (d *VaultWriteQuery) secrets() (*Secret, *api.Secret) {
+func (d *VaultWriteQuery) secrets() (*dep.Secret, *api.Secret) {
 	return d.secret, d.vaultSecret
 }
 

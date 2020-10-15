@@ -19,8 +19,8 @@ var (
 )
 
 func init() {
-	gob.Register([]*CatalogNode{})
-	gob.Register([]*CatalogNodeService{})
+	gob.Register([]*dep.CatalogNode{})
+	gob.Register([]*dep.CatalogNodeService{})
 }
 
 // CatalogNodeQuery represents a single node from the Consul catalog.
@@ -31,23 +31,6 @@ type CatalogNodeQuery struct {
 	dc   string
 	name string
 	opts QueryOptions
-}
-
-// CatalogNode is a wrapper around the node and its services.
-type CatalogNode struct {
-	Node     *Node
-	Services []*CatalogNodeService
-}
-
-// CatalogNodeService is a service on a single node.
-type CatalogNodeService struct {
-	ID                string
-	Service           string
-	Tags              ServiceTags
-	Meta              map[string]string
-	Port              int
-	Address           string
-	EnableTagOverride bool
 }
 
 // NewCatalogNodeQuery parses the given string into a dependency. If the name is
@@ -108,16 +91,16 @@ func (d *CatalogNodeQuery) Fetch(clients dep.Clients) (interface{}, *dep.Respons
 
 	if node == nil {
 		//log.Printf("[WARN] %s: no node exists with the name %q", d, name)
-		var node CatalogNode
+		var node dep.CatalogNode
 		return &node, rm, nil
 	}
 
-	services := make([]*CatalogNodeService, 0, len(node.Services))
+	services := make([]*dep.CatalogNodeService, 0, len(node.Services))
 	for _, v := range node.Services {
-		services = append(services, &CatalogNodeService{
+		services = append(services, &dep.CatalogNodeService{
 			ID:                v.ID,
 			Service:           v.Service,
-			Tags:              ServiceTags(deepCopyAndSortTags(v.Tags)),
+			Tags:              dep.ServiceTags(deepCopyAndSortTags(v.Tags)),
 			Meta:              v.Meta,
 			Port:              v.Port,
 			Address:           v.Address,
@@ -126,8 +109,8 @@ func (d *CatalogNodeQuery) Fetch(clients dep.Clients) (interface{}, *dep.Respons
 	}
 	sort.Stable(ByService(services))
 
-	detail := &CatalogNode{
-		Node: &Node{
+	detail := &dep.CatalogNode{
+		Node: &dep.Node{
 			ID:              node.Node.ID,
 			Node:            node.Node.Node,
 			Address:         node.Node.Address,
@@ -165,7 +148,7 @@ func (d *CatalogNodeQuery) Stop() {
 }
 
 // ByService is a sorter of node services by their service name and then ID.
-type ByService []*CatalogNodeService
+type ByService []*dep.CatalogNodeService
 
 func (s ByService) Len() int      { return len(s) }
 func (s ByService) Swap(i, j int) { s[i], s[j] = s[j], s[i] }

@@ -19,21 +19,7 @@ var (
 )
 
 func init() {
-	gob.Register([]*KeyPair{})
-}
-
-// KeyPair is a simple Key-Value pair
-type KeyPair struct {
-	Path  string
-	Key   string
-	Value string
-
-	// Lesser-used, but still valuable keys from api.KV
-	CreateIndex uint64
-	ModifyIndex uint64
-	LockIndex   uint64
-	Flags       uint64
-	Session     string
+	gob.Register([]*dep.KeyPair{})
 }
 
 // KVListQuery queries the KV store for a single key.
@@ -84,12 +70,12 @@ func (d *KVListQuery) Fetch(clients dep.Clients) (interface{}, *dep.ResponseMeta
 
 	//log.Printf("[TRACE] %s: returned %d pairs", d, len(list))
 
-	pairs := make([]*KeyPair, 0, len(list))
+	pairs := make([]*dep.KeyPair, 0, len(list))
 	for _, pair := range list {
 		key := strings.TrimPrefix(pair.Key, d.prefix)
 		key = strings.TrimLeft(key, "/")
 
-		pairs = append(pairs, &KeyPair{
+		pairs = append(pairs, &dep.KeyPair{
 			Path:        pair.Key,
 			Key:         key,
 			Value:       string(pair.Value),

@@ -19,17 +19,7 @@ var (
 )
 
 func init() {
-	gob.Register([]*Node{})
-}
-
-// Node is a node entry in Consul
-type Node struct {
-	ID              string
-	Node            string
-	Address         string
-	Datacenter      string
-	TaggedAddresses map[string]string
-	Meta            map[string]string
+	gob.Register([]*dep.Node{})
 }
 
 // CatalogNodesQuery is the representation of all registered nodes in Consul.
@@ -82,9 +72,9 @@ func (d *CatalogNodesQuery) Fetch(clients dep.Clients) (interface{}, *dep.Respon
 
 	//log.Printf("[TRACE] %s: returned %d results", d, len(n))
 
-	nodes := make([]*Node, 0, len(n))
+	nodes := make([]*dep.Node, 0, len(n))
 	for _, node := range n {
-		nodes = append(nodes, &Node{
+		nodes = append(nodes, &dep.Node{
 			ID:              node.ID,
 			Node:            node.Node,
 			Address:         node.Address,
@@ -134,7 +124,7 @@ func (d *CatalogNodesQuery) Stop() {
 }
 
 // ByNode is a sortable list of nodes by name and then IP address.
-type ByNode []*Node
+type ByNode []*dep.Node
 
 func (s ByNode) Len() int      { return len(s) }
 func (s ByNode) Swap(i, j int) { s[i], s[j] = s[j], s[i] }

@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/hcat/dep"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -154,12 +155,12 @@ func TestKVListQuery_Fetch(t *testing.T) {
 	cases := []struct {
 		name string
 		i    string
-		exp  []*KeyPair
+		exp  []*dep.KeyPair
 	}{
 		{
 			"exists",
 			"test-kv-list/prefix",
-			[]*KeyPair{
+			[]*dep.KeyPair{
 				{
 					Path:  "test-kv-list/prefix/foo",
 					Key:   "foo",
@@ -180,7 +181,7 @@ func TestKVListQuery_Fetch(t *testing.T) {
 		{
 			"trailing",
 			"test-kv-list/prefix/",
-			[]*KeyPair{
+			[]*dep.KeyPair{
 				{
 					Path:  "test-kv-list/prefix/foo",
 					Key:   "foo",
@@ -201,7 +202,7 @@ func TestKVListQuery_Fetch(t *testing.T) {
 		{
 			"no_exist",
 			"test-kv-list/not/a/real/prefix/like/ever",
-			[]*KeyPair{},
+			[]*dep.KeyPair{},
 		},
 	}
 
@@ -217,7 +218,7 @@ func TestKVListQuery_Fetch(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			for _, p := range act.([]*KeyPair) {
+			for _, p := range act.([]*dep.KeyPair) {
 				p.CreateIndex = 0
 				p.ModifyIndex = 0
 			}
@@ -295,7 +296,7 @@ func TestKVListQuery_Fetch(t *testing.T) {
 		case err := <-errCh:
 			t.Fatal(err)
 		case data := <-dataCh:
-			typed := data.([]*KeyPair)
+			typed := data.([]*dep.KeyPair)
 			if len(typed) == 0 {
 				t.Fatal("bad length")
 			}
@@ -304,7 +305,7 @@ func TestKVListQuery_Fetch(t *testing.T) {
 			act.CreateIndex = 0
 			act.ModifyIndex = 0
 
-			exp := &KeyPair{
+			exp := &dep.KeyPair{
 				Path:  "test-kv-list/prefix/foo",
 				Key:   "foo",
 				Value: "new-bar",
