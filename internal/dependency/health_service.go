@@ -8,7 +8,6 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/hashicorp/consul/api"
 	"github.com/hashicorp/hcat/dep"
 	"github.com/pkg/errors"
 )
@@ -33,27 +32,7 @@ var (
 )
 
 func init() {
-	gob.Register([]*HealthService{})
-}
-
-// HealthService is a service entry in Consul.
-type HealthService struct {
-	Node                string
-	NodeID              string
-	NodeAddress         string
-	NodeDatacenter      string
-	NodeTaggedAddresses map[string]string
-	NodeMeta            map[string]string
-	ServiceMeta         map[string]string
-	Address             string
-	ID                  string
-	Name                string
-	Tags                ServiceTags
-	Checks              api.HealthChecks
-	Status              string
-	Port                int
-	Weights             api.AgentWeights
-	Namespace           string
+	gob.Register([]*dep.HealthService{})
 }
 
 // HealthServiceQuery is the representation of all a service query in Consul.
@@ -162,7 +141,7 @@ func (d *HealthServiceQuery) Fetch(clients dep.Clients) (interface{}, *dep.Respo
 
 	//log.Printf("[TRACE] %s: returned %d results", d, len(entries))
 
-	list := make([]*HealthService, 0, len(entries))
+	list := make([]*dep.HealthService, 0, len(entries))
 	for _, entry := range entries {
 		// Get the status of this service from its checks.
 		status := entry.Checks.AggregatedStatus()
@@ -180,7 +159,7 @@ func (d *HealthServiceQuery) Fetch(clients dep.Clients) (interface{}, *dep.Respo
 			address = entry.Node.Address
 		}
 
-		list = append(list, &HealthService{
+		list = append(list, &dep.HealthService{
 			Node:                entry.Node.Node,
 			NodeID:              entry.Node.ID,
 			NodeAddress:         entry.Node.Address,
@@ -191,7 +170,7 @@ func (d *HealthServiceQuery) Fetch(clients dep.Clients) (interface{}, *dep.Respo
 			Address:             address,
 			ID:                  entry.Service.ID,
 			Name:                entry.Service.Service,
-			Tags: ServiceTags(
+			Tags: dep.ServiceTags(
 				deepCopyAndSortTags(entry.Service.Tags)),
 			Status:    status,
 			Checks:    entry.Checks,
@@ -259,7 +238,7 @@ func acceptStatus(list []string, s string) bool {
 }
 
 // ByNodeThenID is a sortable slice of Service
-type ByNodeThenID []*HealthService
+type ByNodeThenID []*dep.HealthService
 
 // Len, Swap, and Less are used to implement the sort.Sort interface.
 func (s ByNodeThenID) Len() int      { return len(s) }

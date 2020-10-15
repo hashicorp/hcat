@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/hashicorp/hcat/dep"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -84,13 +85,13 @@ func TestCatalogNodeQuery_Fetch(t *testing.T) {
 	cases := []struct {
 		name string
 		i    string
-		exp  *CatalogNode
+		exp  *dep.CatalogNode
 	}{
 		{
 			"local",
 			"",
-			&CatalogNode{
-				Node: &Node{
+			&dep.CatalogNode{
+				Node: &dep.Node{
 					Node:       testConsul.Config.NodeName,
 					Address:    testConsul.Config.Bind,
 					Datacenter: "dc1",
@@ -102,25 +103,25 @@ func TestCatalogNodeQuery_Fetch(t *testing.T) {
 						"consul-network-segment": "",
 					},
 				},
-				Services: []*CatalogNodeService{
-					&CatalogNodeService{
+				Services: []*dep.CatalogNodeService{
+					&dep.CatalogNodeService{
 						ID:      "consul",
 						Service: "consul",
 						Port:    testConsul.Config.Ports.Server,
-						Tags:    ServiceTags([]string{}),
+						Tags:    dep.ServiceTags([]string{}),
 						Meta:    map[string]string{},
 					},
-					&CatalogNodeService{
+					&dep.CatalogNodeService{
 						ID:      "foo",
 						Service: "foo-sidecar-proxy",
-						Tags:    ServiceTags([]string{}),
+						Tags:    dep.ServiceTags([]string{}),
 						Meta:    map[string]string{},
 						Port:    21999,
 					},
-					&CatalogNodeService{
+					&dep.CatalogNodeService{
 						ID:      "service-meta",
 						Service: "service-meta",
-						Tags:    ServiceTags([]string{"tag1"}),
+						Tags:    dep.ServiceTags([]string{"tag1"}),
 						Meta: map[string]string{
 							"meta1": "value1",
 						},
@@ -131,7 +132,7 @@ func TestCatalogNodeQuery_Fetch(t *testing.T) {
 		{
 			"unknown",
 			"not_a_real_node",
-			&CatalogNode{},
+			&dep.CatalogNode{},
 		},
 	}
 
@@ -148,12 +149,12 @@ func TestCatalogNodeQuery_Fetch(t *testing.T) {
 			}
 
 			if act != nil {
-				if n := act.(*CatalogNode).Node; n != nil {
+				if n := act.(*dep.CatalogNode).Node; n != nil {
 					n.ID = ""
 					n.TaggedAddresses = filterAddresses(n.TaggedAddresses)
 				}
 				// delete any version data from ServiceMeta
-				services := act.(*CatalogNode).Services
+				services := act.(*dep.CatalogNode).Services
 				for i := range services {
 					services[i].Meta = filterVersionMeta(services[i].Meta)
 				}

@@ -15,7 +15,7 @@ var (
 type VaultTokenQuery struct {
 	isVault
 	stopCh      chan struct{}
-	secret      *Secret
+	secret      *dep.Secret
 	vaultSecret *api.Secret
 }
 
@@ -57,7 +57,7 @@ func (d *VaultTokenQuery) stopChan() chan struct{} {
 	return d.stopCh
 }
 
-func (d *VaultTokenQuery) secrets() (*Secret, *api.Secret) {
+func (d *VaultTokenQuery) secrets() (*dep.Secret, *api.Secret) {
 	return d.secret, d.vaultSecret
 }
 

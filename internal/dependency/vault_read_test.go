@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/hcat/dep"
 	"github.com/hashicorp/vault/api"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
@@ -117,7 +118,7 @@ func TestVaultReadQuery_Fetch_KVv1(t *testing.T) {
 		{
 			"exists",
 			secretsPath + "/foo/bar",
-			&Secret{
+			&dep.Secret{
 				Data: map[string]interface{}{
 					"ttl": "100ms",
 					"zip": "zap",
@@ -146,10 +147,10 @@ func TestVaultReadQuery_Fetch_KVv1(t *testing.T) {
 			}
 
 			if act != nil {
-				act.(*Secret).RequestID = ""
-				act.(*Secret).LeaseID = ""
-				act.(*Secret).LeaseDuration = 0
-				act.(*Secret).Renewable = false
+				act.(*dep.Secret).RequestID = ""
+				act.(*dep.Secret).LeaseID = ""
+				act.(*dep.Secret).LeaseDuration = 0
+				act.(*dep.Secret).Renewable = false
 			}
 
 			assert.Equal(t, tc.exp, act)
@@ -307,7 +308,7 @@ func TestVaultReadQuery_Fetch_KVv2(t *testing.T) {
 		{
 			"exists",
 			secretsPath + "/foo/bar",
-			&Secret{
+			&dep.Secret{
 				Data: map[string]interface{}{
 					"data": map[string]interface{}{
 						"ttl": "100ms", // explicitly make this a short duration for testing
@@ -320,7 +321,7 @@ func TestVaultReadQuery_Fetch_KVv2(t *testing.T) {
 		{
 			"/data in path",
 			secretsPath + "/data/foo/bar",
-			&Secret{
+			&dep.Secret{
 				Data: map[string]interface{}{
 					"data": map[string]interface{}{
 						"ttl": "100ms", // explicitly make this a short duration for testing
@@ -333,7 +334,7 @@ func TestVaultReadQuery_Fetch_KVv2(t *testing.T) {
 		{
 			"version=1",
 			secretsPath + "/foo/bar?version=1",
-			&Secret{
+			&dep.Secret{
 				Data: map[string]interface{}{
 					"data": map[string]interface{}{
 						"ttl": "100ms", // explicitly make this a short duration for testing
@@ -346,7 +347,7 @@ func TestVaultReadQuery_Fetch_KVv2(t *testing.T) {
 		{
 			"/data in path and in prefix",
 			secretsPath + "/data/datafoo/bar",
-			&Secret{
+			&dep.Secret{
 				Data: map[string]interface{}{
 					"data": map[string]interface{}{
 						"ttl": "100ms",
@@ -359,7 +360,7 @@ func TestVaultReadQuery_Fetch_KVv2(t *testing.T) {
 		{
 			"without /data/ in path, but contains data prefix",
 			secretsPath + "/datafoo/bar",
-			&Secret{
+			&dep.Secret{
 				Data: map[string]interface{}{
 					"data": map[string]interface{}{
 						"ttl": "100ms",
@@ -390,11 +391,11 @@ func TestVaultReadQuery_Fetch_KVv2(t *testing.T) {
 			}
 
 			if act != nil {
-				act.(*Secret).RequestID = ""
-				act.(*Secret).LeaseID = ""
-				act.(*Secret).LeaseDuration = 0
-				act.(*Secret).Renewable = false
-				tc.exp.(*Secret).Data["metadata"] = act.(*Secret).Data["metadata"]
+				act.(*dep.Secret).RequestID = ""
+				act.(*dep.Secret).LeaseID = ""
+				act.(*dep.Secret).LeaseDuration = 0
+				act.(*dep.Secret).Renewable = false
+				tc.exp.(*dep.Secret).Data["metadata"] = act.(*dep.Secret).Data["metadata"]
 			}
 
 			assert.Equal(t, tc.exp, act)
@@ -559,7 +560,7 @@ func TestVaultReadQuery_Fetch_PKI_Anonymous(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	sec, ok := act.(*Secret)
+	sec, ok := act.(*dep.Secret)
 	if !ok {
 		t.Fatalf("expected secret but found %v", reflect.TypeOf(act))
 	}
@@ -622,7 +623,7 @@ func TestVaultReadQuery_Fetch_NonSecrets(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	sec, ok := act.(*Secret)
+	sec, ok := act.(*dep.Secret)
 	if !ok {
 		t.Fatalf("expected secret but found %v", reflect.TypeOf(act))
 	}

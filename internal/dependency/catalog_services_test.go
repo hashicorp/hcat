@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/hashicorp/hcat/dep"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -60,23 +61,23 @@ func TestCatalogServicesQuery_Fetch(t *testing.T) {
 	cases := []struct {
 		name string
 		i    string
-		exp  []*CatalogSnippet
+		exp  []*dep.CatalogSnippet
 	}{
 		{
 			"all",
 			"",
-			[]*CatalogSnippet{
-				&CatalogSnippet{
+			[]*dep.CatalogSnippet{
+				&dep.CatalogSnippet{
 					Name: "consul",
-					Tags: ServiceTags([]string{}),
+					Tags: dep.ServiceTags([]string{}),
 				},
-				&CatalogSnippet{
+				&dep.CatalogSnippet{
 					Name: "foo-sidecar-proxy",
-					Tags: ServiceTags([]string{}),
+					Tags: dep.ServiceTags([]string{}),
 				},
-				&CatalogSnippet{
+				&dep.CatalogSnippet{
 					Name: "service-meta",
-					Tags: ServiceTags([]string{"tag1"}),
+					Tags: dep.ServiceTags([]string{"tag1"}),
 				},
 			},
 		},

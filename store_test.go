@@ -4,7 +4,8 @@ import (
 	"reflect"
 	"testing"
 
-	dep "github.com/hashicorp/hcat/internal/dependency"
+	"github.com/hashicorp/hcat/dep"
+	idep "github.com/hashicorp/hcat/internal/dependency"
 )
 
 func TestNewStore(t *testing.T) {
@@ -24,7 +25,7 @@ func TestRecall(t *testing.T) {
 	t.Parallel()
 	st := NewStore()
 
-	d, err := dep.NewCatalogNodesQuery("")
+	d, err := idep.NewCatalogNodesQuery("")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -54,7 +55,7 @@ func TestForceSet(t *testing.T) {
 	t.Parallel()
 	st := NewStore()
 
-	d, err := dep.NewCatalogNodesQuery("")
+	d, err := idep.NewCatalogNodesQuery("")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -83,7 +84,7 @@ func TestForget(t *testing.T) {
 	t.Parallel()
 	st := NewStore()
 
-	d, err := dep.NewCatalogNodesQuery("")
+	d, err := idep.NewCatalogNodesQuery("")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -108,7 +109,7 @@ func TestReset(t *testing.T) {
 	t.Parallel()
 	st := NewStore()
 
-	d, err := dep.NewCatalogNodesQuery("")
+	d, err := idep.NewCatalogNodesQuery("")
 	if err != nil {
 		t.Fatal(err)
 	}

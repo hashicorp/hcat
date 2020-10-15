@@ -17,60 +17,11 @@ var (
 	VaultDefaultLeaseDuration = 5 * time.Minute
 )
 
-// Secret is the structure returned for every secret within Vault.
-type Secret struct {
-	// The request ID that generated this response
-	RequestID string
-
-	LeaseID       string
-	LeaseDuration int
-	Renewable     bool
-
-	// Data is the actual contents of the secret. The format of the data
-	// is arbitrary and up to the secret backend.
-	Data map[string]interface{}
-
-	// Warnings contains any warnings related to the operation. These
-	// are not issues that caused the command to fail, but that the
-	// client should be aware of.
-	Warnings []string
-
-	// Auth, if non-nil, means that there was authentication information
-	// attached to this response.
-	Auth *SecretAuth
-
-	// WrapInfo, if non-nil, means that the initial response was wrapped in the
-	// cubbyhole of the given token (which has a TTL of the given number of
-	// seconds)
-	WrapInfo *SecretWrapInfo
-}
-
-// SecretAuth is the structure containing auth information if we have it.
-type SecretAuth struct {
-	ClientToken string
-	Accessor    string
-	Policies    []string
-	Metadata    map[string]string
-
-	LeaseDuration int
-	Renewable     bool
-}
-
-// SecretWrapInfo contains wrapping information if we have it. If what is
-// contained is an authentication token, the accessor for the token will be
-// available in WrappedAccessor.
-type SecretWrapInfo struct {
-	Token           string
-	TTL             int
-	CreationTime    time.Time
-	WrappedAccessor string
-}
-
 //
 type renewer interface {
 	dep.Dependency
 	stopChan() chan struct{}
-	secrets() (*Secret, *api.Secret)
+	secrets() (*dep.Secret, *api.Secret)
 }
 
 func renewSecret(clients dep.Clients, d renewer) error {
@@ -106,7 +57,7 @@ func renewSecret(clients dep.Clients, d renewer) error {
 
 // leaseCheckWait accepts a secret and returns the recommended amount of
 // time to sleep.
-func leaseCheckWait(s *Secret) time.Duration {
+func leaseCheckWait(s *dep.Secret) time.Duration {
 	// base should be set to the default already
 	// be sure not to set base to <=0 below
 	base := s.LeaseDuration
@@ -171,7 +122,7 @@ func printVaultWarnings(d dep.Dependency, warnings []string) {
 }
 
 // vaultSecretRenewable determines if the given secret is renewable.
-func vaultSecretRenewable(s *Secret) bool {
+func vaultSecretRenewable(s *dep.Secret) bool {
 	if s.Auth != nil {
 		return s.Auth.Renewable
 	}
@@ -181,12 +132,12 @@ func vaultSecretRenewable(s *Secret) bool {
 // transformSecret transforms an api secret into our secret. This does not deep
 // copy underlying deep data structures, so it's not safe to modify the vault
 // secret as that may modify the data in the transformed secret.
-func transformSecret(theirs *api.Secret, defaultLease time.Duration) *Secret {
+func transformSecret(theirs *api.Secret, defaultLease time.Duration) *dep.Secret {
 	if defaultLease <= 0 {
 		// just in case 0 gets passed by mistake
 		defaultLease = VaultDefaultLeaseDuration
 	}
-	ours := &Secret{LeaseDuration: int(defaultLease.Seconds())}
+	ours := &dep.Secret{LeaseDuration: int(defaultLease.Seconds())}
 	updateSecret(ours, theirs)
 	return ours
 }
@@ -194,7 +145,7 @@ func transformSecret(theirs *api.Secret, defaultLease time.Duration) *Secret {
 // updateSecret updates our secret with the new data from the api, careful to
 // not overwrite missing data. Renewals don't include the original secret, and
 // we don't want to delete that data accidentally.
-func updateSecret(ours *Secret, theirs *api.Secret) {
+func updateSecret(ours *dep.Secret, theirs *api.Secret) {
 	if theirs.RequestID != "" {
 		ours.RequestID = theirs.RequestID
 	}
@@ -221,7 +172,7 @@ func updateSecret(ours *Secret, theirs *api.Secret) {
 
 	if theirs.Auth != nil {
 		if ours.Auth == nil {
-			ours.Auth = &SecretAuth{}
+			ours.Auth = &dep.SecretAuth{}
 		}
 
 		if theirs.Auth.ClientToken != "" {
@@ -251,7 +202,7 @@ func updateSecret(ours *Secret, theirs *api.Secret) {
 
 	if theirs.WrapInfo != nil {
 		if ours.WrapInfo == nil {
-			ours.WrapInfo = &SecretWrapInfo{}
+			ours.WrapInfo = &dep.SecretWrapInfo{}
 		}
 
 		if theirs.WrapInfo.Token != "" {

@@ -19,7 +19,7 @@ var (
 )
 
 func init() {
-	gob.Register([]*CatalogSnippet{})
+	gob.Register([]*dep.CatalogSnippet{})
 }
 
 // CatalogService is a catalog entry in Consul.
@@ -33,7 +33,7 @@ type CatalogService struct {
 	ServiceID       string
 	ServiceName     string
 	ServiceAddress  string
-	ServiceTags     ServiceTags
+	ServiceTags     dep.ServiceTags
 	ServiceMeta     map[string]string
 	ServicePort     int
 	Namespace       string
@@ -112,7 +112,7 @@ func (d *CatalogServiceQuery) Fetch(clients dep.Clients) (interface{}, *dep.Resp
 			ServiceID:       s.ServiceID,
 			ServiceName:     s.ServiceName,
 			ServiceAddress:  s.ServiceAddress,
-			ServiceTags:     ServiceTags(deepCopyAndSortTags(s.ServiceTags)),
+			ServiceTags:     dep.ServiceTags(deepCopyAndSortTags(s.ServiceTags)),
 			ServiceMeta:     s.ServiceMeta,
 			ServicePort:     s.ServicePort,
 			Namespace:       s.Namespace,

@@ -24,7 +24,7 @@ type VaultReadQuery struct {
 
 	rawPath     string
 	queryValues url.Values
-	secret      *Secret
+	secret      *dep.Secret
 	isKVv2      *bool
 	secretPath  string
 	opts        QueryOptions
@@ -106,7 +106,7 @@ func (d *VaultReadQuery) stopChan() chan struct{} {
 	return d.stopCh
 }
 
-func (d *VaultReadQuery) secrets() (*Secret, *api.Secret) {
+func (d *VaultReadQuery) secrets() (*dep.Secret, *api.Secret) {
 	return d.secret, d.vaultSecret
 }
 

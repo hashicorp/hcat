@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/hashicorp/hcat/dep"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -77,13 +78,13 @@ func TestCatalogNodesQuery_Fetch(t *testing.T) {
 	cases := []struct {
 		name string
 		i    string
-		exp  []*Node
+		exp  []*dep.Node
 	}{
 		{
 			"all",
 			"",
-			[]*Node{
-				&Node{
+			[]*dep.Node{
+				{
 					Node:       testConsul.Config.NodeName,
 					Address:    testConsul.Config.Bind,
 					Datacenter: "dc1",
@@ -112,7 +113,7 @@ func TestCatalogNodesQuery_Fetch(t *testing.T) {
 			}
 
 			if act != nil {
-				for _, n := range act.([]*Node) {
+				for _, n := range act.([]*dep.Node) {
 					n.ID = ""
 					n.TaggedAddresses = filterAddresses(n.TaggedAddresses)
 				}

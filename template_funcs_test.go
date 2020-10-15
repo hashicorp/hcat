@@ -7,7 +7,7 @@ import (
 	"runtime"
 	"testing"
 
-	dep "github.com/hashicorp/hcat/internal/dependency"
+	"github.com/hashicorp/hcat/dep"
 )
 
 // NOTE: the template functions are all tested in ./template_test.go and
