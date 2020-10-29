@@ -302,8 +302,12 @@ func TestWatcherWait(t *testing.T) {
 				w.dataCh <- v
 			}
 		}()
-		w.Wait(context.Background())
 		store := w.cache.(*Store)
+		count := 0
+		for len(store.data) != 5 || count > 3 {
+			count += 1
+			w.Wait(context.Background())
+		}
 		if len(store.data) != 5 {
 			t.Fatal("failed update")
 		}
@@ -341,7 +345,11 @@ func TestWatcherWait(t *testing.T) {
 				w.dataCh <- v
 			}
 		}()
-		w.Wait(context.Background())
+		count := 0
+		for w.changed.Len() != 5 || count > 3 {
+			count += 1
+			w.Wait(context.Background())
+		}
 		if w.changed.Len() != 5 {
 			t.Fatal("failed to track updated dependency")
 		}
