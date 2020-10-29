@@ -7,7 +7,8 @@ import (
 
 func All() template.FuncMap {
 	all := make(template.FuncMap)
-	allfuncs := []func() template.FuncMap{ConsulFilters, Env, Control, Helpers}
+	allfuncs := []func() template.FuncMap{
+		ConsulFilters, Env, Control, Helpers, Math}
 	for _, f := range allfuncs {
 		for k, v := range f() {
 			all[k] = v
@@ -39,6 +40,18 @@ func Control() template.FuncMap {
 		"containsNotAll": containsSomeFunc(false, true),
 		"in":             in,
 		"loop":           loop,
+	}
+}
+
+func Math() template.FuncMap {
+	return template.FuncMap{
+		"add":      add,
+		"subtract": subtract,
+		"multiply": multiply,
+		"divide":   divide,
+		"modulo":   modulo,
+		"minimum":  minimum,
+		"maximum":  maximum,
 	}
 }
 

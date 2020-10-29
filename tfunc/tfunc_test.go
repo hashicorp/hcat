@@ -18,7 +18,8 @@ func testKVListQueryID(prefix string) string {
 
 func TestAllForDups(t *testing.T) {
 	all := make(template.FuncMap)
-	allfuncs := []func() template.FuncMap{ConsulFilters, Env, Control, Helpers}
+	allfuncs := []func() template.FuncMap{
+		ConsulFilters, Env, Control, Helpers, Math}
 	for _, f := range allfuncs {
 		for k, v := range f() {
 			if _, ok := all[k]; ok {
