@@ -130,7 +130,7 @@ func TestTransformExecute(t *testing.T) {
 
 	for i, tc := range cases {
 		t.Run(fmt.Sprintf("%d_%s", i, tc.name), func(t *testing.T) {
-			tpl := hcat.NewTemplate(tc.ti)
+			tpl := NewTemplate(tc.ti)
 
 			a, err := tpl.Execute(tc.i)
 			if (err != nil) != tc.err {
