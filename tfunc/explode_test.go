@@ -40,7 +40,16 @@ func TestExplodeExecute(t *testing.T) {
 		{
 			"helper_explodemap",
 			hcat.TemplateInput{
-				Contents: `{{ scratch.MapSet "explode-test" "foo/bar" "a"}}{{ scratch.MapSet "explode-test" "qux" "c"}}{{ scratch.MapSet "explode-test" "zip/zap" "d"}}{{ scratch.Get "explode-test" | explodeMap }}`,
+				Contents: `{{ testMap | explodeMap }}`,
+				FuncMapMerge: map[string]interface{}{
+					"testMap": func() map[string]interface{} {
+						m := make(map[string]interface{})
+						m["foo"] = map[string]string{"bar": "a"}
+						m["qux"] = "c"
+						m["zip"] = map[string]string{"zap": "d"}
+						return m
+					},
+				},
 			},
 			hcat.NewStore(),
 			"map[foo:map[bar:a] qux:c zip:map[zap:d]]",

@@ -32,6 +32,13 @@ func TestAllForDups(t *testing.T) {
 
 // Wrap the new template to use our template library
 func NewTemplate(ti hcat.TemplateInput) *hcat.Template {
-	ti.FuncMapMerge = All()
+	switch ti.FuncMapMerge {
+	case nil:
+		ti.FuncMapMerge = All()
+	default:
+		for k, v := range All() {
+			ti.FuncMapMerge[k] = v
+		}
+	}
 	return hcat.NewTemplate(ti)
 }
