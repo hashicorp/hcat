@@ -12,18 +12,13 @@ type Store struct {
 	// data is the map of individual dependencies and the most recent data for
 	// that dependency.
 	data map[string]interface{}
-
-	// receivedData is an internal tracker of which dependencies have stored
-	// data in the Store.
-	receivedData map[string]struct{}
 }
 
 // NewStore creates a new Store with empty values for each
 // of the key structs.
 func NewStore() *Store {
 	return &Store{
-		data:         make(map[string]interface{}),
-		receivedData: make(map[string]struct{}),
+		data: make(map[string]interface{}),
 	}
 }
 
@@ -35,7 +30,6 @@ func (s *Store) Save(id string, data interface{}) {
 	defer s.Unlock()
 
 	s.data[id] = data
-	s.receivedData[id] = struct{}{}
 }
 
 // Recall gets the current value for the given dependency in the Store.
@@ -43,12 +37,8 @@ func (s *Store) Recall(id string) (interface{}, bool) {
 	s.RLock()
 	defer s.RUnlock()
 
-	// If we have not received data for this dependency, return now.
-	if _, ok := s.receivedData[id]; !ok {
-		return nil, false
-	}
-
-	return s.data[id], true
+	data, ok := s.data[id]
+	return data, ok
 }
 
 // Forget accepts a dependency and removes all associated data with this
@@ -58,7 +48,6 @@ func (s *Store) Delete(id string) {
 	defer s.Unlock()
 
 	delete(s.data, id)
-	delete(s.receivedData, id)
 }
 
 // Reset clears all stored data.
@@ -69,9 +58,6 @@ func (s *Store) Reset() {
 	for k := range s.data {
 		delete(s.data, k)
 	}
-	for k := range s.receivedData {
-		delete(s.receivedData, k)
-	}
 }
 
 // forceSet is used to force set the value of a dependency for a given hash
@@ -81,5 +67,4 @@ func (s *Store) forceSet(hashCode string, data interface{}) {
 	defer s.Unlock()
 
 	s.data[hashCode] = data
-	s.receivedData[hashCode] = struct{}{}
 }
