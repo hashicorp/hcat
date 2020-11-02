@@ -93,16 +93,16 @@ func TestClientSet_hasLeader(t *testing.T) {
 		}
 
 		startTime := time.Now()
-		if err = hasLeader(client, 5*time.Second); err == nil {
+		if err = hasLeader(client, 3*time.Second); err == nil {
 			t.Fatal("hasLeader should have returned an error")
 		}
 
 		// Test retry logic reaches the maxRetryWait
-		// retries after 2s, 4s, and exits before retrying after 8s
+		// retries once and exists before the next retry with delay 4s
 		elapsed := time.Now().Sub(startTime)
-		expected := 6 * time.Second
+		expected := 2 * time.Second
 		if elapsed < expected {
-			t.Fatal("hasLeader should have exceeded retry duration")
+			t.Fatal("hasLeader should have exceeded retry duration but returned early", elapsed, expected)
 		}
 	})
 }
