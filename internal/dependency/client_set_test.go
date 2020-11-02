@@ -1,7 +1,10 @@
 package dependency
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"testing"
+	"time"
 
 	capi "github.com/hashicorp/consul/api"
 	vapi "github.com/hashicorp/vault/api"
@@ -39,20 +42,67 @@ func TestClientSet_unwrapVaultToken(t *testing.T) {
 }
 
 func TestClientSet_hasLeader(t *testing.T) {
-	// good
-	var err error
-	client := testClients.Consul()
-	if err = hasLeader(client); err != nil {
-		t.Fatal("unexpected hasLeader error:", err)
-	}
-	// bad
-	cconf := capi.DefaultConfig()
-	cconf.Address = "bad.host:8500"
-	client, err = capi.NewClient(cconf)
-	if err != nil {
-		t.Fatal("client create error:", err)
-	}
-	if err = hasLeader(client); err == nil {
-		t.Fatal("hasLeader should have returned an error")
-	}
+	t.Parallel()
+
+	t.Run("success", func(t *testing.T) {
+		t.Parallel()
+
+		var err error
+		client := testClients.Consul()
+		if err = hasLeader(client, time.Minute); err != nil {
+			t.Fatal("unexpected hasLeader error:", err)
+		}
+	})
+
+	t.Run("non temp error", func(t *testing.T) {
+		t.Parallel()
+
+		cconf := capi.DefaultConfig()
+		cconf.Address = "bad.host:8500"
+		client, err := capi.NewClient(cconf)
+		if err != nil {
+			t.Fatal("client create error:", err)
+		}
+		if err = hasLeader(client, time.Minute); err == nil {
+			t.Fatal("hasLeader should have returned an error")
+		}
+	})
+
+	t.Run("retry exceeds", func(t *testing.T) {
+		t.Parallel()
+
+		testServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// Force timeout by setting client transport timeout to a shorter duration
+			// than the delayed response
+			time.Sleep(20 * time.Millisecond)
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte("leader.address:8500"))
+		}))
+		defer testServer.Close()
+
+		transport := http.DefaultTransport.(*http.Transport).Clone()
+		transport.ResponseHeaderTimeout = 10 * time.Millisecond
+		cconf := capi.Config{
+			Address:    testServer.URL,
+			HttpClient: testServer.Client(),
+			Transport:  transport,
+		}
+		client, err := capi.NewClient(&cconf)
+		if err != nil {
+			t.Fatal("client create error:", err)
+		}
+
+		startTime := time.Now()
+		if err = hasLeader(client, 5*time.Second); err == nil {
+			t.Fatal("hasLeader should have returned an error")
+		}
+
+		// Test retry logic reaches the maxRetryWait
+		// retries after 2s, 4s, and exits before retrying after 8s
+		elapsed := time.Now().Sub(startTime)
+		expected := 6 * time.Second
+		if elapsed < expected {
+			t.Fatal("hasLeader should have exceeded retry duration")
+		}
+	})
 }
