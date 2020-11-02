@@ -15,10 +15,6 @@ func TestNewStore(t *testing.T) {
 	if st.data == nil {
 		t.Errorf("expected data to not be nil")
 	}
-
-	if st.receivedData == nil {
-		t.Errorf("expected receivedData to not be nil")
-	}
 }
 
 func TestRecall(t *testing.T) {
