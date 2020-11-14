@@ -28,6 +28,9 @@ type view struct {
 	receivedData bool
 	lastIndex    uint64
 
+	// flag to denote that polling is active
+	isPolling bool
+
 	// blockWaitTime is amount of time in seconds to do a blocking query for
 	blockWaitTime time.Duration
 
@@ -99,12 +102,42 @@ func (v *view) DataAndLastIndex() (interface{}, uint64) {
 	return v.data, v.lastIndex
 }
 
+// ID outputs a unique string identifier for the view
+// It is identical to it's contained Dependency ID.
+func (v *view) ID() string {
+	return v.dependency.String()
+}
+
+// pollingFlag handles setting and clearing the flag to indicate active polling
+// Returned function needs to be called (usually w/ defer) to clear the flag.
+func (v *view) pollingFlag() (alreadyPolling bool, unflag func()) {
+	v.dataLock.Lock()
+	defer v.dataLock.Unlock()
+
+	if v.isPolling {
+		return true, func() {}
+	}
+
+	v.isPolling = true
+	return false, func() {
+		v.dataLock.Lock()
+		defer v.dataLock.Unlock()
+		v.isPolling = false
+	}
+}
+
 // poll queries the Consul instance for data using the fetch function, but also
 // accounts for interrupts on the interrupt channel. This allows the poll
 // function to be fired in a goroutine, but then halted even if the fetch
 // function is in the middle of a blocking query.
 func (v *view) poll(viewCh chan<- *view, errCh chan<- error) {
 	var retries int
+
+	if alreadyPolling, unflag := v.pollingFlag(); alreadyPolling {
+		return
+	} else {
+		defer unflag()
+	}
 
 	for {
 		doneCh := make(chan struct{}, 1)
@@ -261,17 +294,25 @@ func (v *view) fetch(doneCh, successCh chan<- struct{}, errCh chan<- error) {
 
 		if _, ok := v.dependency.(idep.BlockingQuery); ok && data == nil {
 			//log.Printf("[TRACE] (view) %s asked for blocking query", v.dependency)
-			fmt.Println("Blocking!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
 			v.dataLock.Unlock()
 			continue
 		}
-
-		v.data = data
-		v.receivedData = true
 		v.dataLock.Unlock()
+
+		v.store(data)
 
 		close(doneCh)
 		return
+	}
+}
+
+// Store-s the data and marks that it was received
+func (v *view) store(data interface{}) {
+	v.dataLock.Lock()
+	defer v.dataLock.Unlock()
+	v.data = data
+	if !v.receivedData {
+		v.receivedData = true
 	}
 }
 

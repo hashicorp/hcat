@@ -43,16 +43,8 @@ type Watcher struct {
 	// waitingCh is used internally to test when Wait is waiting
 	waitingCh chan struct{}
 
-	// changed is a list of deps that have been changed since last check
-	changed stringSet
 	// tracker tracks template<->dependencies (see bottom of this file)
-	depTracker *tracker
-	// olddepCh is the chan where no longer used dependencies are sent.
-	olddepCh chan string
-
-	// depViewMap is a map of Dependency-IDs to Views.
-	depViewMap   map[string]*view
-	depViewMapMx sync.Mutex
+	tracker *tracker
 
 	// bufferTemplates manages the buffer period per template to accumulate
 	// dependency changes.
@@ -124,12 +116,9 @@ func NewWatcher(i WatcherInput) *Watcher {
 		cache:           cache,
 		dataCh:          make(chan *view, dataBufferSize),
 		errCh:           make(chan error),
-		olddepCh:        make(chan string, dataBufferSize),
 		waitingCh:       make(chan struct{}),
 		stopCh:          make(chan struct{}, 1),
-		changed:         newStringSet(),
-		depTracker:      newTracker(),
-		depViewMap:      make(map[string]*view),
+		tracker:         newTracker(),
 		bufferTrigger:   bufferTriggerCh,
 		bufferTemplates: newTimers(),
 		retryFuncConsul: i.ConsulRetryFunc,
@@ -157,9 +146,9 @@ func (w *Watcher) WatchVaultToken(token string) error {
 		if err != nil {
 			return errors.Wrap(err, "watcher")
 		}
-		w.Add(vt)
-		// prevent cleanDeps from removing it
-		w.Register(vaultTokenDummyTemplateID, vt)
+		// fakeNotifier is defined near end of file
+		w.Register(fakeNotifier(vaultTokenDummyTemplateID), vt)
+		w.Poll(vt)
 	}
 	return nil
 }
@@ -177,13 +166,12 @@ func (w *Watcher) WaitCh(ctx context.Context) <-chan error {
 // Wait blocks until new a watched value changes or until context is closed
 // or exceeds its deadline.
 func (w *Watcher) Wait(ctx context.Context) error {
-	w.changed.Clear() // clear old updates before waiting on new ones
-	w.stopCh.drain()  // in case Stop was already called
+	w.stopCh.drain() // in case Stop was already called
 
-	cleanStop := make(chan struct{})
-	defer close(cleanStop) // only run while waiting
+	//	sweepStop := make(chan struct{})
+	//	defer close(sweepStop) // only run while waiting
 	go func() {
-		w.cleanDeps(cleanStop)
+		//w.tracker.sweep()
 	}()
 
 	// send waiting notification, only used for testing
@@ -196,7 +184,9 @@ func (w *Watcher) Wait(ctx context.Context) error {
 	dataUpdate := func(v *view) {
 		id := v.Dependency().String()
 		w.cache.Save(id, v.Data())
-		w.changed.Add(id)
+		for _, n := range w.tracker.notifiersFor(v) {
+			n.Notify(v.Dependency())
+		}
 	}
 	for {
 		select {
@@ -229,10 +219,6 @@ func (w *Watcher) Wait(ctx context.Context) error {
 		case <-w.stopCh:
 			return nil
 
-		// olddepCh outputs deps that need to be removed
-		case d := <-w.olddepCh:
-			w.remove(d)
-
 		case err := <-w.errCh:
 			// Push the error back up the stack
 			return err
@@ -248,69 +234,13 @@ func (w *Watcher) Wait(ctx context.Context) error {
 	}
 }
 
-// cleanDeps scans all current dependencies and removes any unused ones.
-// This can happen in, for example, cases of a loop that gets service
-// information for all services and the 'all services' list changes over time.
-func (w *Watcher) cleanDeps(done chan struct{}) {
-	// get all dependencies
-	w.depViewMapMx.Lock()
-	deps := make([]string, 0, len(w.depViewMap))
-	for k := range w.depViewMap {
-		deps = append(deps, k)
-	}
-	w.depViewMapMx.Unlock()
-	// remove any no longer used
-	for k := range w.depTracker.findUnused(deps) {
-		w.remove(k)
-		select {
-		case <-done:
-			return
-		default:
-		}
-	}
-}
-
-// Register is used to tell the Watcher which dependencies are used by
-// which templates. This is used to enable a you to check to see if a template
-// needs to be updated by checking if any of its dependencies have Changed().
-func (w *Watcher) Register(tmplID string, deps ...dep.Dependency) {
-	if len(deps) > 0 {
-		w.depTracker.update(tmplID, deps...)
-	}
-}
-
-// Changed is used to check a template to see if any of its dependencies
-// have been updated (changed).
-// Returns True if template dependencies have changed.
-func (w *Watcher) Changed(tmplID string) bool {
-	deps, initialized := w.depTracker.templateDeps(tmplID)
-	if !initialized { // first pass, always return true
-		return true
-	}
-
-	// Check if the template was buffering and is now finished. We'll return
-	// true since the template had changed at an earlier point but was not ready
-	// then to render then. The cache is not checked because it may have been
-	// cleared by now.
-	if w.bufferTemplates.Buffered(tmplID) {
-		return true
-	}
-
-	for depID := range w.changed.Map() {
-		if _, ok := deps[depID]; ok {
-			return true
-		}
-	}
-	return false
-}
-
 // Buffer sets the template to activate buffer and accumulate changes for a
 // period. If the template has not been initalized or a buffer period is not
 // configured for the template, it will skip the buffering.
 // period.
 func (w *Watcher) Buffer(tmplID string) bool {
 	// first pass skips buffering.
-	_, initialized := w.depTracker.templateDeps(tmplID)
+	_, initialized := w.tracker.notifiers[tmplID]
 	if !initialized {
 		return false
 	}
@@ -318,23 +248,25 @@ func (w *Watcher) Buffer(tmplID string) bool {
 	return w.bufferTemplates.Buffer(tmplID)
 }
 
-// Add the given dependency to the list of monitored dependencies and start the
-// associated view. If the dependency already exists, no action is taken.
-//
-// If the Dependency already existed, it this function will return false. If the
-// view was successfully created, it will return true.
-func (w *Watcher) Add(d dep.Dependency) bool {
-	w.depViewMapMx.Lock()
-	defer w.depViewMapMx.Unlock()
+// Register is used to add dependencies to be monitored by the watcher. It sets
+// everything up but stops short of running the polling, waiting for an
+// explicit start.
+// If the dependency is already registered, no action is taken.
+func (w *Watcher) Register(n Notifier, d dep.Dependency) {
+	w.register(n, d)
+}
 
-	//log.Printf("[DEBUG] (watcher) adding %s", d)
-
-	if _, ok := w.depViewMap[d.String()]; ok {
-		//log.Printf("[TRACE] (watcher) %s already exists, skipping", d)
-		return false
+// register is private form of Register that returns the new view.
+// Returned view is useful internally and for testing.
+// Private as we don't want `view` public at this point.
+func (w *Watcher) register(n Notifier, d dep.Dependency) *view {
+	if v, ok := w.tracker.lookup(d.String()); ok {
+		w.tracker.usedID(v.ID())
+		return v
 	}
-
 	// Choose the correct retry function based off of the dependency's type.
+	// NOTE: I would like to abstract this part out to not have type specific
+	//       things embedded in general code.
 	var retryFunc RetryFunc
 	switch d.(type) {
 	case idep.ConsulType:
@@ -350,18 +282,46 @@ func (w *Watcher) Add(d dep.Dependency) bool {
 		BlockWaitTime: w.blockWaitTime,
 		RetryFunc:     retryFunc,
 	})
-
-	//log.Printf("[TRACE] (watcher) %s starting", d)
-
-	w.depViewMap[d.String()] = v
-	go v.poll(w.dataCh, w.errCh)
-
-	return true
+	w.tracker.add(v, n)
+	w.tracker.usedID(v.ID())
+	return v
 }
 
-// Wrap embedded cache's Recaller interface
-func (w *Watcher) Recall(id string) (interface{}, bool) {
-	return w.cache.Recall(id)
+// Poll starts any/all polling as needed.
+// It is idepotent.
+// If nothing is passed it checks all views (dependencies).
+func (w *Watcher) Poll(deps ...dep.Dependency) {
+	if len(deps) == 0 {
+		for _, v := range w.tracker.views {
+			deps = append(deps, v.Dependency())
+		}
+	}
+	for _, d := range deps {
+		if v, ok := w.tracker.lookup(d.String()); ok {
+			//log.Printf("[TRACE] (watcher) %s starting", d)
+			go v.poll(w.dataCh, w.errCh)
+		}
+	}
+}
+
+// Recaller returns a Recaller (function) that wraps the Store (cache)
+// to enable tracking dependencies on the Watcher.
+func (w *Watcher) Recaller(tmpl *Template) Recaller {
+	return func(dep dep.Dependency) (interface{}, bool) {
+		w.Register(tmpl, dep)
+		data, ok := w.cache.Recall(dep.String())
+		if !ok {
+			w.Poll(dep)
+		}
+		return data, ok
+	}
+}
+
+// Complete checks if all values in use have been fetched.
+// ..also cleans out data no longer used.
+func (w *Watcher) Complete(n Notifier) bool {
+	defer w.tracker.sweep(n)
+	return w.tracker.complete(n)
 }
 
 // SetBufferPeriod sets a buffer period to accumulate dependency changes for
@@ -375,23 +335,10 @@ func (w *Watcher) SetBufferPeriod(min, max time.Duration, tmplIDs ...string) {
 // Stop halts this watcher and any currently polling views immediately. If a
 // view was in the middle of a poll, no data will be returned.
 func (w *Watcher) Stop() {
-	w.depViewMapMx.Lock()
-	defer w.depViewMapMx.Unlock()
-
 	w.bufferTemplates.Stop()
 
 	//log.Printf("[DEBUG] (watcher) stopping all views")
-
-	for _, view := range w.depViewMap {
-		if view == nil {
-			continue
-		}
-		//log.Printf("[TRACE] (watcher) stopping %s", view.Dependency())
-		view.stop()
-	}
-
-	// Reset the map to have no views
-	w.depViewMap = make(map[string]*view)
+	w.tracker.stopViews()
 
 	w.stopCh.drain() // So calling Stop twice doesn't block
 	w.stopCh <- struct{}{}
@@ -409,9 +356,7 @@ func (w *Watcher) Stop() {
 
 // Size returns the number of views this watcher is watching.
 func (w *Watcher) Size() int {
-	w.depViewMapMx.Lock()
-	defer w.depViewMapMx.Unlock()
-	return len(w.depViewMap)
+	return w.tracker.viewCount()
 }
 
 // Remove-s the given dependency from the list and stops the
@@ -419,91 +364,248 @@ func (w *Watcher) Size() int {
 // function will return false. If the view does exist, this function will return
 // true upon successful deletion.
 func (w *Watcher) remove(id string) bool {
-	w.depViewMapMx.Lock()
-	defer w.depViewMapMx.Unlock()
-
 	//log.Printf("[DEBUG] (watcher) removing %s", id)
 
 	defer w.cache.Delete(id)
-
-	if view, ok := w.depViewMap[id]; ok {
-		//log.Printf("[TRACE] (watcher) actually removing %s", id)
-		view.stop()
-		delete(w.depViewMap, id)
-		return true
-	}
-
-	//log.Printf("[TRACE] (watcher) %s did not exist, skipping", id)
-	return false
+	return w.tracker.remove(id)
 }
 
 // Watching determines if the given dependency (id) is being watched.
 func (w *Watcher) Watching(id string) bool {
-	w.depViewMapMx.Lock()
-	defer w.depViewMapMx.Unlock()
-
-	_, ok := w.depViewMap[id]
+	_, ok := w.tracker.lookup(id)
 	return ok
 }
 
-///////////
-// internal structure used to track template <-> dependencies relationships
-type depmap map[string]map[string]struct{}
-
-func (dm depmap) add(k, k1 string) {
-	if _, ok := dm[k]; !ok {
-		dm[k] = make(map[string]struct{})
+// view is a convenience function for accessing stored views by id
+// note that dependency IDs and their corresponding view IDs are identical
+func (w *Watcher) view(id string) *view {
+	if v, ok := w.tracker.lookup(id); ok {
+		return v
 	}
-	dm[k][k1] = struct{}{}
+	return nil
 }
 
-type tracker struct {
-	sync.RWMutex
-	deps depmap
-	tpls depmap
-}
+///////////////////////////////////////////////////////////////////////////
+// internal structure used to track template <-> dependencies relationships
 
 func newTracker() *tracker {
 	return &tracker{
-		deps: make(depmap),
-		tpls: make(depmap),
+		tracked:   make([]trackedPair, 0, 8),
+		views:     make(map[string]*view),
+		notifiers: make(map[string]Notifier),
 	}
 }
 
-func (t *tracker) update(tmplID string, deps ...dep.Dependency) {
-	t.clear(tmplID)
+// 1 view/notifier pair. Think many-2-many RDBMS table with annotations.
+type trackedPair struct {
+	// viewed: id of view watched, notified: id of external thing
+	// notified, client, consumer
+	view, notify string
+	// inUse flag gets off pre-render and back on at use
+	inUse bool
+}
+
+//	// removed flags that this pairing is no longer in use
+//	// fields get flagged for deletion, then removed on idle sweep
+//	removed bool
+
+func (tp trackedPair) used() trackedPair {
+	tp.inUse = true
+	return tp
+}
+
+func (tp trackedPair) refresh() trackedPair {
+	tp.inUse = false
+	return tp
+}
+
+type Notifier interface {
+	Notify(dep.Dependency)
+	ID() string
+}
+
+// If performance of looping through tracked gets to be to much build 2 indexes
+// of views/notifiers to their trackedPair entries and use that to accel lookups.
+// It will require updating though, and complicates things. So wait.
+
+type tracker struct {
+	sync.Mutex
+	// think in terms of a many-2-many DB relationship
+	tracked []trackedPair
+	// viewID -> view
+	views map[string]*view
+	// stringID -> Notifier (stringID is usually template-id)
+	notifiers map[string]Notifier
+}
+
+// viewCount returns the number of views watched
+func (t *tracker) viewCount() int {
 	t.Lock()
 	defer t.Unlock()
-	for _, d := range deps {
-		t.deps.add(d.String(), tmplID)
-		t.tpls.add(tmplID, d.String())
-	}
+	return len(t.views)
 }
 
-func (t *tracker) clear(tmplID string) {
-	t.Lock()
-	defer t.Unlock()
-	for d := range t.tpls[tmplID] {
-		delete(t.deps[d], tmplID)
-		delete(t.tpls[tmplID], d)
-	}
-}
-
-func (t *tracker) findUnused(depIDs []string) map[string]struct{} {
-	t.RLock()
-	defer t.RUnlock()
-	result := make(map[string]struct{})
-	for _, depID := range depIDs {
-		if len(t.deps[depID]) == 0 {
-			result[depID] = struct{}{}
+// notUsed clears the inUse flag, for testing
+func (t *tracker) notUsed(notifierID, viewID string) bool {
+	for i, tp := range t.tracked {
+		if tp.view == viewID && tp.notify == notifierID {
+			t.tracked[i] = tp.refresh()
+			return true
 		}
 	}
-	return result
+	return false
 }
 
-func (t *tracker) templateDeps(tmplID string) (map[string]struct{}, bool) {
-	t.RLock()
-	defer t.RUnlock()
-	deps, ok := t.tpls[tmplID]
-	return deps, ok
+// lookup returns the view and true, or view's zero value and false
+func (t *tracker) lookup(viewID string) (*view, bool) {
+	t.Lock()
+	defer t.Unlock()
+	v, ok := t.views[viewID]
+	return v, ok
+}
+
+// Adds new entry
+func (t *tracker) add(v *view, n Notifier) {
+	t.Lock()
+	defer t.Unlock()
+	t.views[v.ID()] = v
+	t.notifiers[n.ID()] = n
+	t.tracked = append(t.tracked,
+		trackedPair{view: v.ID(), notify: n.ID(), inUse: true})
+}
+
+// Marks all trackedPairs w/ a view as having been used
+func (t *tracker) usedID(viewID string) {
+	t.Lock()
+	defer t.Unlock()
+	for idx, tp := range t.tracked {
+		if tp.view == viewID {
+			t.tracked[idx] = tp.used()
+		}
+	}
+}
+
+// Remove view and all trackedPairs that contained it
+func (t *tracker) remove(viewID string) bool {
+	t.Lock()
+	defer t.Unlock()
+	delete(t.views, viewID)
+	tmp := t.tracked[:0]
+	var removed bool
+	for _, tp := range t.tracked {
+		if tp.view != viewID {
+			tmp = append(tmp, tp)
+		} else {
+			removed = true
+		}
+	}
+	t.tracked = tmp
+	return removed
+}
+
+// stop all view from polling/watching
+func (t *tracker) stopViews() {
+	t.Lock()
+	defer t.Unlock()
+	for id, view := range t.views {
+		delete(t.views, id)
+		if view == nil {
+			continue
+		}
+		view.stop()
+	}
+}
+
+// Return all views for a notifier
+func (t *tracker) notifiersFor(v *view) []Notifier {
+	viewID := v.ID()
+	results := make([]Notifier, 0, 8)
+	for _, tp := range t.tracked {
+		if tp.view == viewID {
+			results = append(results, t.notifiers[tp.notify])
+		}
+	}
+	return results
+}
+
+// initialized returns true if the view has had its data fetched at least once
+func (t *tracker) initialized(viewID string) bool {
+	return t.views[viewID].receivedData
+}
+
+// complete returns true if every dependency used has been initialized
+// ie. it returns true if all values have been fetched
+func (t *tracker) complete(n Notifier) bool {
+	for _, tp := range t.tracked {
+		thisNotifier := tp.notify == n.ID()
+		//		fmt.Println(thisNotifier, tp.inUse, !t.initialized(tp.view))
+		//		fmt.Printf("%#v\n", tp)
+		if thisNotifier && tp.inUse && !t.initialized(tp.view) {
+			return false
+		}
+	}
+	return true
+}
+
+// Clean out un-used trackedPair entries, views and notifiers
+// Checks based on passed in notifier, ignores others.
+func (t *tracker) sweep(n Notifier) {
+	t.Lock()
+	defer t.Unlock()
+	used := make(map[string]struct{})
+	// remove tracked that were used
+	tmp := t.tracked[:0]
+	for _, tp := range t.tracked {
+		otherNotifier := tp.notify != n.ID()
+		if tp.inUse || otherNotifier {
+			tmp = append(tmp, tp.refresh())
+			used[tp.view] = struct{}{}
+			used[tp.notify] = struct{}{}
+		}
+	}
+	t.tracked = tmp
+	// remove views/notifiers no longer referenced
+	for v := range t.views {
+		if _, ok := used[v]; !ok {
+			delete(t.views, v)
+		}
+	}
+	for n := range t.notifiers {
+		if _, ok := used[n]; !ok {
+			delete(t.views, n)
+		}
+	}
+}
+
+// dummy Notifier for use by vault token above and in tests
+type dummyNotifier struct {
+	name string
+	deps chan dep.Dependency
+}
+
+func fakeNotifier(name string) *dummyNotifier {
+	return &dummyNotifier{name: name, deps: make(chan dep.Dependency, 100)}
+}
+func (n *dummyNotifier) Notify(d dep.Dependency) {
+	n.deps <- d
+}
+func (n *dummyNotifier) ID() string {
+	return string(n.name)
+}
+func (n *dummyNotifier) count() int {
+	return len(n.deps)
+}
+func (n *dummyNotifier) ids() []string {
+	results := make([]string, len(n.deps))
+	for i := 0; i < len(n.deps); i++ {
+		d := <-n.deps
+		results[i] = d.String()
+		n.deps <- d
+	}
+	return results
+}
+func (n *dummyNotifier) drain() {
+	for range n.deps {
+		// just draining
+	}
 }

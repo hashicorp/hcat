@@ -6,7 +6,8 @@ import (
 	"testing"
 	"text/template"
 
-	dep "github.com/hashicorp/hcat/internal/dependency"
+	"github.com/hashicorp/hcat/dep"
+	idep "github.com/hashicorp/hcat/internal/dependency"
 )
 
 func TestResolverRun(t *testing.T) {
@@ -29,13 +30,17 @@ func TestResolverRun(t *testing.T) {
 	t.Run("skip-dueto-no-changes", func(t *testing.T) {
 		rv := NewResolver()
 		tt := fooTemplate(t)
+		tt.isDirty() // flush dirty mark set on new templates
 		w := blindWatcher(t)
+		d, _ := idep.NewKVGetQuery("foo")
 		defer w.Stop()
 
 		// seed the dependency tracking
 		// otherwise it will trigger first run
-		w.Register(tt.ID(), &dep.FakeDep{Name: "foo"})
-		// basically this is what we're testing
+		w.Register(tt, d)
+		// set receivedData to true to make it think it has it already
+		v, _ := w.tracker.lookup(d.String())
+		v.receivedData = true
 
 		r, err := rv.Run(tt, w)
 		if err != nil {
@@ -57,10 +62,17 @@ func TestResolverRun(t *testing.T) {
 		tt := fooTemplate(t)
 		w := blindWatcher(t)
 		defer w.Stop()
+		d, _ := idep.NewKVGetQuery("foo")
 
-		d, _ := dep.NewKVGetQuery("foo")
 		// seed the cache and the dependency tracking
-		w.cache.Save(d.String(), "bar")
+		// maybe abstract out into separate function
+		regSave := func(d dep.Dependency, value interface{}) {
+			v := w.register(tt, d)      // register with watcher
+			v.store(value)              // view received and recorded data
+			w.cache.Save(v.ID(), value) // saves data to cache
+		}
+
+		regSave(d, "bar")
 		r, err := rv.Run(tt, w)
 
 		if err != nil {
@@ -184,35 +196,31 @@ func echoTemplate(t *testing.T, data string) *Template {
 		})
 }
 
-func echoFunc(r Recaller, used, missing *DepSet) interface{} {
+func echoFunc(recall Recaller) interface{} {
 	return func(s string) (interface{}, error) {
-		d := &dep.FakeDep{Name: s}
-		used.Add(d)
-		if value, ok := r.Recall(d.String()); ok {
+		d := &idep.FakeDep{Name: s}
+		if value, ok := recall(d); ok {
 			if value == nil {
 				return "", nil
 			}
 			return value.(string), nil
 		}
-		missing.Add(d)
 		return "", nil
 	}
 }
 
-func wordListFunc(r Recaller, used, missing *DepSet) interface{} {
+func wordListFunc(recall Recaller) interface{} {
 	return func(s ...string) interface{} {
-		d := &dep.FakeListDep{
+		d := &idep.FakeListDep{
 			Name: "words",
 			Data: s,
 		}
-		used.Add(d)
-		if value, ok := r.Recall(d.String()); ok {
+		if value, ok := recall(d); ok {
 			if value == nil {
 				return []string{}
 			}
 			return value.([]string)
 		}
-		missing.Add(d)
 		return []string{}
 	}
 }

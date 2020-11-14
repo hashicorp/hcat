@@ -6,12 +6,14 @@ import (
 	"encoding/hex"
 	"text/template"
 
+	"github.com/hashicorp/hcat/dep"
 	"github.com/pkg/errors"
 )
 
-// ErrTemplateMissingContents is the error returned when a template does
-// not specify "content" argument, which is not valid.
-var errTemplateMissingContents = errors.New("template: missing 'contents'")
+// ErrMissingValues is the error returned when a template doesn't completely
+// render due to missing values (values that haven't been fetched yet).
+var ErrMissingValues = errors.New("Missing template values")
+var ErrNoNewValues = errors.New("No new values for template")
 
 // Template is the internal representation of an individual template to process.
 // The template retains the relationship between it's contents and is
@@ -20,6 +22,10 @@ type Template struct {
 	// contents is the string contents for the template. It is either given
 	// during template creation or read from disk when initialized.
 	contents string
+
+	// dirty indicates that the template's data has been updated and it
+	// needs to be re-rendered
+	dirty drainableChan
 
 	// leftDelim and rightDelim are the template delimiters.
 	leftDelim  string
@@ -53,9 +59,7 @@ type Renderer interface {
 
 // Recaller is the read interface for the cache
 // Implemented by Store and Watcher (which wraps Store)
-type Recaller interface {
-	Recall(key string) (value interface{}, found bool)
-}
+type Recaller func(dep.Dependency) (value interface{}, found bool)
 
 // TemplateInput is used as input when creating the template.
 type TemplateInput struct {
@@ -104,6 +108,8 @@ func NewTemplate(i TemplateInput) *Template {
 	t.sandboxPath = i.SandboxPath
 	t.funcMapMerge = i.FuncMapMerge
 	t.renderer = i.Renderer
+	t.dirty = make(drainableChan, 1)
+	t.Notify(nil) // prime template as needing to be run
 
 	// Compute the MD5, encode as hex
 	hash := md5.Sum([]byte(t.contents))
@@ -117,6 +123,24 @@ func (t *Template) ID() string {
 	return t.hexMD5
 }
 
+// Notify template that a dependency it relies on has been updated.
+func (t *Template) Notify(dep.Dependency) {
+	select {
+	case t.dirty <- struct{}{}:
+	default:
+	}
+}
+
+// Check and clear dirty flag
+func (t *Template) isDirty() bool {
+	select {
+	case <-t.dirty:
+		return true
+	default:
+		return false
+	}
+}
+
 // Render calls the stored Renderer with the passed content
 func (t *Template) Render(content []byte) (RenderResult, error) {
 	return t.renderer.Render(content)
@@ -124,30 +148,21 @@ func (t *Template) Render(content []byte) (RenderResult, error) {
 
 // ExecuteResult is the result of the template execution.
 type ExecuteResult struct {
-	// Used is the set of dependencies that were used.
-	Used DepSet
-
-	// Missing is the set of dependencies that were missing.
-	Missing DepSet
-
 	// Output the (possibly partially) filled in template
 	Output []byte
 }
 
 // Execute evaluates this template in the provided context.
-func (t *Template) Execute(r Recaller) (*ExecuteResult, error) {
-	var used, missing = NewDepSet(), NewDepSet()
+func (t *Template) Execute(w Watcherer) (*ExecuteResult, error) {
+	if !t.isDirty() {
+		return nil, ErrNoNewValues
+	}
 
 	tmpl := template.New(t.ID())
 	tmpl.Delims(t.leftDelim, t.rightDelim)
-
 	tmpl.Funcs(funcMap(&funcMapInput{
-		t:            tmpl,
-		store:        r,
-		used:         used,
-		missing:      missing,
+		recaller:     w.Recaller(t),
 		funcMapMerge: t.funcMapMerge,
-		sandboxPath:  t.sandboxPath,
 	}))
 
 	if t.errMissingKey {
@@ -167,51 +182,50 @@ func (t *Template) Execute(r Recaller) (*ExecuteResult, error) {
 		return nil, errors.Wrap(err, "execute")
 	}
 
+	// Checks if all values in use have been fetched.
+	// ..also cleans out data no longer used by this template.
+	if !w.Complete(t) {
+		return nil, ErrMissingValues
+	}
+
 	return &ExecuteResult{
-		Used:    *used,
-		Missing: *missing,
-		Output:  b.Bytes(),
+		Output: b.Bytes(),
 	}, nil
 }
 
 // funcMapInput is input to the funcMap, which builds the template functions.
 type funcMapInput struct {
-	t            *template.Template
-	store        Recaller
-	env          []string
+	recaller     Recaller
 	funcMapMerge template.FuncMap
-	sandboxPath  string
-	used         *DepSet
-	missing      *DepSet
 }
 
 // funcMap is the map of template functions to their respective functions.
 func funcMap(i *funcMapInput) template.FuncMap {
 
 	r := template.FuncMap{
-		"datacenters":  datacentersFunc(i.store, i.used, i.missing),
-		"key":          keyFunc(i.store, i.used, i.missing),
-		"keyExists":    keyExistsFunc(i.store, i.used, i.missing),
-		"keyOrDefault": keyWithDefaultFunc(i.store, i.used, i.missing),
-		"ls":           lsFunc(i.store, i.used, i.missing, true),
-		"safeLs":       safeLsFunc(i.store, i.used, i.missing),
-		"node":         nodeFunc(i.store, i.used, i.missing),
-		"nodes":        nodesFunc(i.store, i.used, i.missing),
-		"secret":       secretFunc(i.store, i.used, i.missing),
-		"secrets":      secretsFunc(i.store, i.used, i.missing),
-		"service":      serviceFunc(i.store, i.used, i.missing),
-		"connect":      connectFunc(i.store, i.used, i.missing),
-		"services":     servicesFunc(i.store, i.used, i.missing),
-		"tree":         treeFunc(i.store, i.used, i.missing, true),
-		"safeTree":     safeTreeFunc(i.store, i.used, i.missing),
-		"caRoots":      connectCARootsFunc(i.store, i.used, i.missing),
-		"caLeaf":       connectLeafFunc(i.store, i.used, i.missing),
+		"datacenters":  datacentersFunc(i.recaller),
+		"key":          keyFunc(i.recaller),
+		"keyExists":    keyExistsFunc(i.recaller),
+		"keyOrDefault": keyWithDefaultFunc(i.recaller),
+		"ls":           lsFunc(i.recaller, true),
+		"safeLs":       safeLsFunc(i.recaller),
+		"node":         nodeFunc(i.recaller),
+		"nodes":        nodesFunc(i.recaller),
+		"secret":       secretFunc(i.recaller),
+		"secrets":      secretsFunc(i.recaller),
+		"service":      serviceFunc(i.recaller),
+		"connect":      connectFunc(i.recaller),
+		"services":     servicesFunc(i.recaller),
+		"tree":         treeFunc(i.recaller, true),
+		"safeTree":     safeTreeFunc(i.recaller),
+		"caRoots":      connectCARootsFunc(i.recaller),
+		"caLeaf":       connectLeafFunc(i.recaller),
 	}
 
 	for k, v := range i.funcMapMerge {
 		switch f := v.(type) {
-		case func(Recaller, *DepSet, *DepSet) interface{}:
-			r[k] = f(i.store, i.used, i.missing)
+		case func(Recaller) interface{}:
+			r[k] = f(i.recaller)
 		default:
 			r[k] = v
 		}
