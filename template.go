@@ -12,8 +12,8 @@ import (
 
 // ErrMissingValues is the error returned when a template doesn't completely
 // render due to missing values (values that haven't been fetched yet).
-var ErrMissingValues = errors.New("Missing template values")
-var ErrNoNewValues = errors.New("No new values for template")
+var ErrMissingValues = errors.New("missing template values")
+var ErrNoNewValues = errors.New("no new values for template")
 
 // Template is the internal representation of an individual template to process.
 // The template retains the relationship between it's contents and is
