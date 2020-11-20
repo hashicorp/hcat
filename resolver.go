@@ -35,7 +35,7 @@ type Watcherer interface {
 // Templater the interface the Template provides.
 // The interface is used to make the used/required API explicit.
 type Templater interface {
-	Execute(Watcherer) (*ExecuteResult, error)
+	Execute(Watcherer) ([]byte, error)
 	ID() string
 }
 
@@ -53,7 +53,7 @@ func (r *Resolver) Run(tmpl Templater, w Watcherer) (ResolveEvent, error) {
 	// Attempt to render the template, returning any missing dependencies and
 	// the rendered contents. If there are any missing dependencies, the
 	// contents cannot be rendered or trusted!
-	result, err := tmpl.Execute(w)
+	output, err := tmpl.Execute(w)
 	switch err {
 	case nil:
 	case ErrMissingValues:
@@ -64,5 +64,5 @@ func (r *Resolver) Run(tmpl Templater, w Watcherer) (ResolveEvent, error) {
 		return ResolveEvent{}, err
 	}
 
-	return ResolveEvent{Complete: true, Contents: result.Output}, nil
+	return ResolveEvent{Complete: true, Contents: output}, nil
 }

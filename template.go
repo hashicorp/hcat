@@ -146,14 +146,8 @@ func (t *Template) Render(content []byte) (RenderResult, error) {
 	return t.renderer.Render(content)
 }
 
-// ExecuteResult is the result of the template execution.
-type ExecuteResult struct {
-	// Output the (possibly partially) filled in template
-	Output []byte
-}
-
 // Execute evaluates this template in the provided context.
-func (t *Template) Execute(w Watcherer) (*ExecuteResult, error) {
+func (t *Template) Execute(w Watcherer) ([]byte, error) {
 	if !t.isDirty() {
 		return nil, ErrNoNewValues
 	}
@@ -188,9 +182,7 @@ func (t *Template) Execute(w Watcherer) (*ExecuteResult, error) {
 		return nil, ErrMissingValues
 	}
 
-	return &ExecuteResult{
-		Output: b.Bytes(),
-	}, nil
+	return b.Bytes(), nil
 }
 
 // funcMapInput is input to the funcMap, which builds the template functions.
