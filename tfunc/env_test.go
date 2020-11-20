@@ -21,7 +21,7 @@ func TestEnvExecute(t *testing.T) {
 	cases := []struct {
 		name string
 		ti   hcat.TemplateInput
-		i    hcat.Recaller
+		i    hcat.Watcherer
 		e    string
 		err  bool
 	}{
@@ -31,7 +31,7 @@ func TestEnvExecute(t *testing.T) {
 				// CT_TEST set above
 				Contents: `{{ env "CT_TEST" }}`,
 			},
-			hcat.NewStore(),
+			fakeWatcher{hcat.NewStore()},
 			"1",
 			false,
 		},

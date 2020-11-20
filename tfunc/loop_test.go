@@ -14,7 +14,7 @@ func TestLoopExecute(t *testing.T) {
 	cases := []struct {
 		name string
 		ti   hcat.TemplateInput
-		i    hcat.Recaller
+		i    hcat.Watcherer
 		e    string
 		err  bool
 	}{
@@ -23,7 +23,7 @@ func TestLoopExecute(t *testing.T) {
 			hcat.TemplateInput{
 				Contents: `{{ range loop 3 }}1{{ end }}`,
 			},
-			hcat.NewStore(),
+			fakeWatcher{hcat.NewStore()},
 			"111",
 			false,
 		},
@@ -32,7 +32,7 @@ func TestLoopExecute(t *testing.T) {
 			hcat.TemplateInput{
 				Contents: `{{ range $i := loop 3 }}{{ $i }}{{ end }}`,
 			},
-			hcat.NewStore(),
+			fakeWatcher{hcat.NewStore()},
 			"012",
 			false,
 		},
@@ -41,7 +41,7 @@ func TestLoopExecute(t *testing.T) {
 			hcat.TemplateInput{
 				Contents: `{{ range loop 1 3 }}1{{ end }}`,
 			},
-			hcat.NewStore(),
+			fakeWatcher{hcat.NewStore()},
 			"11",
 			false,
 		},
@@ -50,7 +50,7 @@ func TestLoopExecute(t *testing.T) {
 			hcat.TemplateInput{
 				Contents: `{{ range loop 1 "3" }}1{{ end }}`,
 			},
-			hcat.NewStore(),
+			fakeWatcher{hcat.NewStore()},
 			"11",
 			false,
 		},
@@ -59,7 +59,7 @@ func TestLoopExecute(t *testing.T) {
 			hcat.TemplateInput{
 				Contents: `{{ $i := print "3" | parseInt }}{{ range loop 1 $i }}1{{ end }}`,
 			},
-			hcat.NewStore(),
+			fakeWatcher{hcat.NewStore()},
 			"11",
 			false,
 		},
@@ -70,7 +70,7 @@ func TestLoopExecute(t *testing.T) {
 				Contents: `{{$n := 3 }}` +
 					`{{ range $i := loop $n }}{{ $i }}{{ end }}`,
 			},
-			hcat.NewStore(),
+			fakeWatcher{hcat.NewStore()},
 			"012",
 			false,
 		},

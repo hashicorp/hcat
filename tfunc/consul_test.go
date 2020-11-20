@@ -133,7 +133,7 @@ func TestConsulExecute(t *testing.T) {
 	cases := []struct {
 		name string
 		ti   hcat.TemplateInput
-		i    hcat.Recaller
+		i    hcat.Watcherer
 		e    string
 		err  bool
 	}{
@@ -143,7 +143,7 @@ func TestConsulExecute(t *testing.T) {
 			hcat.TemplateInput{
 				Contents: `{{ range $key, $pairs := tree "list" | byKey }}{{ $key }}:{{ range $pairs }}{{ .Key }}={{ .Value }}{{ end }}{{ end }}`,
 			},
-			func() *hcat.Store {
+			func() hcat.Watcherer {
 				st := hcat.NewStore()
 				id := testKVListQueryID("list")
 				st.Save(id, []*dep.KeyPair{
@@ -151,7 +151,7 @@ func TestConsulExecute(t *testing.T) {
 					{Key: "foo/bar", Value: "a"},
 					{Key: "zip/zap", Value: "b"},
 				})
-				return st
+				return fakeWatcher{st}
 			}(),
 			"foo:bar=azip:zap=b",
 			false,
@@ -161,7 +161,7 @@ func TestConsulExecute(t *testing.T) {
 			hcat.TemplateInput{
 				Contents: `{{ range $tag, $services := service "webapp" | byTag }}{{ $tag }}:{{ range $services }}{{ .Address }}{{ end }}{{ end }}`,
 			},
-			func() *hcat.Store {
+			func() hcat.Watcherer {
 				st := hcat.NewStore()
 				id := testHealthServiceQueryID("webapp")
 				st.Save(id, []*dep.HealthService{
@@ -174,7 +174,7 @@ func TestConsulExecute(t *testing.T) {
 						Tags:    []string{"staging"},
 					},
 				})
-				return st
+				return fakeWatcher{st}
 			}(),
 			"prod:1.2.3.4staging:1.2.3.45.6.7.8",
 			false,
@@ -193,5 +193,17 @@ func TestConsulExecute(t *testing.T) {
 				t.Errorf("\nexp: %#v\nact: %#v", tc.e, string(a.Output))
 			}
 		})
+	}
+}
+
+type fakeWatcher struct {
+	*hcat.Store
+}
+
+func (fakeWatcher) Buffer(string) bool            { return false }
+func (f fakeWatcher) Complete(hcat.Notifier) bool { return true }
+func (f fakeWatcher) Recaller(t *hcat.Template) hcat.Recaller {
+	return func(d dep.Dependency) (value interface{}, found bool) {
+		return f.Store.Recall(d.String())
 	}
 }

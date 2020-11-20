@@ -15,7 +15,7 @@ func TestContainsExecute(t *testing.T) {
 	cases := []struct {
 		name string
 		ti   hcat.TemplateInput
-		i    hcat.Recaller
+		i    hcat.Watcherer
 		e    string
 		err  bool
 	}{
@@ -24,7 +24,7 @@ func TestContainsExecute(t *testing.T) {
 			hcat.TemplateInput{
 				Contents: `{{ range service "webapp" }}{{ if .Tags | contains "prod" }}{{ .Address }}{{ end }}{{ end }}`,
 			},
-			func() *hcat.Store {
+			func() hcat.Watcherer {
 				st := hcat.NewStore()
 				id := testHealthServiceQueryID("webapp")
 				st.Save(id, []*dep.HealthService{
@@ -37,7 +37,7 @@ func TestContainsExecute(t *testing.T) {
 						Tags:    []string{"staging"},
 					},
 				})
-				return st
+				return fakeWatcher{st}
 			}(),
 			"1.2.3.4",
 			false,
@@ -47,7 +47,7 @@ func TestContainsExecute(t *testing.T) {
 			hcat.TemplateInput{
 				Contents: `{{ $requiredTags := parseJSON "[\"prod\",\"us-realm\"]" }}{{ range service "webapp" }}{{ if .Tags | containsAll $requiredTags }}{{ .Address }}{{ end }}{{ end }}`,
 			},
-			func() *hcat.Store {
+			func() hcat.Watcherer {
 				st := hcat.NewStore()
 				id := testHealthServiceQueryID("webapp")
 				st.Save(id, []*dep.HealthService{
@@ -60,7 +60,7 @@ func TestContainsExecute(t *testing.T) {
 						Tags:    []string{"prod", "ca-realm"},
 					},
 				})
-				return st
+				return fakeWatcher{st}
 			}(),
 			"1.2.3.4",
 			false,
@@ -70,7 +70,7 @@ func TestContainsExecute(t *testing.T) {
 			hcat.TemplateInput{
 				Contents: `{{ $requiredTags := parseJSON "[]" }}{{ range service "webapp" }}{{ if .Tags | containsAll $requiredTags }}{{ .Address }}{{ end }}{{ end }}`,
 			},
-			func() *hcat.Store {
+			func() hcat.Watcherer {
 				st := hcat.NewStore()
 				id := testHealthServiceQueryID("webapp")
 				st.Save(id, []*dep.HealthService{
@@ -83,7 +83,7 @@ func TestContainsExecute(t *testing.T) {
 						Tags:    []string{"prod", "ca-realm"},
 					},
 				})
-				return st
+				return fakeWatcher{st}
 			}(),
 			"1.2.3.45.6.7.8",
 			false,
@@ -93,7 +93,7 @@ func TestContainsExecute(t *testing.T) {
 			hcat.TemplateInput{
 				Contents: `{{ $acceptableTags := parseJSON "[\"v2\",\"v3\"]" }}{{ range service "webapp" }}{{ if .Tags | containsAny $acceptableTags }}{{ .Address }}{{ end }}{{ end }}`,
 			},
-			func() *hcat.Store {
+			func() hcat.Watcherer {
 				st := hcat.NewStore()
 				id := testHealthServiceQueryID("webapp")
 				st.Save(id, []*dep.HealthService{
@@ -106,7 +106,7 @@ func TestContainsExecute(t *testing.T) {
 						Tags:    []string{"prod", "v2"},
 					},
 				})
-				return st
+				return fakeWatcher{st}
 			}(),
 			"5.6.7.8",
 			false,
@@ -116,7 +116,7 @@ func TestContainsExecute(t *testing.T) {
 			hcat.TemplateInput{
 				Contents: `{{ $acceptableTags := parseJSON "[]" }}{{ range service "webapp" }}{{ if .Tags | containsAny $acceptableTags }}{{ .Address }}{{ end }}{{ end }}`,
 			},
-			func() *hcat.Store {
+			func() hcat.Watcherer {
 				st := hcat.NewStore()
 				id := testHealthServiceQueryID("webapp")
 				st.Save(id, []*dep.HealthService{
@@ -129,7 +129,7 @@ func TestContainsExecute(t *testing.T) {
 						Tags:    []string{"prod", "v2"},
 					},
 				})
-				return st
+				return fakeWatcher{st}
 			}(),
 			"",
 			false,
@@ -139,7 +139,7 @@ func TestContainsExecute(t *testing.T) {
 			hcat.TemplateInput{
 				Contents: `{{ $forbiddenTags := parseJSON "[\"devel\",\"staging\"]" }}{{ range service "webapp" }}{{ if .Tags | containsNone $forbiddenTags }}{{ .Address }}{{ end }}{{ end }}`,
 			},
-			func() *hcat.Store {
+			func() hcat.Watcherer {
 				st := hcat.NewStore()
 				id := testHealthServiceQueryID("webapp")
 				st.Save(id, []*dep.HealthService{
@@ -152,7 +152,7 @@ func TestContainsExecute(t *testing.T) {
 						Tags:    []string{"devel", "v2"},
 					},
 				})
-				return st
+				return fakeWatcher{st}
 			}(),
 			"1.2.3.4",
 			false,
@@ -162,7 +162,7 @@ func TestContainsExecute(t *testing.T) {
 			hcat.TemplateInput{
 				Contents: `{{ $forbiddenTags := parseJSON "[]" }}{{ range service "webapp" }}{{ if .Tags | containsNone $forbiddenTags }}{{ .Address }}{{ end }}{{ end }}`,
 			},
-			func() *hcat.Store {
+			func() hcat.Watcherer {
 				st := hcat.NewStore()
 				id := testHealthServiceQueryID("webapp")
 				st.Save(id, []*dep.HealthService{
@@ -175,7 +175,7 @@ func TestContainsExecute(t *testing.T) {
 						Tags:    []string{"devel", "v2"},
 					},
 				})
-				return st
+				return fakeWatcher{st}
 			}(),
 			"1.2.3.45.6.7.8",
 			false,
@@ -185,7 +185,7 @@ func TestContainsExecute(t *testing.T) {
 			hcat.TemplateInput{
 				Contents: `{{ $excludingTags := parseJSON "[\"es-v1\",\"es-v2\"]" }}{{ range service "webapp" }}{{ if .Tags | containsNotAll $excludingTags }}{{ .Address }}{{ end }}{{ end }}`,
 			},
-			func() *hcat.Store {
+			func() hcat.Watcherer {
 				st := hcat.NewStore()
 				id := testHealthServiceQueryID("webapp")
 				st.Save(id, []*dep.HealthService{
@@ -198,7 +198,7 @@ func TestContainsExecute(t *testing.T) {
 						Tags:    []string{"prod", "hybrid", "es-v1", "es-v2"},
 					},
 				})
-				return st
+				return fakeWatcher{st}
 			}(),
 			"1.2.3.4",
 			false,
@@ -208,7 +208,7 @@ func TestContainsExecute(t *testing.T) {
 			hcat.TemplateInput{
 				Contents: `{{ $excludingTags := parseJSON "[]" }}{{ range service "webapp" }}{{ if .Tags | containsNotAll $excludingTags }}{{ .Address }}{{ end }}{{ end }}`,
 			},
-			func() *hcat.Store {
+			func() hcat.Watcherer {
 				st := hcat.NewStore()
 				id := testHealthServiceQueryID("webapp")
 				st.Save(id, []*dep.HealthService{
@@ -221,7 +221,7 @@ func TestContainsExecute(t *testing.T) {
 						Tags:    []string{"prod", "hybrid", "es-v1", "es-v2"},
 					},
 				})
-				return st
+				return fakeWatcher{st}
 			}(),
 			"",
 			false,

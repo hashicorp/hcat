@@ -14,7 +14,7 @@ func TestMathExecute(t *testing.T) {
 	cases := []struct {
 		name string
 		ti   hcat.TemplateInput
-		i    hcat.Recaller
+		i    hcat.Watcherer
 		e    string
 		err  bool
 	}{
@@ -23,7 +23,7 @@ func TestMathExecute(t *testing.T) {
 			hcat.TemplateInput{
 				Contents: `{{ 2 | add 2 }}`,
 			},
-			hcat.NewStore(),
+			fakeWatcher{hcat.NewStore()},
 			"4",
 			false,
 		},
@@ -32,7 +32,7 @@ func TestMathExecute(t *testing.T) {
 			hcat.TemplateInput{
 				Contents: `{{ 2 | subtract 2 }}`,
 			},
-			hcat.NewStore(),
+			fakeWatcher{hcat.NewStore()},
 			"0",
 			false,
 		},
@@ -41,7 +41,7 @@ func TestMathExecute(t *testing.T) {
 			hcat.TemplateInput{
 				Contents: `{{ 2 | multiply 2 }}`,
 			},
-			hcat.NewStore(),
+			fakeWatcher{hcat.NewStore()},
 			"4",
 			false,
 		},
@@ -50,7 +50,7 @@ func TestMathExecute(t *testing.T) {
 			hcat.TemplateInput{
 				Contents: `{{ 2 | divide 2 }}`,
 			},
-			hcat.NewStore(),
+			fakeWatcher{hcat.NewStore()},
 			"1",
 			false,
 		},
@@ -59,7 +59,7 @@ func TestMathExecute(t *testing.T) {
 			hcat.TemplateInput{
 				Contents: `{{ 3 | modulo 2 }}`,
 			},
-			hcat.NewStore(),
+			fakeWatcher{hcat.NewStore()},
 			"1",
 			false,
 		},
@@ -68,7 +68,7 @@ func TestMathExecute(t *testing.T) {
 			hcat.TemplateInput{
 				Contents: `{{ 3 | minimum 2 }}`,
 			},
-			hcat.NewStore(),
+			fakeWatcher{hcat.NewStore()},
 			"2",
 			false,
 		},
@@ -77,7 +77,7 @@ func TestMathExecute(t *testing.T) {
 			hcat.TemplateInput{
 				Contents: `{{ 3 | maximum 2 }}`,
 			},
-			hcat.NewStore(),
+			fakeWatcher{hcat.NewStore()},
 			"3",
 			false,
 		},
