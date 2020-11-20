@@ -530,7 +530,10 @@ func (t *tracker) notifiersFor(v *view) []Notifier {
 
 // initialized returns true if the view has had its data fetched at least once
 func (t *tracker) initialized(viewID string) bool {
-	return t.views[viewID].receivedData
+	if v, ok := t.views[viewID]; ok {
+		return v.receivedData
+	}
+	return false
 }
 
 // complete returns true if every dependency used has been initialized
