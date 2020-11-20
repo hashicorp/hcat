@@ -168,12 +168,6 @@ func (w *Watcher) WaitCh(ctx context.Context) <-chan error {
 func (w *Watcher) Wait(ctx context.Context) error {
 	w.stopCh.drain() // in case Stop was already called
 
-	//	sweepStop := make(chan struct{})
-	//	defer close(sweepStop) // only run while waiting
-	go func() {
-		//w.tracker.sweep()
-	}()
-
 	// send waiting notification, only used for testing
 	select {
 	case w.waitingCh <- struct{}{}:
@@ -456,7 +450,7 @@ func (t *tracker) notUsed(notifierID, viewID string) bool {
 	return false
 }
 
-// lookup returns the view and true, or view's zero value and false
+// lookup returns the view and true, or nil and false
 func (t *tracker) lookup(viewID string) (*view, bool) {
 	t.Lock()
 	defer t.Unlock()
@@ -541,8 +535,6 @@ func (t *tracker) initialized(viewID string) bool {
 func (t *tracker) complete(n Notifier) bool {
 	for _, tp := range t.tracked {
 		thisNotifier := tp.notify == n.ID()
-		//		fmt.Println(thisNotifier, tp.inUse, !t.initialized(tp.view))
-		//		fmt.Printf("%#v\n", tp)
 		if thisNotifier && tp.inUse && !t.initialized(tp.view) {
 			return false
 		}

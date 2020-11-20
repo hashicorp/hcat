@@ -177,7 +177,7 @@ func (t *Template) Execute(w Watcherer) ([]byte, error) {
 	}
 
 	// Checks if all values in use have been fetched.
-	// ..also cleans out data no longer used by this template.
+	// Also cleans out data no longer used by this template.
 	if !w.Complete(t) {
 		return nil, ErrMissingValues
 	}
