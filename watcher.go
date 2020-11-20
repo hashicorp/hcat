@@ -607,8 +607,3 @@ func (n *dummyNotifier) ids() []string {
 	}
 	return results
 }
-func (n *dummyNotifier) drain() {
-	for range n.deps {
-		// just draining
-	}
-}
