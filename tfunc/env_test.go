@@ -21,7 +21,7 @@ func TestEnvExecute(t *testing.T) {
 	cases := []struct {
 		name string
 		ti   hcat.TemplateInput
-		i    hcat.Recaller
+		i    hcat.Watcherer
 		e    string
 		err  bool
 	}{
@@ -31,7 +31,7 @@ func TestEnvExecute(t *testing.T) {
 				// CT_TEST set above
 				Contents: `{{ env "CT_TEST" }}`,
 			},
-			hcat.NewStore(),
+			fakeWatcher{hcat.NewStore()},
 			"1",
 			false,
 		},
@@ -45,8 +45,8 @@ func TestEnvExecute(t *testing.T) {
 			if (err != nil) != tc.err {
 				t.Fatal(err)
 			}
-			if a != nil && !bytes.Equal([]byte(tc.e), a.Output) {
-				t.Errorf("\nexp: %#v\nact: %#v", tc.e, string(a.Output))
+			if !bytes.Equal([]byte(tc.e), a) {
+				t.Errorf("\nexp: %#v\nact: %#v", tc.e, string(a))
 			}
 		})
 	}

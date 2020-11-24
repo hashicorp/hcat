@@ -68,6 +68,7 @@ func TestNewTemplate(t *testing.T) {
 	for i, tc := range cases {
 		t.Run(fmt.Sprintf("%d_%s", i, tc.name), func(t *testing.T) {
 			tmpl := NewTemplate(tc.i)
+			tc.e.dirty, tmpl.dirty = nil, nil // don't compare well
 			if !reflect.DeepEqual(tc.e, tmpl) {
 				t.Errorf("\nexp: %#v\nact: %#v", tc.e, tmpl)
 			}
@@ -95,7 +96,7 @@ func TestTemplate_Execute(t *testing.T) {
 	cases := []struct {
 		name string
 		ti   TemplateInput
-		i    Recaller
+		i    *Store
 		e    string
 		err  bool
 	}{
@@ -652,13 +653,26 @@ func TestTemplate_Execute(t *testing.T) {
 		t.Run(fmt.Sprintf("%d_%s", i, tc.name), func(t *testing.T) {
 			tpl := NewTemplate(tc.ti)
 
-			a, err := tpl.Execute(tc.i)
+			w := fakeWatcher{tc.i}
+			a, err := tpl.Execute(w)
 			if (err != nil) != tc.err {
 				t.Fatal(err)
 			}
-			if a != nil && !bytes.Equal([]byte(tc.e), a.Output) {
-				t.Errorf("\nexp: %#v\nact: %#v", tc.e, string(a.Output))
+			if !bytes.Equal([]byte(tc.e), a) {
+				t.Errorf("\nexp: %#v\nact: %#v", tc.e, string(a))
 			}
 		})
+	}
+}
+
+type fakeWatcher struct {
+	*Store
+}
+
+func (fakeWatcher) Buffer(string) bool       { return false }
+func (f fakeWatcher) Complete(Notifier) bool { return true }
+func (f fakeWatcher) Recaller(t *Template) Recaller {
+	return func(d dep.Dependency) (value interface{}, found bool) {
+		return f.Store.Recall(d.String())
 	}
 }

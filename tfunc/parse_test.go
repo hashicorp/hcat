@@ -14,7 +14,7 @@ func TestParseExecute(t *testing.T) {
 	cases := []struct {
 		name string
 		ti   hcat.TemplateInput
-		i    hcat.Recaller
+		i    hcat.Watcherer
 		e    string
 		err  bool
 	}{
@@ -23,7 +23,7 @@ func TestParseExecute(t *testing.T) {
 			hcat.TemplateInput{
 				Contents: `{{ "true" | parseBool }}`,
 			},
-			hcat.NewStore(),
+			fakeWatcher{hcat.NewStore()},
 			"true",
 			false,
 		},
@@ -32,7 +32,7 @@ func TestParseExecute(t *testing.T) {
 			hcat.TemplateInput{
 				Contents: `{{ "1.2" | parseFloat }}`,
 			},
-			hcat.NewStore(),
+			fakeWatcher{hcat.NewStore()},
 			"1.2",
 			false,
 		},
@@ -41,7 +41,7 @@ func TestParseExecute(t *testing.T) {
 			hcat.TemplateInput{
 				Contents: `{{ "-1" | parseInt }}`,
 			},
-			hcat.NewStore(),
+			fakeWatcher{hcat.NewStore()},
 			"-1",
 			false,
 		},
@@ -50,7 +50,7 @@ func TestParseExecute(t *testing.T) {
 			hcat.TemplateInput{
 				Contents: `{{ "{\"foo\": \"bar\"}" | parseJSON }}`,
 			},
-			hcat.NewStore(),
+			fakeWatcher{hcat.NewStore()},
 			"map[foo:bar]",
 			false,
 		},
@@ -59,7 +59,7 @@ func TestParseExecute(t *testing.T) {
 			hcat.TemplateInput{
 				Contents: `{{ "1" | parseUint }}`,
 			},
-			hcat.NewStore(),
+			fakeWatcher{hcat.NewStore()},
 			"1",
 			false,
 		},
@@ -68,7 +68,7 @@ func TestParseExecute(t *testing.T) {
 			hcat.TemplateInput{
 				Contents: `{{ "foo: bar" | parseYAML }}`,
 			},
-			hcat.NewStore(),
+			fakeWatcher{hcat.NewStore()},
 			"map[foo:bar]",
 			false,
 		},
@@ -77,7 +77,7 @@ func TestParseExecute(t *testing.T) {
 			hcat.TemplateInput{
 				Contents: `{{ "foo: bar\nbaz: \"foo\"" | parseYAML }}`,
 			},
-			hcat.NewStore(),
+			fakeWatcher{hcat.NewStore()},
 			"map[baz:foo foo:bar]",
 			false,
 		},
@@ -86,7 +86,7 @@ func TestParseExecute(t *testing.T) {
 			hcat.TemplateInput{
 				Contents: `{{ "foo:\n  bar: \"baz\"\n  baz: 7" | parseYAML }}`,
 			},
-			hcat.NewStore(),
+			fakeWatcher{hcat.NewStore()},
 			"map[foo:map[bar:baz baz:7]]",
 			false,
 		},
@@ -100,8 +100,8 @@ func TestParseExecute(t *testing.T) {
 			if (err != nil) != tc.err {
 				t.Fatal(err)
 			}
-			if a != nil && !bytes.Equal([]byte(tc.e), a.Output) {
-				t.Errorf("\nexp: %#v\nact: %#v", tc.e, string(a.Output))
+			if !bytes.Equal([]byte(tc.e), a) {
+				t.Errorf("\nexp: %#v\nact: %#v", tc.e, string(a))
 			}
 		})
 	}

@@ -22,7 +22,7 @@ func DenyFunc(...interface{}) (string, error) {
 var now = func() time.Time { return time.Now().UTC() }
 
 // datacentersFunc returns or accumulates datacenter dependencies.
-func datacentersFunc(r Recaller, used, missing *DepSet) func(ignore ...bool) ([]string, error) {
+func datacentersFunc(recall Recaller) func(ignore ...bool) ([]string, error) {
 	return func(i ...bool) ([]string, error) {
 		result := []string{}
 
@@ -42,20 +42,16 @@ func datacentersFunc(r Recaller, used, missing *DepSet) func(ignore ...bool) ([]
 			return result, err
 		}
 
-		used.Add(d)
-
-		if value, ok := r.Recall(d.String()); ok {
+		if value, ok := recall(d); ok {
 			return value.([]string), nil
 		}
-
-		missing.Add(d)
 
 		return result, nil
 	}
 }
 
 // keyFunc returns or accumulates key dependencies.
-func keyFunc(r Recaller, used, missing *DepSet) func(string) (string, error) {
+func keyFunc(recall Recaller) func(string) (string, error) {
 	return func(s string) (string, error) {
 		if len(s) == 0 {
 			return "", nil
@@ -66,23 +62,19 @@ func keyFunc(r Recaller, used, missing *DepSet) func(string) (string, error) {
 			return "", err
 		}
 
-		used.Add(d)
-
-		if value, ok := r.Recall(d.String()); ok {
+		if value, ok := recall(d); ok {
 			if value == nil {
 				return "", nil
 			}
 			return value.(string), nil
 		}
 
-		missing.Add(d)
-
 		return "", nil
 	}
 }
 
 // keyExistsFunc returns true if a key exists, false otherwise.
-func keyExistsFunc(r Recaller, used, missing *DepSet) func(string) (bool, error) {
+func keyExistsFunc(recall Recaller) func(string) (bool, error) {
 	return func(s string) (bool, error) {
 		if len(s) == 0 {
 			return false, nil
@@ -93,13 +85,9 @@ func keyExistsFunc(r Recaller, used, missing *DepSet) func(string) (bool, error)
 			return false, err
 		}
 
-		used.Add(d)
-
-		if value, ok := r.Recall(d.String()); ok {
+		if value, ok := recall(d); ok {
 			return value != nil, nil
 		}
-
-		missing.Add(d)
 
 		return false, nil
 	}
@@ -107,7 +95,7 @@ func keyExistsFunc(r Recaller, used, missing *DepSet) func(string) (bool, error)
 
 // keyWithDefaultFunc returns or accumulates key dependencies that have a
 // default value.
-func keyWithDefaultFunc(r Recaller, used, missing *DepSet) func(string, string) (string, error) {
+func keyWithDefaultFunc(recall Recaller) func(string, string) (string, error) {
 	return func(s, def string) (string, error) {
 		if len(s) == 0 {
 			return def, nil
@@ -118,28 +106,25 @@ func keyWithDefaultFunc(r Recaller, used, missing *DepSet) func(string, string) 
 			return "", err
 		}
 
-		used.Add(d)
-
-		if value, ok := r.Recall(d.String()); ok {
+		if value, ok := recall(d); ok {
 			if value == nil || value.(string) == "" {
 				return def, nil
 			}
 			return value.(string), nil
 		}
 
-		missing.Add(d)
-
 		return def, nil
 	}
 }
 
-func safeLsFunc(r Recaller, used, missing *DepSet) func(string) ([]*dep.KeyPair, error) {
-	// call lsFunc but explicitly mark that empty data set returned on monitored KV prefix is NOT safe
-	return lsFunc(r, used, missing, false)
+func safeLsFunc(recall Recaller) func(string) ([]*dep.KeyPair, error) {
+	// call lsFunc but explicitly mark that empty data set returned on
+	// monitored KV prefix is NOT safe
+	return lsFunc(recall, false)
 }
 
 // lsFunc returns or accumulates keyPrefix dependencies.
-func lsFunc(r Recaller, used, missing *DepSet, emptyIsSafe bool) func(string) ([]*dep.KeyPair, error) {
+func lsFunc(recall Recaller, emptyIsSafe bool) func(string) ([]*dep.KeyPair, error) {
 	return func(s string) ([]*dep.KeyPair, error) {
 		result := []*dep.KeyPair{}
 
@@ -152,10 +137,8 @@ func lsFunc(r Recaller, used, missing *DepSet, emptyIsSafe bool) func(string) ([
 			return result, err
 		}
 
-		used.Add(d)
-
 		// Only return non-empty top-level keys
-		if value, ok := r.Recall(d.String()); ok {
+		if value, ok := recall(d); ok {
 			for _, pair := range value.([]*dep.KeyPair) {
 				if pair.Key != "" && !strings.Contains(pair.Key, "/") {
 					result = append(result, pair)
@@ -180,14 +163,12 @@ func lsFunc(r Recaller, used, missing *DepSet, emptyIsSafe bool) func(string) ([
 		}
 
 		// r.Recall either returned an error or safeLs entered unsafe case
-		missing.Add(d)
-
 		return result, nil
 	}
 }
 
 // nodeFunc returns or accumulates catalog node dependency.
-func nodeFunc(r Recaller, used, missing *DepSet) func(...string) (*dep.CatalogNode, error) {
+func nodeFunc(recall Recaller) func(...string) (*dep.CatalogNode, error) {
 	return func(s ...string) (*dep.CatalogNode, error) {
 
 		d, err := idep.NewCatalogNodeQuery(strings.Join(s, ""))
@@ -195,20 +176,16 @@ func nodeFunc(r Recaller, used, missing *DepSet) func(...string) (*dep.CatalogNo
 			return nil, err
 		}
 
-		used.Add(d)
-
-		if value, ok := r.Recall(d.String()); ok {
+		if value, ok := recall(d); ok {
 			return value.(*dep.CatalogNode), nil
 		}
-
-		missing.Add(d)
 
 		return nil, nil
 	}
 }
 
 // nodesFunc returns or accumulates catalog node dependencies.
-func nodesFunc(r Recaller, used, missing *DepSet) func(...string) ([]*dep.Node, error) {
+func nodesFunc(recall Recaller) func(...string) ([]*dep.Node, error) {
 	return func(s ...string) ([]*dep.Node, error) {
 		result := []*dep.Node{}
 
@@ -217,20 +194,16 @@ func nodesFunc(r Recaller, used, missing *DepSet) func(...string) ([]*dep.Node, 
 			return nil, err
 		}
 
-		used.Add(d)
-
-		if value, ok := r.Recall(d.String()); ok {
+		if value, ok := recall(d); ok {
 			return value.([]*dep.Node), nil
 		}
-
-		missing.Add(d)
 
 		return result, nil
 	}
 }
 
 // secretFunc returns or accumulates secret dependencies from Vault.
-func secretFunc(r Recaller, used, missing *DepSet) func(...string) (*dep.Secret, error) {
+func secretFunc(recall Recaller) func(...string) (*dep.Secret, error) {
 	return func(s ...string) (*dep.Secret, error) {
 		var result *dep.Secret
 
@@ -264,21 +237,17 @@ func secretFunc(r Recaller, used, missing *DepSet) func(...string) (*dep.Secret,
 			return nil, err
 		}
 
-		used.Add(d)
-
-		if value, ok := r.Recall(d.String()); ok {
+		if value, ok := recall(d); ok {
 			result = value.(*dep.Secret)
 			return result, nil
 		}
-
-		missing.Add(d)
 
 		return result, nil
 	}
 }
 
 // secretsFunc returns or accumulates a list of secret dependencies from Vault.
-func secretsFunc(r Recaller, used, missing *DepSet) func(string) ([]string, error) {
+func secretsFunc(recall Recaller) func(string) ([]string, error) {
 	return func(s string) ([]string, error) {
 		var result []string
 
@@ -291,21 +260,17 @@ func secretsFunc(r Recaller, used, missing *DepSet) func(string) ([]string, erro
 			return nil, err
 		}
 
-		used.Add(d)
-
-		if value, ok := r.Recall(d.String()); ok {
+		if value, ok := recall(d); ok {
 			result = value.([]string)
 			return result, nil
 		}
-
-		missing.Add(d)
 
 		return result, nil
 	}
 }
 
 // serviceFunc returns or accumulates health service dependencies.
-func serviceFunc(r Recaller, used, missing *DepSet) func(...string) ([]*dep.HealthService, error) {
+func serviceFunc(recall Recaller) func(...string) ([]*dep.HealthService, error) {
 	return func(s ...string) ([]*dep.HealthService, error) {
 		result := []*dep.HealthService{}
 
@@ -318,20 +283,16 @@ func serviceFunc(r Recaller, used, missing *DepSet) func(...string) ([]*dep.Heal
 			return nil, err
 		}
 
-		used.Add(d)
-
-		if value, ok := r.Recall(d.String()); ok {
+		if value, ok := recall(d); ok {
 			return value.([]*dep.HealthService), nil
 		}
-
-		missing.Add(d)
 
 		return result, nil
 	}
 }
 
 // servicesFunc returns or accumulates catalog services dependencies.
-func servicesFunc(r Recaller, used, missing *DepSet) func(...string) ([]*dep.CatalogSnippet, error) {
+func servicesFunc(recall Recaller) func(...string) ([]*dep.CatalogSnippet, error) {
 	return func(s ...string) ([]*dep.CatalogSnippet, error) {
 		result := []*dep.CatalogSnippet{}
 
@@ -340,20 +301,16 @@ func servicesFunc(r Recaller, used, missing *DepSet) func(...string) ([]*dep.Cat
 			return nil, err
 		}
 
-		used.Add(d)
-
-		if value, ok := r.Recall(d.String()); ok {
+		if value, ok := recall(d); ok {
 			return value.([]*dep.CatalogSnippet), nil
 		}
-
-		missing.Add(d)
 
 		return result, nil
 	}
 }
 
 // connectFunc returns or accumulates health connect dependencies.
-func connectFunc(r Recaller, used, missing *DepSet) func(...string) ([]*dep.HealthService, error) {
+func connectFunc(recall Recaller) func(...string) ([]*dep.HealthService, error) {
 	return func(s ...string) ([]*dep.HealthService, error) {
 		result := []*dep.HealthService{}
 
@@ -366,56 +323,46 @@ func connectFunc(r Recaller, used, missing *DepSet) func(...string) ([]*dep.Heal
 			return nil, err
 		}
 
-		used.Add(d)
-
-		if value, ok := r.Recall(d.String()); ok {
+		if value, ok := recall(d); ok {
 			return value.([]*dep.HealthService), nil
 		}
-
-		missing.Add(d)
 
 		return result, nil
 	}
 }
 
-func connectCARootsFunc(r Recaller, used, missing *DepSet,
-) func(...string) ([]*api.CARoot, error) {
+func connectCARootsFunc(recall Recaller) func(...string) ([]*api.CARoot, error) {
 	return func(...string) ([]*api.CARoot, error) {
 		d := idep.NewConnectCAQuery()
-		used.Add(d)
-		if value, ok := r.Recall(d.String()); ok {
+		if value, ok := recall(d); ok {
 			return value.([]*api.CARoot), nil
 		}
-		missing.Add(d)
 		return nil, nil
 	}
 }
 
-func connectLeafFunc(r Recaller, used, missing *DepSet,
-) func(...string) (*api.LeafCert, error) {
+func connectLeafFunc(recall Recaller) func(...string) (*api.LeafCert, error) {
 	return func(s ...string) (*api.LeafCert, error) {
 		if len(s) == 0 || s[0] == "" {
 			return nil, nil
 		}
 		d := idep.NewConnectLeafQuery(s[0])
-		used.Add(d)
-		if value, ok := r.Recall(d.String()); ok {
+		if value, ok := recall(d); ok {
 			return value.(*api.LeafCert), nil
 		}
-		missing.Add(d)
 		return nil, nil
 
 	}
 }
 
-func safeTreeFunc(r Recaller, used, missing *DepSet) func(string) ([]*dep.KeyPair, error) {
+func safeTreeFunc(recall Recaller) func(string) ([]*dep.KeyPair, error) {
 	// call treeFunc but explicitly mark that empty data set returned on
 	// monitored KV prefix is NOT safe
-	return treeFunc(r, used, missing, false)
+	return treeFunc(recall, false)
 }
 
 // treeFunc returns or accumulates keyPrefix dependencies.
-func treeFunc(r Recaller, used, missing *DepSet, emptyIsSafe bool) func(string) ([]*dep.KeyPair, error) {
+func treeFunc(recall Recaller, emptyIsSafe bool) func(string) ([]*dep.KeyPair, error) {
 	return func(s string) ([]*dep.KeyPair, error) {
 		result := []*dep.KeyPair{}
 
@@ -428,10 +375,8 @@ func treeFunc(r Recaller, used, missing *DepSet, emptyIsSafe bool) func(string) 
 			return result, err
 		}
 
-		used.Add(d)
-
 		// Only return non-empty top-level keys
-		if value, ok := r.Recall(d.String()); ok {
+		if value, ok := recall(d); ok {
 			for _, pair := range value.([]*dep.KeyPair) {
 				parts := strings.Split(pair.Key, "/")
 				if parts[len(parts)-1] != "" {
@@ -457,8 +402,6 @@ func treeFunc(r Recaller, used, missing *DepSet, emptyIsSafe bool) func(string) 
 		}
 
 		// r.Recall either returned an error or safeTree entered unsafe case
-		missing.Add(d)
-
 		return result, nil
 	}
 }

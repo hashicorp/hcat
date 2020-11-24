@@ -13,13 +13,14 @@ import (
 )
 
 func TestWatcherAdd(t *testing.T) {
-	t.Run("updates-map", func(t *testing.T) {
+	t.Run("updates-tracker", func(t *testing.T) {
 		w := newWatcher(t)
 		defer w.Stop()
 
 		d := &idep.FakeDep{}
-		if added := w.Add(d); !added {
-			t.Fatal("expected add to return true")
+		n := fakeNotifier("foo")
+		if added := w.register(n, d); added == nil {
+			t.Fatal("Register returned nil")
 		}
 
 		if !w.Watching(d.String()) {
@@ -31,20 +32,26 @@ func TestWatcherAdd(t *testing.T) {
 		defer w.Stop()
 
 		d := &idep.FakeDep{}
-		if added := w.Add(d); !added {
-			t.Errorf("expected add to return true")
+		n := fakeNotifier("foo")
+		var added *view
+		if added = w.register(n, d); added == nil {
+			t.Fatal("Register returned nil")
 		}
-		if added := w.Add(d); added {
-			t.Errorf("expected add to return false")
+		if readded := w.register(n, d); readded != added {
+			t.Fatal("Register should have returned the already created"+
+				"view, instead got:", added)
 		}
 	})
 	t.Run("startsViewPoll", func(t *testing.T) {
 		w := newWatcher(t)
 		defer w.Stop()
 
-		if added := w.Add(&idep.FakeDep{}); !added {
-			t.Errorf("expected add to return true")
+		d := &idep.FakeDep{}
+		n := fakeNotifier("foo")
+		if added := w.register(n, d); added == nil {
+			t.Fatal("Register returned nil")
 		}
+		w.Poll(d)
 
 		select {
 		case err := <-w.errCh:
@@ -71,7 +78,8 @@ func TestWatcherWatching(t *testing.T) {
 		defer w.Stop()
 
 		d := &idep.FakeDep{}
-		w.Add(d)
+		n := fakeNotifier("foo")
+		w.Register(n, d)
 
 		if w.Watching(d.String()) == false {
 			t.Errorf("expected to be Watching")
@@ -84,8 +92,9 @@ func TestWatcherRemove(t *testing.T) {
 		w := newWatcher(t)
 		defer w.Stop()
 
-		d := &idep.FakeDep{}
-		w.Add(d)
+		d := &idep.FakeDep{Name: "foo"}
+		n := fakeNotifier("foo")
+		w.Register(n, d)
 
 		removed := w.remove(d.String())
 		if removed != true {
@@ -145,8 +154,8 @@ func TestWatcherVaultToken(t *testing.T) {
 		if !w.Watching(test_id) {
 			t.Fatal("token dep not added to watcher")
 		}
-		stop := make(chan struct{})
-		w.cleanDeps(stop)
+		n := fakeNotifier("some-random-notifier")
+		w.Complete(n)
 		if !w.Watching(test_id) {
 			t.Fatal("token dep should not have been cleaned")
 		}
@@ -169,7 +178,8 @@ func TestWatcherSize(t *testing.T) {
 
 		for i := 0; i < 10; i++ {
 			d := &idep.FakeDep{Name: fmt.Sprintf("%d", i)}
-			w.Add(d)
+			n := fakeNotifier("foo")
+			w.Register(n, d)
 		}
 
 		if w.Size() != 10 {
@@ -261,12 +271,17 @@ func TestWatcherWait(t *testing.T) {
 	t.Run("remove-old-dependency", func(t *testing.T) {
 		w := newWatcher(t)
 		defer w.Stop()
-		d := &idep.FakeDep{}
-		w.Add(d)
+		d := &idep.FakeDep{Name: "foo"}
+		n := fakeNotifier("foo")
+		w.Register(n, d)
+		if !w.tracker.notUsed(n.ID(), d.String()) {
+			t.Fatal("Couldn't find registered dependency")
+		}
+
 		if !w.Watching(d.String()) {
 			t.Error("expected dependency to be present")
 		}
-		w.cleanDeps(nil)
+		w.Complete(n)
 		if w.Watching(d.String()) {
 			t.Error("expected dependency to be removed")
 		}
@@ -297,17 +312,12 @@ func TestWatcherWait(t *testing.T) {
 				Dependency: deps[i],
 			})
 		}
-		go func() {
-			for _, v := range views {
-				w.dataCh <- v
-			}
-		}()
-		store := w.cache.(*Store)
-		count := 0
-		for len(store.data) != 5 || count > 3 {
-			count += 1
-			w.Wait(context.Background())
+		// doesn't need goroutine as dataCh has a large buffer
+		for _, v := range views {
+			w.dataCh <- v
 		}
+		w.Wait(context.Background())
+		store := w.cache.(*Store)
 		if len(store.data) != 5 {
 			t.Fatal("failed update")
 		}
@@ -323,50 +333,51 @@ func TestWatcherWait(t *testing.T) {
 		view := newView(&newViewInput{
 			Dependency: foodep,
 		})
+		view.data = "foo"
+		n := fakeNotifier("foo")
+		w.Register(n, foodep)
 		w.dataCh <- view
 		w.Wait(context.Background())
-		if w.changed.Len() != 1 {
+
+		if len(w.tracker.tracked) != 1 {
+			fmt.Printf("%#v\n", w.tracker)
 			t.Fatal("failed to track updated dependency")
+		}
+
+		if _, found := w.cache.Recall(foodep.String()); !found {
+			fmt.Printf("%#v\n", w.cache)
+			t.Fatal("failed to update cache")
 		}
 	})
 	t.Run("multi-updated-tracking", func(t *testing.T) {
 		w := newWatcher(t)
+		n := fakeNotifier("multi")
 		defer w.Stop()
 		deps := make([]dep.Dependency, 5)
-		views := make([]*view, 5)
 		for i := 0; i < 5; i++ {
 			deps[i] = &idep.FakeDep{Name: strconv.Itoa(i)}
-			views[i] = newView(&newViewInput{
-				Dependency: deps[i],
-			})
+			w.dataCh <- w.register(n, deps[i])
 		}
-		go func() {
-			for _, v := range views {
-				w.dataCh <- v
-			}
-		}()
-		count := 0
-		for w.changed.Len() != 5 || count > 3 {
-			count += 1
-			w.Wait(context.Background())
-		}
-		if w.changed.Len() != 5 {
+		w.Wait(context.Background())
+		if n.count() != len(deps) {
 			t.Fatal("failed to track updated dependency")
 		}
 	})
 	t.Run("duplicate-updated-tracking", func(t *testing.T) {
 		w := newWatcher(t)
+		n := fakeNotifier("dup")
 		defer w.Stop()
 		for i := 0; i < 2; i++ {
 			foodep := &idep.FakeDep{Name: "foo"}
-			view := newView(&newViewInput{
-				Dependency: foodep,
-			})
-			w.dataCh <- view
+			w.dataCh <- w.register(n, foodep)
+			//w.dataCh <- w.tracker.views[foodep.String()]
 		}
 		w.Wait(context.Background())
-		if w.changed.Len() != 1 {
-			t.Fatal("failed to track updated dependency")
+		if n.count() != 2 {
+			t.Fatal("didn't recieve all notifications")
+		}
+		if len(w.tracker.views) != 1 {
+			t.Fatal("duplicate views for same dependency")
 		}
 	})
 	t.Run("wait-channel", func(t *testing.T) {

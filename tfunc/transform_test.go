@@ -14,7 +14,7 @@ func TestTransformExecute(t *testing.T) {
 	cases := []struct {
 		name string
 		ti   hcat.TemplateInput
-		i    hcat.Recaller
+		i    hcat.Watcherer
 		e    string
 		err  bool
 	}{
@@ -23,7 +23,7 @@ func TestTransformExecute(t *testing.T) {
 			hcat.TemplateInput{
 				Contents: `{{ base64Decode "aGVsbG8=" }}`,
 			},
-			nil,
+			fakeWatcher{hcat.NewStore()},
 			"hello",
 			false,
 		},
@@ -32,7 +32,7 @@ func TestTransformExecute(t *testing.T) {
 			hcat.TemplateInput{
 				Contents: `{{ base64Decode "aGVsxxbG8=" }}`,
 			},
-			nil,
+			fakeWatcher{hcat.NewStore()},
 			"",
 			true,
 		},
@@ -41,7 +41,7 @@ func TestTransformExecute(t *testing.T) {
 			hcat.TemplateInput{
 				Contents: `{{ base64Encode "hello" }}`,
 			},
-			nil,
+			fakeWatcher{hcat.NewStore()},
 			"aGVsbG8=",
 			false,
 		},
@@ -50,7 +50,7 @@ func TestTransformExecute(t *testing.T) {
 			hcat.TemplateInput{
 				Contents: `{{ base64URLDecode "dGVzdGluZzEyMw==" }}`,
 			},
-			nil,
+			fakeWatcher{hcat.NewStore()},
 			"testing123",
 			false,
 		},
@@ -59,7 +59,7 @@ func TestTransformExecute(t *testing.T) {
 			hcat.TemplateInput{
 				Contents: `{{ base64URLDecode "aGVsxxbG8=" }}`,
 			},
-			nil,
+			fakeWatcher{hcat.NewStore()},
 			"",
 			true,
 		},
@@ -68,7 +68,7 @@ func TestTransformExecute(t *testing.T) {
 			hcat.TemplateInput{
 				Contents: `{{ base64URLEncode "testing123" }}`,
 			},
-			nil,
+			fakeWatcher{hcat.NewStore()},
 			"dGVzdGluZzEyMw==",
 			false,
 		},
@@ -77,7 +77,7 @@ func TestTransformExecute(t *testing.T) {
 			hcat.TemplateInput{
 				Contents: `{{ "a,b,c" | split "," | toJSON }}`,
 			},
-			hcat.NewStore(),
+			fakeWatcher{hcat.NewStore()},
 			"[\"a\",\"b\",\"c\"]",
 			false,
 		},
@@ -86,7 +86,7 @@ func TestTransformExecute(t *testing.T) {
 			hcat.TemplateInput{
 				Contents: `{{ "HI" | toLower }}`,
 			},
-			hcat.NewStore(),
+			fakeWatcher{hcat.NewStore()},
 			"hi",
 			false,
 		},
@@ -95,7 +95,7 @@ func TestTransformExecute(t *testing.T) {
 			hcat.TemplateInput{
 				Contents: `{{ "this is a sentence" | toTitle }}`,
 			},
-			hcat.NewStore(),
+			fakeWatcher{hcat.NewStore()},
 			"This Is A Sentence",
 			false,
 		},
@@ -104,7 +104,7 @@ func TestTransformExecute(t *testing.T) {
 			hcat.TemplateInput{
 				Contents: `{{ "{\"foo\":\"bar\"}" | parseJSON | toTOML }}`,
 			},
-			hcat.NewStore(),
+			fakeWatcher{hcat.NewStore()},
 			"foo = \"bar\"",
 			false,
 		},
@@ -113,7 +113,7 @@ func TestTransformExecute(t *testing.T) {
 			hcat.TemplateInput{
 				Contents: `{{ "hi" | toUpper }}`,
 			},
-			hcat.NewStore(),
+			fakeWatcher{hcat.NewStore()},
 			"HI",
 			false,
 		},
@@ -122,7 +122,7 @@ func TestTransformExecute(t *testing.T) {
 			hcat.TemplateInput{
 				Contents: `{{ "{\"foo\":\"bar\"}" | parseJSON | toYAML }}`,
 			},
-			hcat.NewStore(),
+			fakeWatcher{hcat.NewStore()},
 			"foo: bar",
 			false,
 		},
@@ -136,8 +136,8 @@ func TestTransformExecute(t *testing.T) {
 			if (err != nil) != tc.err {
 				t.Fatal(err)
 			}
-			if a != nil && !bytes.Equal([]byte(tc.e), a.Output) {
-				t.Errorf("\nexp: %#v\nact: %#v", tc.e, string(a.Output))
+			if !bytes.Equal([]byte(tc.e), a) {
+				t.Errorf("\nexp: %#v\nact: %#v", tc.e, string(a))
 			}
 		})
 	}

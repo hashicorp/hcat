@@ -18,7 +18,7 @@ func TestTimeExecute(t *testing.T) {
 	cases := []struct {
 		name string
 		ti   hcat.TemplateInput
-		i    hcat.Recaller
+		i    hcat.Watcherer
 		e    string
 		err  bool
 	}{
@@ -27,7 +27,7 @@ func TestTimeExecute(t *testing.T) {
 			hcat.TemplateInput{
 				Contents: `{{ timestamp }}`,
 			},
-			hcat.NewStore(),
+			fakeWatcher{hcat.NewStore()},
 			"1970-01-01T00:00:00Z",
 			false,
 		},
@@ -36,7 +36,7 @@ func TestTimeExecute(t *testing.T) {
 			hcat.TemplateInput{
 				Contents: `{{ timestamp "2006-01-02" }}`,
 			},
-			hcat.NewStore(),
+			fakeWatcher{hcat.NewStore()},
 			"1970-01-01",
 			false,
 		},
@@ -50,8 +50,8 @@ func TestTimeExecute(t *testing.T) {
 			if (err != nil) != tc.err {
 				t.Fatal(err)
 			}
-			if a != nil && !bytes.Equal([]byte(tc.e), a.Output) {
-				t.Errorf("\nexp: %#v\nact: %#v", tc.e, string(a.Output))
+			if !bytes.Equal([]byte(tc.e), a) {
+				t.Errorf("\nexp: %#v\nact: %#v", tc.e, string(a))
 			}
 		})
 	}

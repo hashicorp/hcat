@@ -1,7 +1,5 @@
 package hcat
 
-import "github.com/hashicorp/hcat/dep"
-
 // Resolver is responsible rendering Templates and invoking Commands.
 // Empty but reserving the space for future use.
 type Resolver struct{}
@@ -29,17 +27,15 @@ func NewResolver() *Resolver {
 // Watcherer is the subset of the Watcher's API that the resolver needs.
 // The interface is used to make the used/required API explicit.
 type Watcherer interface {
-	Recaller
-	Add(dep.Dependency) bool
-	Changed(tmplID string) bool
 	Buffer(tmplID string) bool
-	Register(tmplID string, deps ...dep.Dependency)
+	Recaller(*Template) Recaller
+	Complete(Notifier) bool
 }
 
 // Templater the interface the Template provides.
 // The interface is used to make the used/required API explicit.
 type Templater interface {
-	Execute(Recaller) (*ExecuteResult, error)
+	Execute(Watcherer) ([]byte, error)
 	ID() string
 }
 
@@ -47,12 +43,9 @@ type Templater interface {
 // output returns Complete as true. It uses the watcher for dependency
 // lookup state. The content will be updated each pass until complete.
 func (r *Resolver) Run(tmpl Templater, w Watcherer) (ResolveEvent, error) {
+
 	// Check if this dependency has any dependencies that have been change and
 	// if not, don't waste time re-rendering it.
-	if !w.Changed(tmpl.ID()) {
-		return ResolveEvent{}, nil
-	}
-
 	if w.Buffer(tmpl.ID()) {
 		return ResolveEvent{Complete: false}, nil
 	}
@@ -60,25 +53,16 @@ func (r *Resolver) Run(tmpl Templater, w Watcherer) (ResolveEvent, error) {
 	// Attempt to render the template, returning any missing dependencies and
 	// the rendered contents. If there are any missing dependencies, the
 	// contents cannot be rendered or trusted!
-	result, err := tmpl.Execute(w)
-	if err != nil {
+	output, err := tmpl.Execute(w)
+	switch err {
+	case nil:
+	case ErrMissingValues:
+		return ResolveEvent{missing: true}, nil
+	case ErrNoNewValues:
+		return ResolveEvent{}, nil
+	default:
 		return ResolveEvent{}, err
 	}
 
-	// register all dependencies used
-	if l := result.Used.Len(); l > 0 {
-		w.Register(tmpl.ID(), result.Used.List()...)
-	}
-
-	// add missing dependencies to watcher
-	if l := result.Missing.Len(); l > 0 {
-		for _, d := range result.Missing.List() {
-			w.Add(d)
-		}
-		// If the template is missing data for some dependencies then we are
-		// not ready to render and need to move on to the next one.
-		return ResolveEvent{missing: true}, nil
-	}
-
-	return ResolveEvent{Complete: true, Contents: result.Output}, nil
+	return ResolveEvent{Complete: true, Contents: output}, nil
 }

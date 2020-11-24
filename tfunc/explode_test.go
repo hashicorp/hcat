@@ -15,7 +15,7 @@ func TestExplodeExecute(t *testing.T) {
 	cases := []struct {
 		name string
 		ti   hcat.TemplateInput
-		i    hcat.Recaller
+		i    hcat.Watcherer
 		e    string
 		err  bool
 	}{
@@ -24,7 +24,7 @@ func TestExplodeExecute(t *testing.T) {
 			hcat.TemplateInput{
 				Contents: `{{ range $k, $v := tree "list" | explode }}{{ $k }}{{ $v }}{{ end }}`,
 			},
-			func() *hcat.Store {
+			func() hcat.Watcherer {
 				st := hcat.NewStore()
 				id := testKVListQueryID("list")
 				st.Save(id, []*dep.KeyPair{
@@ -32,7 +32,7 @@ func TestExplodeExecute(t *testing.T) {
 					{Key: "foo/bar", Value: "a"},
 					{Key: "zip/zap", Value: "b"},
 				})
-				return st
+				return fakeWatcher{st}
 			}(),
 			"foomap[bar:a]zipmap[zap:b]",
 			false,
@@ -51,7 +51,7 @@ func TestExplodeExecute(t *testing.T) {
 					},
 				},
 			},
-			hcat.NewStore(),
+			fakeWatcher{hcat.NewStore()},
 			"map[foo:map[bar:a] qux:c zip:map[zap:d]]",
 			false,
 		},
@@ -65,8 +65,8 @@ func TestExplodeExecute(t *testing.T) {
 			if (err != nil) != tc.err {
 				t.Fatal(err)
 			}
-			if a != nil && !bytes.Equal([]byte(tc.e), a.Output) {
-				t.Errorf("\nexp: %#v\nact: %#v", tc.e, string(a.Output))
+			if !bytes.Equal([]byte(tc.e), a) {
+				t.Errorf("\nexp: %#v\nact: %#v", tc.e, string(a))
 			}
 		})
 	}
