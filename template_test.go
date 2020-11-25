@@ -322,6 +322,52 @@ func TestTemplate_Execute(t *testing.T) {
 			false,
 		},
 		{
+			"func_secret_read_dash_error",
+			TemplateInput{
+				// the dash "-" in "zip-zap" triggers a template parsing error
+				// see next entry for test of workaround
+				Contents: `{{ with secret "secret/foo" }}{{ .Data.zip-zap }}{{ end }}`,
+			},
+			func() *Store {
+				st := NewStore()
+				d, err := idep.NewVaultReadQuery("secret/foo")
+				if err != nil {
+					t.Fatal(err)
+				}
+				st.Save(d.String(), &dep.Secret{
+					LeaseID:       "abcd1234",
+					LeaseDuration: 120,
+					Renewable:     true,
+					Data:          map[string]interface{}{"zip-zap": "zoom"},
+				})
+				return st
+			}(),
+			"",
+			true,
+		},
+		{
+			"func_secret_read_dash_error_workaround",
+			TemplateInput{
+				Contents: `{{ with secret "secret/foo" }}{{ index .Data "zip-zap" }}{{ end }}`,
+			},
+			func() *Store {
+				st := NewStore()
+				d, err := idep.NewVaultReadQuery("secret/foo")
+				if err != nil {
+					t.Fatal(err)
+				}
+				st.Save(d.String(), &dep.Secret{
+					LeaseID:       "abcd1234",
+					LeaseDuration: 120,
+					Renewable:     true,
+					Data:          map[string]interface{}{"zip-zap": "zoom"},
+				})
+				return st
+			}(),
+			"zoom",
+			false,
+		},
+		{
 			"func_secret_read_versions",
 			TemplateInput{
 				Contents: `{{with secret "secret/foo"}}{{.Data.zip}}{{end}}:{{with secret "secret/foo?version=1"}}{{.Data.zip}}{{end}}`,
