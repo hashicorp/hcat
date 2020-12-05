@@ -300,9 +300,9 @@ func (w *Watcher) Poll(deps ...dep.Dependency) {
 
 // Recaller returns a Recaller (function) that wraps the Store (cache)
 // to enable tracking dependencies on the Watcher.
-func (w *Watcher) Recaller(tmpl *Template) Recaller {
+func (w *Watcher) Recaller(n Notifier) Recaller {
 	return func(dep dep.Dependency) (interface{}, bool) {
-		w.Register(tmpl, dep)
+		w.Register(n, dep)
 		data, ok := w.cache.Recall(dep.String())
 		if !ok {
 			w.Poll(dep)
