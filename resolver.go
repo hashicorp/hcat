@@ -28,7 +28,7 @@ func NewResolver() *Resolver {
 // The interface is used to make the used/required API explicit.
 type Watcherer interface {
 	Buffer(tmplID string) bool
-	Recaller(*Template) Recaller
+	Recaller(Notifier) Recaller
 	Complete(Notifier) bool
 }
 
