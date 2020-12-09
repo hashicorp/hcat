@@ -254,7 +254,7 @@ func (w *Watcher) Register(n Notifier, d dep.Dependency) {
 // Returned view is useful internally and for testing.
 // Private as we don't want `view` public at this point.
 func (w *Watcher) register(n Notifier, d dep.Dependency) *view {
-	if v, ok := w.tracker.lookup(d.String()); ok {
+	if v, ok := w.tracker.lookup(n, d); ok {
 		w.tracker.usedID(v.ID())
 		return v
 	}
@@ -291,7 +291,7 @@ func (w *Watcher) Poll(deps ...dep.Dependency) {
 		}
 	}
 	for _, d := range deps {
-		if v, ok := w.tracker.lookup(d.String()); ok {
+		if v := w.tracker.view(d.String()); v != nil {
 			//log.Printf("[TRACE] (watcher) %s starting", d)
 			go v.poll(w.dataCh, w.errCh)
 		}
@@ -302,7 +302,7 @@ func (w *Watcher) Poll(deps ...dep.Dependency) {
 // to enable tracking dependencies on the Watcher.
 func (w *Watcher) Recaller(n Notifier) Recaller {
 	return func(dep dep.Dependency) (interface{}, bool) {
-		w.Register(n, dep)
+		w.register(n, dep)
 		data, ok := w.cache.Recall(dep.String())
 		if !ok {
 			w.Poll(dep)
@@ -366,17 +366,14 @@ func (w *Watcher) remove(id string) bool {
 
 // Watching determines if the given dependency (id) is being watched.
 func (w *Watcher) Watching(id string) bool {
-	_, ok := w.tracker.lookup(id)
-	return ok
+	v := w.tracker.view(id)
+	return (v != nil)
 }
 
 // view is a convenience function for accessing stored views by id
 // note that dependency IDs and their corresponding view IDs are identical
 func (w *Watcher) view(id string) *view {
-	if v, ok := w.tracker.lookup(id); ok {
-		return v
-	}
-	return nil
+	return w.tracker.view(id)
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -399,15 +396,13 @@ type trackedPair struct {
 	inUse bool
 }
 
-//	// removed flags that this pairing is no longer in use
-//	// fields get flagged for deletion, then removed on idle sweep
-//	removed bool
-
+// returns new pair to keep as value
 func (tp trackedPair) used() trackedPair {
 	tp.inUse = true
 	return tp
 }
 
+// returns new pair to keep as value
 func (tp trackedPair) refresh() trackedPair {
 	tp.inUse = false
 	return tp
@@ -451,14 +446,30 @@ func (t *tracker) notUsed(notifierID, viewID string) bool {
 }
 
 // lookup returns the view and true, or nil and false
-func (t *tracker) lookup(viewID string) (*view, bool) {
+// true is returned if the notifier and depencency match a tracked pair
+// returns the view as it is the 1 thing that you don't have yet
+// note that a view's and dependency's IDs are interchangeable (identical)
+func (t *tracker) lookup(n Notifier, d dep.Dependency) (*view, bool) {
+	notifierID, depID := n.ID(), d.String()
 	t.Lock()
 	defer t.Unlock()
-	v, ok := t.views[viewID]
-	return v, ok
+	for _, tp := range t.tracked {
+		if tp.view == depID && tp.notify == notifierID {
+			return t.views[tp.view], true
+		}
+	}
+	return nil, false
 }
 
-// Adds new entry
+// view returns the view (or nil)
+// note that a view's and dependency's IDs are interchangeable (identical)
+func (t *tracker) view(viewID string) *view {
+	t.Lock()
+	defer t.Unlock()
+	return t.views[viewID]
+}
+
+// adds new tracked entry
 func (t *tracker) add(v *view, n Notifier) {
 	t.Lock()
 	defer t.Unlock()
