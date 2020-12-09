@@ -1,6 +1,7 @@
 package dependency
 
 import (
+	"context"
 	"fmt"
 	"sync"
 	"time"
@@ -171,3 +172,44 @@ func (d *FakeDepRetry) String() string {
 
 func (d *FakeDepRetry) Stop()                        {}
 func (d *FakeDepRetry) SetOptions(opts QueryOptions) {}
+
+// FakeDepBlockingQuery is a fake dependency that blocks on Fetch for a
+// duration to resemble Consul blocking queries.
+type FakeDepBlockingQuery struct {
+	Name          string
+	Data          interface{}
+	BlockDuration time.Duration
+	Ctx           context.Context
+	stop          chan struct{}
+}
+
+func (d *FakeDepBlockingQuery) Fetch(dep.Clients) (interface{}, *dep.ResponseMetadata, error) {
+	if d.stop == nil {
+		d.stop = make(chan struct{})
+	}
+
+	select {
+	case <-d.stop:
+		return nil, nil, dep.ErrStopped
+	case <-time.After(d.BlockDuration):
+		return "this is some data", &dep.ResponseMetadata{LastIndex: 1}, nil
+	case <-d.Ctx.Done():
+		return nil, nil, d.Ctx.Err()
+	}
+}
+
+func (d *FakeDepBlockingQuery) CanShare() bool {
+	return true
+}
+
+func (d *FakeDepBlockingQuery) String() string {
+	return fmt.Sprintf("test_dep_blocking_query(%s)", d.Name)
+}
+
+func (d *FakeDepBlockingQuery) Stop() {
+	if d.stop != nil {
+		close(d.stop)
+	}
+}
+
+func (d *FakeDepBlockingQuery) SetOptions(opts QueryOptions) {}

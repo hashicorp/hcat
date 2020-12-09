@@ -3,7 +3,6 @@ package dependency
 import (
 	"encoding/gob"
 	"fmt"
-	"net/url"
 	"regexp"
 	"sort"
 	"strings"
@@ -114,16 +113,10 @@ func (d *HealthServiceQuery) Fetch(clients dep.Clients) (interface{}, *dep.Respo
 		Near:       d.near,
 	})
 
-	u := &url.URL{
-		Path:     "/v1/health/service/" + d.name,
-		RawQuery: opts.String(),
-	}
-	if d.tag != "" {
-		q := u.Query()
-		q.Set("tag", d.tag)
-		u.RawQuery = q.Encode()
-	}
-	//log.Printf("[TRACE] %s: GET %s", d, u)
+	//log.Printf("[TRACE] %s: GET %s", d, &url.URL{
+	//	Path:     "/v1/health/service/%d"+d.name,
+	//	RawQuery: opts.String(),
+	//})
 
 	// Check if a user-supplied filter was given. If so, we may be querying for
 	// more than healthy services, so we need to implement client-side
