@@ -85,6 +85,60 @@ func TestWatcherWatching(t *testing.T) {
 			t.Errorf("expected to be Watching")
 		}
 	})
+	// below are tracking related
+	t.Run("ignore-duplicates", func(t *testing.T) {
+		w := newWatcher(t)
+		defer w.Stop()
+
+		d := &idep.FakeDep{}
+		n := fakeNotifier("foo")
+		w.Register(n, d)
+		w.Register(n, d)
+
+		if w.Watching(d.String()) == false {
+			t.Errorf("expected to be Watching")
+		}
+		if w.Size() != 1 {
+			t.Errorf("should ignore duplicate entries")
+		}
+	})
+	t.Run("multi-notifiers-same-dep", func(t *testing.T) {
+		w := newWatcher(t)
+		defer w.Stop()
+
+		d := &idep.FakeDep{}
+		n0 := fakeNotifier("foo")
+		n1 := fakeNotifier("bar")
+		w.Register(n0, d)
+		w.Register(n1, d)
+
+		if w.Watching(d.String()) == false {
+			t.Errorf("expected to be Watching")
+		}
+		if len(w.tracker.tracked) != 2 {
+			t.Errorf("should have 2 entries")
+		}
+	})
+	t.Run("same-notifier-multiple-deps", func(t *testing.T) {
+		w := newWatcher(t)
+		defer w.Stop()
+
+		d0 := &idep.FakeDep{Name: "foo"}
+		d1 := &idep.FakeDep{Name: "bar"}
+		n := fakeNotifier("foo")
+		w.Register(n, d0)
+		w.Register(n, d1)
+
+		if w.Watching(d0.String()) == false {
+			t.Errorf("expected to be Watching")
+		}
+		if w.Watching(d1.String()) == false {
+			t.Errorf("expected to be Watching")
+		}
+		if len(w.tracker.tracked) != 2 {
+			t.Errorf("should have 2 entries")
+		}
+	})
 }
 
 func TestWatcherRemove(t *testing.T) {
