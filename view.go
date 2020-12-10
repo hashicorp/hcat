@@ -1,9 +1,11 @@
 package hcat
 
 import (
+	"context"
 	"fmt"
 	"math/rand"
 	"reflect"
+	"strings"
 	"sync"
 	"time"
 
@@ -46,6 +48,14 @@ type view struct {
 
 	// stopCh is used to stop polling on this view
 	stopCh chan struct{}
+
+	// Each view has a context used to cancel an in-flight HTTP request. This is
+	// a no-op if there is not an active request. Canceling is required to release
+	// the underlying TCP connections used by Consul blocking queries that are
+	// waiting for changes from the server. It allows for the http.Transport to
+	// change the TCP connection status from active to idle, to then be reaped.
+	ctx       context.Context
+	ctxCancel context.CancelFunc
 }
 
 // NewViewInput is used as input to the NewView function.
@@ -71,6 +81,7 @@ type newViewInput struct {
 
 // NewView constructs a new view with the given inputs.
 func newView(i *newViewInput) *view {
+	ctx, cancel := context.WithCancel(context.Background())
 	return &view{
 		dependency:    i.Dependency,
 		clients:       i.Clients,
@@ -78,6 +89,8 @@ func newView(i *newViewInput) *view {
 		maxStale:      i.MaxStale,
 		retryFunc:     i.RetryFunc,
 		stopCh:        make(chan struct{}, 1),
+		ctx:           ctx,
+		ctxCancel:     cancel,
 	}
 }
 
@@ -220,24 +233,32 @@ func (v *view) fetch(doneCh, successCh chan<- struct{}, errCh chan<- error) {
 		select {
 		case <-v.stopCh:
 			return
+		case <-v.ctx.Done():
+			return
 		default:
 		}
 
 		start := time.Now() // for rateLimiter below
 
 		if d, ok := v.dependency.(idep.QueryOptionsSetter); ok {
-			d.SetOptions(idep.QueryOptions{
+			opts := idep.QueryOptions{
 				AllowStale:   allowStale,
 				WaitTime:     v.blockWaitTime,
 				WaitIndex:    v.lastIndex,
 				DefaultLease: v.defaultLease,
-			})
+			}
+			opts = opts.SetContext(v.ctx)
+			d.SetOptions(opts)
 		}
 		data, rm, err := v.dependency.Fetch(v.clients)
 		if err != nil {
-			if err == dep.ErrStopped {
+			switch {
+			case err == dep.ErrStopped:
 				//log.Printf("[TRACE] (view) %s reported stop", v.dependency)
-			} else {
+			case strings.Contains(err.Error(), context.Canceled.Error()):
+				// This is a wrapped error so relying on string matching
+				// log.Printf("[TRACE] (view) %s request context stopped", v.dependency)
+			default:
 				errCh <- err
 			}
 			return
@@ -332,4 +353,5 @@ func rateLimiter(start time.Time) time.Duration {
 func (v *view) stop() {
 	v.dependency.Stop()
 	close(v.stopCh)
+	v.ctxCancel()
 }

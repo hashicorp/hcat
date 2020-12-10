@@ -1,6 +1,7 @@
 package dependency
 
 import (
+	"context"
 	"net/url"
 	"regexp"
 	"sort"
@@ -72,6 +73,8 @@ type QueryOptions struct {
 	WaitIndex         uint64
 	WaitTime          time.Duration
 	DefaultLease      time.Duration
+
+	ctx context.Context
 }
 
 func (q *QueryOptions) Merge(o *QueryOptions) *QueryOptions {
@@ -118,8 +121,17 @@ func (q *QueryOptions) Merge(o *QueryOptions) *QueryOptions {
 	return &r
 }
 
+func (q *QueryOptions) SetContext(ctx context.Context) QueryOptions {
+	var q2 QueryOptions
+	if q != nil {
+		q2 = *q
+	}
+	q2.ctx = ctx
+	return q2
+}
+
 func (q *QueryOptions) ToConsulOpts() *consulapi.QueryOptions {
-	return &consulapi.QueryOptions{
+	cq := consulapi.QueryOptions{
 		AllowStale:        q.AllowStale,
 		Datacenter:        q.Datacenter,
 		Near:              q.Near,
@@ -127,6 +139,11 @@ func (q *QueryOptions) ToConsulOpts() *consulapi.QueryOptions {
 		WaitIndex:         q.WaitIndex,
 		WaitTime:          q.WaitTime,
 	}
+
+	if q.ctx != nil {
+		return cq.WithContext(q.ctx)
+	}
+	return &cq
 }
 
 func (q *QueryOptions) String() string {

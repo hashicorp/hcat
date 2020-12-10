@@ -1,7 +1,9 @@
 package hcat
 
 import (
+	"context"
 	"reflect"
+	"sync"
 	"testing"
 	"time"
 
@@ -193,6 +195,43 @@ func TestFetch_returnsErrCh(t *testing.T) {
 	}
 }
 
+func TestFetch_ctxCancel(t *testing.T) {
+	ctx, ctxCancel := context.WithCancel(context.Background())
+	view := newView(&newViewInput{
+		Dependency: &dep.FakeDepBlockingQuery{
+			Name:          "ctxCancel",
+			BlockDuration: time.Duration(5 * time.Minute),
+			Ctx:           ctx,
+		},
+	})
+
+	doneCh := make(chan struct{})
+	successCh := make(chan struct{})
+	errCh := make(chan error)
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		view.fetch(doneCh, successCh, errCh)
+		wg.Done()
+	}()
+
+	select {
+	case <-doneCh:
+		t.Errorf("unexpected doneCh")
+	case <-successCh:
+		t.Errorf("unexpected successCh")
+	case <-errCh:
+		t.Errorf("unexpected errCh")
+	case <-time.After(5 * time.Millisecond):
+		// Nothing expected in any of these channels
+		ctxCancel()
+	}
+
+	// Successfully stopped by context
+	wg.Wait()
+}
+
 func TestStop_stopsPolling(t *testing.T) {
 	vw := newView(&newViewInput{
 		Dependency: &dep.FakeDep{},
@@ -212,6 +251,45 @@ func TestStop_stopsPolling(t *testing.T) {
 	case <-vw.stopCh:
 		// Successfully stopped
 	}
+}
+
+func TestStop_stopsFetchWithCancel(t *testing.T) {
+	ctx, ctxCancel := context.WithCancel(context.Background())
+	view := newView(&newViewInput{
+		Dependency: &dep.FakeDepBlockingQuery{
+			Name:          "ctxCancel",
+			BlockDuration: time.Duration(5 * time.Minute),
+			Ctx:           ctx,
+		},
+	})
+	view.ctxCancel = ctxCancel
+
+	doneCh := make(chan struct{})
+	successCh := make(chan struct{})
+	errCh := make(chan error)
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		view.fetch(doneCh, successCh, errCh)
+		wg.Done()
+	}()
+
+	view.stop()
+
+	select {
+	case <-doneCh:
+		t.Errorf("unexpected doneCh")
+	case <-successCh:
+		t.Errorf("unexpected successCh")
+	case <-errCh:
+		t.Errorf("unexpected errCh")
+	case <-time.After(5 * time.Millisecond):
+		// Nothing expected in any of these channels
+	}
+
+	// Successfully stopped by context
+	wg.Wait()
 }
 
 func TestRateLimiter(t *testing.T) {
