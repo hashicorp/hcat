@@ -224,6 +224,7 @@ func TestFetch_ctxCancel(t *testing.T) {
 	case <-errCh:
 		t.Errorf("unexpected errCh")
 	case <-time.After(5 * time.Millisecond):
+		// Nothing expected in any of these channels
 		ctxCancel()
 	}
 
@@ -284,9 +285,11 @@ func TestStop_stopsFetchWithCancel(t *testing.T) {
 	case <-errCh:
 		t.Errorf("unexpected errCh")
 	case <-time.After(5 * time.Millisecond):
-		// Successfully stopped by context
-		wg.Wait()
+		// Nothing expected in any of these channels
 	}
+
+	// Successfully stopped by context
+	wg.Wait()
 }
 
 func TestRateLimiter(t *testing.T) {

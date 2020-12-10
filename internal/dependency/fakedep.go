@@ -192,7 +192,7 @@ func (d *FakeDepBlockingQuery) Fetch(dep.Clients) (interface{}, *dep.ResponseMet
 	case <-d.stop:
 		return nil, nil, dep.ErrStopped
 	case <-time.After(d.BlockDuration):
-		return "this is some data", &dep.ResponseMetadata{LastIndex: 1}, nil
+		return d.Data, &dep.ResponseMetadata{LastIndex: 1}, nil
 	case <-d.Ctx.Done():
 		return nil, nil, d.Ctx.Err()
 	}

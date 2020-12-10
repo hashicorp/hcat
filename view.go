@@ -3,7 +3,6 @@ package hcat
 import (
 	"context"
 	"fmt"
-	"log"
 	"math/rand"
 	"reflect"
 	"strings"
@@ -220,13 +219,13 @@ func (v *view) fetch(doneCh, successCh chan<- struct{}, errCh chan<- error) {
 		}
 		data, rm, err := v.dependency.Fetch(v.clients)
 		if err != nil {
-			if err == dep.ErrStopped {
+			switch {
+			case err == dep.ErrStopped:
 				//log.Printf("[TRACE] (view) %s reported stop", v.dependency)
-			} else if strings.Contains(err.Error(), context.Canceled.Error()) {
+			case strings.Contains(err.Error(), context.Canceled.Error()):
 				// This is a wrapped error so relying on string matching
 				// log.Printf("[TRACE] (view) %s request context stopped", v.dependency)
-			} else {
-				log.Printf("[TRACE] (view) Fetch error: %s", err)
+			default:
 				errCh <- err
 			}
 			return

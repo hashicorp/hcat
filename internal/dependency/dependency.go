@@ -121,13 +121,6 @@ func (q *QueryOptions) Merge(o *QueryOptions) *QueryOptions {
 	return &r
 }
 
-func (q *QueryOptions) Context() context.Context {
-	if q != nil && q.ctx != nil {
-		return q.ctx
-	}
-	return context.Background()
-}
-
 func (q *QueryOptions) SetContext(ctx context.Context) QueryOptions {
 	var q2 QueryOptions
 	if q != nil {
