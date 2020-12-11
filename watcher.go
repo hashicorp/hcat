@@ -473,8 +473,12 @@ func (t *tracker) view(viewID string) *view {
 func (t *tracker) add(v *view, n Notifier) {
 	t.Lock()
 	defer t.Unlock()
-	t.views[v.ID()] = v
-	t.notifiers[n.ID()] = n
+	if _, ok := t.views[v.ID()]; !ok {
+		t.views[v.ID()] = v
+	}
+	if _, ok := t.notifiers[n.ID()]; !ok {
+		t.notifiers[n.ID()] = n
+	}
 	t.tracked = append(t.tracked,
 		trackedPair{view: v.ID(), notify: n.ID(), inUse: true})
 }

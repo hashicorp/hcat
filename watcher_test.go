@@ -110,7 +110,14 @@ func TestWatcherWatching(t *testing.T) {
 		n0 := fakeNotifier("foo")
 		n1 := fakeNotifier("bar")
 		w.Register(n0, d)
+		v0 := w.tracker.view(d.String())
 		w.Register(n1, d)
+		v1 := w.tracker.view(d.String())
+
+		// be sure view created for dependency is reused
+		if v0 != v1 {
+			t.Errorf("previous view overwritten, should reuse first one")
+		}
 
 		if w.Watching(d.String()) == false {
 			t.Errorf("expected to be Watching")
