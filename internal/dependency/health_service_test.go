@@ -176,6 +176,7 @@ func TestHealthConnectServiceQuery_Fetch(t *testing.T) {
 				&dep.HealthService{
 					Name:           "foo-sidecar-proxy",
 					ID:             "foo",
+					Kind:           "connect-proxy",
 					Port:           21999,
 					Status:         "passing",
 					Address:        "127.0.0.1",

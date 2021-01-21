@@ -54,6 +54,7 @@ type HealthService struct {
 	Address             string
 	ID                  string
 	Name                string
+	Kind                string
 	Tags                ServiceTags
 	Checks              api.HealthChecks
 	Status              string
