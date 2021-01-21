@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/hashicorp/go-bexpr"
 	"github.com/hashicorp/hcat/dep"
 	"github.com/pkg/errors"
 )
@@ -28,6 +29,11 @@ var (
 
 	// HealthServiceQueryRe is the regular expression to use.
 	HealthServiceQueryRe = regexp.MustCompile(`\A` + tagRe + serviceNameRe + dcRe + nearRe + filterRe + `\z`)
+
+	// queryParamOptRe is the regular expression to distinguish between query
+	// params and filters. Query parameters only have one "=" where as filters
+	// can have "==" or "!=" operators.
+	queryParamOptRe = regexp.MustCompile(`\w*[^!]={1}\w*`)
 )
 
 func init() {
@@ -39,13 +45,27 @@ type HealthServiceQuery struct {
 	isConsul
 	stopCh chan struct{}
 
-	dc      string
-	filters []string
-	name    string
-	near    string
-	tag     string
-	connect bool
-	opts    QueryOptions
+	dc          string
+	filter      string
+	name        string
+	ns          string
+	near        string
+	passingOnly bool
+	connect     bool
+	opts        QueryOptions
+
+	deprecatedStatusFilters []string
+	deprecatedTag           string
+}
+
+// NewHealthServiceQueryV1 processes the strings to build a service dependency.
+func NewHealthServiceQueryV1(s string, opts []string) (*HealthServiceQuery, error) {
+	return healthServiceQueryV1(s, false, opts)
+}
+
+// NewHealthConnectQueryV1 Query processes the strings to build a connect dependency.
+func NewHealthConnectQueryV1(s string, opts []string) (*HealthServiceQuery, error) {
+	return healthServiceQueryV1(s, true, opts)
 }
 
 // NewHealthServiceQuery processes the strings to build a service dependency.
@@ -56,6 +76,60 @@ func NewHealthServiceQuery(s string) (*HealthServiceQuery, error) {
 // NewHealthConnect Query processes the strings to build a connect dependency.
 func NewHealthConnectQuery(s string) (*HealthServiceQuery, error) {
 	return healthServiceQuery(s, true)
+}
+
+// healthServiceQueryV1 queries the health API with expanded filtering support
+func healthServiceQueryV1(service string, connect bool, opts []string) (*HealthServiceQuery, error) {
+	if service == "" {
+		return nil, fmt.Errorf("health.service: service name required: %q", service)
+	}
+
+	healthServiceQuery := HealthServiceQuery{
+		stopCh:  make(chan struct{}, 1),
+		connect: connect,
+		name:    service,
+	}
+
+	// Split query parameters and filters
+	var filters []string
+	for _, opt := range opts {
+		if queryParamOptRe.MatchString(opt) {
+			queryParam := strings.SplitN(opt, "=", 2)
+			query := strings.TrimSpace(queryParam[0])
+			value := strings.TrimSpace(queryParam[1])
+			switch query {
+			case "dc":
+				healthServiceQuery.dc = value
+			case "ns", "namespace":
+				healthServiceQuery.ns = value
+			case "near":
+				healthServiceQuery.near = value
+			default:
+				return nil, fmt.Errorf(
+					"health.service: invalid query parameter: %q for %q", opt, service)
+			}
+			continue
+		}
+
+		// Evaluate the grammer of the filter before attempting to query Consul.
+		// Defer to the Consul API to evaluate the kind and type of filter selectors.
+		_, err := bexpr.CreateFilter(opt)
+		if err != nil {
+			return nil, fmt.Errorf(
+				"health.service: invalid filter: %q for %q: %s", opt, service, err)
+		}
+		filters = append(filters, opt)
+	}
+
+	if len(filters) > 0 {
+		healthServiceQuery.filter = strings.Join(filters, " and ")
+	} else {
+		// Defaults to passing only
+		healthServiceQuery.filter = "Status == passing"
+		healthServiceQuery.passingOnly = true
+	}
+
+	return &healthServiceQuery, nil
 }
 
 func healthServiceQuery(s string, connect bool) (*HealthServiceQuery, error) {
@@ -88,14 +162,20 @@ func healthServiceQuery(s string, connect bool) (*HealthServiceQuery, error) {
 		filters = []string{HealthPassing}
 	}
 
+	// Check if a user-supplied filter was given. If so, we may be querying for
+	// more than healthy services, so we need to implement client-side
+	// filtering.
+	passingOnly := len(filters) == 1 && filters[0] == HealthPassing
+
 	return &HealthServiceQuery{
-		stopCh:  make(chan struct{}, 1),
-		dc:      m["dc"],
-		filters: filters,
-		name:    m["name"],
-		near:    m["near"],
-		tag:     m["tag"],
-		connect: connect,
+		stopCh:                  make(chan struct{}, 1),
+		dc:                      m["dc"],
+		name:                    m["name"],
+		near:                    m["near"],
+		connect:                 connect,
+		passingOnly:             passingOnly,
+		deprecatedStatusFilters: filters,
+		deprecatedTag:           m["tag"],
 	}, nil
 }
 
@@ -110,6 +190,8 @@ func (d *HealthServiceQuery) Fetch(clients dep.Clients) (interface{}, *dep.Respo
 
 	opts := d.opts.Merge(&QueryOptions{
 		Datacenter: d.dc,
+		Filter:     d.filter,
+		Namespace:  d.ns,
 		Near:       d.near,
 	})
 
@@ -118,16 +200,11 @@ func (d *HealthServiceQuery) Fetch(clients dep.Clients) (interface{}, *dep.Respo
 	//	RawQuery: opts.String(),
 	//})
 
-	// Check if a user-supplied filter was given. If so, we may be querying for
-	// more than healthy services, so we need to implement client-side
-	// filtering.
-	passingOnly := len(d.filters) == 1 && d.filters[0] == HealthPassing
-
 	nodes := clients.Consul().Health().Service
 	if d.connect {
 		nodes = clients.Consul().Health().Connect
 	}
-	entries, qm, err := nodes(d.name, d.tag, passingOnly, opts.ToConsulOpts())
+	entries, qm, err := nodes(d.name, d.deprecatedTag, d.passingOnly, opts.ToConsulOpts())
 	if err != nil {
 		return nil, nil, errors.Wrap(err, d.String())
 	}
@@ -139,9 +216,9 @@ func (d *HealthServiceQuery) Fetch(clients dep.Clients) (interface{}, *dep.Respo
 		// Get the status of this service from its checks.
 		status := entry.Checks.AggregatedStatus()
 
-		// If we are not checking only healthy services, filter out services
-		// that do not match the given filter.
-		if !acceptStatus(d.filters, status) {
+		// If we are not checking only healthy services, client-side filter out
+		// services that do not match the given filter.
+		if len(d.deprecatedStatusFilters) > 0 && !acceptStatus(d.deprecatedStatusFilters, status) {
 			continue
 		}
 
@@ -202,8 +279,8 @@ func (d *HealthServiceQuery) Stop() {
 // String returns the human-friendly version of this dependency.
 func (d *HealthServiceQuery) String() string {
 	name := d.name
-	if d.tag != "" {
-		name = d.tag + "." + name
+	if d.deprecatedTag != "" {
+		name = d.deprecatedTag + "." + name
 	}
 	if d.dc != "" {
 		name = name + "@" + d.dc
@@ -211,8 +288,19 @@ func (d *HealthServiceQuery) String() string {
 	if d.near != "" {
 		name = name + "~" + d.near
 	}
-	if len(d.filters) > 0 {
-		name = name + "|" + strings.Join(d.filters, ",")
+	if len(d.deprecatedStatusFilters) > 0 {
+		name = name + "|" + strings.Join(d.deprecatedStatusFilters, ",")
+	}
+
+	var opts []string
+	if d.ns != "" {
+		opts = append(opts, fmt.Sprintf("ns=%s", d.ns))
+	}
+	if d.filter != "" {
+		opts = append(opts, fmt.Sprintf("filter=%q", d.filter))
+	}
+	if len(opts) > 0 {
+		name = fmt.Sprintf("%s?%s", name, strings.Join(opts, "&"))
 	}
 	return fmt.Sprintf("health.service(%s)", name)
 }
