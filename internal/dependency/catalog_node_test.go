@@ -156,7 +156,7 @@ func TestCatalogNodeQuery_Fetch(t *testing.T) {
 				// delete any version data from ServiceMeta
 				services := act.(*dep.CatalogNode).Services
 				for i := range services {
-					services[i].Meta = filterVersionMeta(services[i].Meta)
+					services[i].Meta = filterMeta(services[i].Meta)
 				}
 			}
 

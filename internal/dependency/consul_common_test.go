@@ -11,6 +11,10 @@ func filter(data map[string]string, remove []string) map[string]string {
 	return data
 }
 
+func filterMeta(meta map[string]string) map[string]string {
+	return filterVersionMeta(filterEnterprise(meta))
+}
+
 // filterVersionMeta filters out all version information from the returned
 // metadata. It allocates the meta map if it is nil to make the tests backward
 // compatible with versions < 1.5.2.
@@ -19,6 +23,12 @@ func filterVersionMeta(meta map[string]string) map[string]string {
 		"serf_protocol_min", "serf_protocol_max", "version",
 	}
 	return filter(meta, filteredMeta)
+}
+
+// filterEnterprise filters out enterprise service metadata default values.
+func filterEnterprise(meta map[string]string) map[string]string {
+	filtered := []string{"non_voter", "read_replica"}
+	return filter(meta, filtered)
 }
 
 // filterAddresses filters out consul >1.7 ipv4/ipv6 specific entries
