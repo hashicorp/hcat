@@ -155,6 +155,7 @@ func (d *HealthServiceQuery) Fetch(clients dep.Clients) (interface{}, *dep.Respo
 		list = append(list, &dep.HealthService{
 			Node:                entry.Node.Node,
 			NodeID:              entry.Node.ID,
+			Kind:                string(entry.Service.Kind),
 			NodeAddress:         entry.Node.Address,
 			NodeDatacenter:      entry.Node.Datacenter,
 			NodeTaggedAddresses: entry.Node.TaggedAddresses,
