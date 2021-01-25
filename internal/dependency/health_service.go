@@ -45,14 +45,13 @@ type HealthServiceQuery struct {
 	isConsul
 	stopCh chan struct{}
 
-	dc          string
-	filter      string
-	name        string
-	ns          string
-	near        string
-	passingOnly bool
-	connect     bool
-	opts        QueryOptions
+	dc      string
+	filter  string
+	name    string
+	ns      string
+	near    string
+	connect bool
+	opts    QueryOptions
 
 	deprecatedStatusFilters []string
 	deprecatedTag           string
@@ -90,15 +89,21 @@ func healthServiceQueryV1(service string, connect bool, opts []string) (*HealthS
 		name:    service,
 	}
 
+	passingOnly := true
+
 	// Split query parameters and filters
 	var filters []string
 	for _, opt := range opts {
+		if strings.TrimSpace(opt) == "" {
+			continue
+		}
+
 		if queryParamOptRe.MatchString(opt) {
 			queryParam := strings.SplitN(opt, "=", 2)
 			query := strings.TrimSpace(queryParam[0])
 			value := strings.TrimSpace(queryParam[1])
 			switch query {
-			case "dc":
+			case "dc", "datacenter":
 				healthServiceQuery.dc = value
 			case "ns", "namespace":
 				healthServiceQuery.ns = value
@@ -111,6 +116,11 @@ func healthServiceQueryV1(service string, connect bool, opts []string) (*HealthS
 			continue
 		}
 
+		if strings.Contains(opt, "Checks.Status") {
+			// Disable if any filter option includes "Checks.Status"
+			passingOnly = false
+		}
+
 		// Evaluate the grammer of the filter before attempting to query Consul.
 		// Defer to the Consul API to evaluate the kind and type of filter selectors.
 		_, err := bexpr.CreateFilter(opt)
@@ -121,12 +131,13 @@ func healthServiceQueryV1(service string, connect bool, opts []string) (*HealthS
 		filters = append(filters, opt)
 	}
 
+	if passingOnly {
+		// Default to return passing only
+		filters = append(filters, `Checks.Status == "passing"`)
+	}
+
 	if len(filters) > 0 {
 		healthServiceQuery.filter = strings.Join(filters, " and ")
-	} else {
-		// Defaults to passing only
-		healthServiceQuery.filter = "Status == passing"
-		healthServiceQuery.passingOnly = true
 	}
 
 	return &healthServiceQuery, nil
@@ -162,18 +173,12 @@ func healthServiceQuery(s string, connect bool) (*HealthServiceQuery, error) {
 		filters = []string{HealthPassing}
 	}
 
-	// Check if a user-supplied filter was given. If so, we may be querying for
-	// more than healthy services, so we need to implement client-side
-	// filtering.
-	passingOnly := len(filters) == 1 && filters[0] == HealthPassing
-
 	return &HealthServiceQuery{
 		stopCh:                  make(chan struct{}, 1),
 		dc:                      m["dc"],
 		name:                    m["name"],
 		near:                    m["near"],
 		connect:                 connect,
-		passingOnly:             passingOnly,
 		deprecatedStatusFilters: filters,
 		deprecatedTag:           m["tag"],
 	}, nil
@@ -200,11 +205,16 @@ func (d *HealthServiceQuery) Fetch(clients dep.Clients) (interface{}, *dep.Respo
 	//	RawQuery: opts.String(),
 	//})
 
+	// Check if a user-supplied filter was given. If so, we may be querying for
+	// more than healthy services, so we need to implement client-side
+	// filtering.
+	passingOnly := len(d.deprecatedStatusFilters) == 1 && d.deprecatedStatusFilters[0] == HealthPassing
+
 	nodes := clients.Consul().Health().Service
 	if d.connect {
 		nodes = clients.Consul().Health().Connect
 	}
-	entries, qm, err := nodes(d.name, d.deprecatedTag, d.passingOnly, opts.ToConsulOpts())
+	entries, qm, err := nodes(d.name, d.deprecatedTag, passingOnly, opts.ToConsulOpts())
 	if err != nil {
 		return nil, nil, errors.Wrap(err, d.String())
 	}
@@ -297,7 +307,7 @@ func (d *HealthServiceQuery) String() string {
 		opts = append(opts, fmt.Sprintf("ns=%s", d.ns))
 	}
 	if d.filter != "" {
-		opts = append(opts, fmt.Sprintf("filter=%q", d.filter))
+		opts = append(opts, fmt.Sprintf("filter=%s", d.filter))
 	}
 	if len(opts) > 0 {
 		name = fmt.Sprintf("%s?%s", name, strings.Join(opts, "&"))

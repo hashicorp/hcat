@@ -82,7 +82,7 @@ type TemplateInput struct {
 	// functions) should return a function that matches a signature required
 	// by text/template's Funcmap (masked by an interface).
 	// This special case function's signature should match:
-	//    func(Recaller, *DepSet, *DepSet) interface{}
+	//    func(Recaller) interface{}
 	FuncMapMerge template.FuncMap
 
 	// SandboxPath adds a prefix to any path provided to the `file` function

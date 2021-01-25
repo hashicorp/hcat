@@ -117,10 +117,7 @@ func TestTemplateExecute_consul_v1(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			recaller := func(dep dep.Dependency) (interface{}, bool) {
-				return tc.i.Recall(dep.String())
-			}
-			tc.ti.FuncMapMerge = FuncMapConsulV1(recaller)
+			tc.ti.FuncMapMerge = FuncMapConsulV1()
 			tpl := NewTemplate(tc.ti)
 
 			w := fakeWatcher{tc.i}

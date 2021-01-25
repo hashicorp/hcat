@@ -10,22 +10,21 @@ import (
 
 var errFuncNotImplemented = fmt.Errorf("function is not implemented")
 
-func FuncMapConsulV1(recaller Recaller) template.FuncMap {
-	r := template.FuncMap{
-		"service": v1ServiceFunc(recaller),
-		"connect": v1ConnectFunc(recaller),
+func FuncMapConsulV1() template.FuncMap {
+	return template.FuncMap{
+		"service": v1ServiceFunc,
+		"connect": v1ConnectFunc,
 
 		// Set of Consul functions that are not yet implemented for v1. These
 		// intentionally error instead of defaulting to the v0 implementations
 		// to avoid introducing breaking changes when they are supported.
-		"node":     v1TODOFunc(recaller),
-		"nodes":    v1TODOFunc(recaller),
-		"services": v1TODOFunc(recaller),
+		"node":     v1TODOFunc,
+		"nodes":    v1TODOFunc,
+		"services": v1TODOFunc,
 	}
-	return r
 }
 
-func v1TODOFunc(recall Recaller) func(...string) (interface{}, error) {
+func v1TODOFunc(recall Recaller) interface{} {
 	return func(s ...string) (interface{}, error) {
 		return nil, errFuncNotImplemented
 	}
@@ -33,7 +32,7 @@ func v1TODOFunc(recall Recaller) func(...string) (interface{}, error) {
 
 // v1ServiceFunc returns or accumulates health service dependencies.
 // /v1/health/service/:service
-func v1ServiceFunc(recall Recaller) func(string, ...string) ([]*dep.HealthService, error) {
+func v1ServiceFunc(recall Recaller) interface{} {
 	return func(service string, opts ...string) ([]*dep.HealthService, error) {
 		result := []*dep.HealthService{}
 
@@ -55,7 +54,7 @@ func v1ServiceFunc(recall Recaller) func(string, ...string) ([]*dep.HealthServic
 }
 
 // v1ConnectFunc returns or accumulates health connect dependencies.
-func v1ConnectFunc(recall Recaller) func(string, ...string) ([]*dep.HealthService, error) {
+func v1ConnectFunc(recall Recaller) interface{} {
 	return func(service string, opts ...string) ([]*dep.HealthService, error) {
 		result := []*dep.HealthService{}
 
