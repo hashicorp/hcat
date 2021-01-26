@@ -437,6 +437,46 @@ func TestHealthServiceQuery_String(t *testing.T) {
 	}
 }
 
+func TestQueryParamOptRe(t *testing.T) {
+	cases := []struct {
+		name  string
+		opt   string
+		match bool
+	}{
+		{
+			"empty",
+			"",
+			false,
+		}, {
+			"query param",
+			"ns=ns",
+			true,
+		}, {
+			"query param spaces",
+			"ns = ns",
+			true,
+		}, {
+			"equality filter",
+			"Checks.Status == test",
+			false,
+		}, {
+			"inequality filter",
+			"Checks.Status != test",
+			false,
+		}, {
+			"grammar filter expression",
+			"tag in Service.Tags",
+			false,
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			match := queryParamOptRe.MatchString(tc.opt)
+			assert.Equal(t, tc.match, match, "unexpected regex match for %q", tc.opt)
+		})
+	}
+}
+
 func TestNewHealthServiceQueryV1(t *testing.T) {
 	t.Parallel()
 
@@ -499,8 +539,16 @@ func TestNewHealthServiceQueryV1(t *testing.T) {
 			},
 			false,
 		}, {
+			"status filter",
+			[]string{`Checks.Status == "critical"`},
+			&HealthServiceQuery{
+				name:   "name",
+				filter: `Checks.Status == "critical"`,
+			},
+			false,
+		}, {
 			"filters",
-			[]string{"Checks.Status != passing", "\"my-tag\" in Service.Tags"},
+			[]string{"Checks.Status != passing", `"my-tag" in Service.Tags`},
 			&HealthServiceQuery{
 				name:   "name",
 				filter: "Checks.Status != passing and \"my-tag\" in Service.Tags",

@@ -33,7 +33,7 @@ var (
 	// queryParamOptRe is the regular expression to distinguish between query
 	// params and filters. Query parameters only have one "=" where as filters
 	// can have "==" or "!=" operators.
-	queryParamOptRe = regexp.MustCompile(`\w*[^!]={1}\w*`)
+	queryParamOptRe = regexp.MustCompile(`[\w\d\s]=[\w\d\s]`)
 )
 
 func init() {
