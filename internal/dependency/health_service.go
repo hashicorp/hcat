@@ -53,8 +53,14 @@ type HealthServiceQuery struct {
 	connect bool
 	opts    QueryOptions
 
+	// deprecatedStatusFilters is a list of check statuses for client-side
+	// filtering. Accepted values are the Health* constants above.
 	deprecatedStatusFilters []string
-	deprecatedTag           string
+
+	// deprecatedTag is the singular tag parsed from the template argument
+	// {{ service "tag.service" }} used for the deprecated tag query parameter.
+	// Use the filter parameter with the "Service.Tags" selector instead.
+	deprecatedTag string
 }
 
 // NewHealthServiceQueryV1 processes the strings to build a service dependency.
