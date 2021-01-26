@@ -9,6 +9,7 @@ require (
 	github.com/google/btree v1.0.0 // indirect
 	github.com/hashicorp/consul/api v1.4.0
 	github.com/hashicorp/consul/sdk v0.4.0
+	github.com/hashicorp/go-bexpr v0.1.4
 	github.com/hashicorp/go-gatedio v0.5.0
 	github.com/hashicorp/go-hclog v0.12.2 // indirect
 	github.com/hashicorp/go-immutable-radix v1.2.0 // indirect
@@ -22,7 +23,7 @@ require (
 	github.com/mitchellh/mapstructure v1.3.0 // indirect
 	github.com/pierrec/lz4 v2.5.2+incompatible // indirect
 	github.com/pkg/errors v0.9.1
-	github.com/stretchr/testify v1.5.1
+	github.com/stretchr/testify v1.6.1
 	golang.org/x/crypto v0.0.0-20200429183012-4b2356b1ed79 // indirect
 	golang.org/x/net v0.0.0-20200506145744-7e3656a0809f // indirect
 	golang.org/x/sys v0.0.0-20200501145240-bc7a7d42d5c3 // indirect

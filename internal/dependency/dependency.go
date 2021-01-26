@@ -67,6 +67,8 @@ type QueryOptionsSetter interface {
 type QueryOptions struct {
 	AllowStale        bool
 	Datacenter        string
+	Filter            string
+	Namespace         string
 	Near              string
 	RequireConsistent bool
 	VaultGrace        time.Duration
@@ -102,6 +104,14 @@ func (q *QueryOptions) Merge(o *QueryOptions) *QueryOptions {
 		r.Datacenter = o.Datacenter
 	}
 
+	if o.Filter != "" {
+		r.Filter = o.Filter
+	}
+
+	if o.Namespace != "" {
+		r.Namespace = o.Namespace
+	}
+
 	if o.Near != "" {
 		r.Near = o.Near
 	}
@@ -134,6 +144,8 @@ func (q *QueryOptions) ToConsulOpts() *consulapi.QueryOptions {
 	cq := consulapi.QueryOptions{
 		AllowStale:        q.AllowStale,
 		Datacenter:        q.Datacenter,
+		Filter:            q.Filter,
+		Namespace:         q.Namespace,
 		Near:              q.Near,
 		RequireConsistent: q.RequireConsistent,
 		WaitIndex:         q.WaitIndex,
@@ -155,6 +167,14 @@ func (q *QueryOptions) String() string {
 
 	if q.Datacenter != "" {
 		u.Add("dc", q.Datacenter)
+	}
+
+	if q.Filter != "" {
+		u.Add("filter", q.Filter)
+	}
+
+	if q.Namespace != "" {
+		u.Add("ns", q.Namespace)
 	}
 
 	if q.Near != "" {
