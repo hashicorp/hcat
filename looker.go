@@ -41,6 +41,8 @@ func NewClientSet() *ClientSet {
 }
 
 // AddConsul creates a Consul client and adds to the client set
+// HTTP/2 requires HTTPS, so if you need HTTP/2 be sure the local agent has
+// TLS setup and it's HTTPS port condigured and use with the Address here.
 func (cs *ClientSet) AddConsul(i ConsulInput) error {
 	return cs.CreateConsulClient(i.toInternal())
 }

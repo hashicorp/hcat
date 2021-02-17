@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"reflect"
 	"runtime"
 	"testing"
@@ -25,6 +26,7 @@ func TestMain(m *testing.M) {
 	//log.SetOutput(ioutil.Discard)
 	runTestVault()
 	runTestConsul()
+	testConsulHttp2Connect()
 	clients := NewClientSet()
 	if err := clients.CreateConsulClient(&CreateClientInput{
 		Address: testConsul.HTTPAddr,
@@ -103,12 +105,35 @@ func TestMain(m *testing.M) {
 	os.Exit(exit)
 }
 
+// Connects, with leader/api test, with each protocol.
+func testConsulHttp2Connect() {
+	clients := NewClientSet()
+	if err := clients.CreateConsulClient(&CreateClientInput{
+		Address:    testConsul.HTTPSAddr,
+		SSLEnabled: true,
+		SSLVerify:  false,
+	}); err != nil {
+		testConsul.Stop()
+		Fatalf("failed to create consul HTTP/2 client: %v\n", err)
+	}
+}
+
 func runTestConsul() {
+	certFile, err := filepath.Abs("./testdata/cert.pem")
+	if err != nil {
+		Fatalf("failed to open test cert file: %v\n", err)
+	}
+	keyFile, err := filepath.Abs("./testdata/key.pem")
+	if err != nil {
+		Fatalf("failed to open test key file: %v\n", err)
+	}
 	consul, err := testutil.NewTestServerConfig(
 		func(c *testutil.TestServerConfig) {
 			c.LogLevel = "warn"
 			c.Stdout = ioutil.Discard
 			c.Stderr = ioutil.Discard
+			c.CertFile = certFile
+			c.KeyFile = keyFile
 		})
 	if err != nil {
 		Fatalf("failed to start consul server: %v", err)
