@@ -277,6 +277,7 @@ func newTransport(i *CreateClientInput) (*http.Transport, error) {
 			KeepAlive: i.TransportDialKeepAlive,
 		}).Dial,
 		DisableKeepAlives:   i.TransportDisableKeepAlives,
+		ForceAttemptHTTP2:   true,
 		MaxIdleConns:        i.TransportMaxIdleConns,
 		IdleConnTimeout:     i.TransportIdleConnTimeout,
 		MaxIdleConnsPerHost: i.TransportMaxIdleConnsPerHost,
