@@ -555,6 +555,14 @@ func TestNewHealthServiceQueryV1(t *testing.T) {
 			},
 			false,
 		}, {
+			"non-DNS compliant tag filter still valid",
+			[]string{"Checks.Status != passing", `"my=tag" in Service.Tags`},
+			&HealthServiceQuery{
+				name:   "name",
+				filter: "Checks.Status != passing and \"my=tag\" in Service.Tags",
+			},
+			false,
+		}, {
 			"query and filter",
 			[]string{"dc=dc", "\"my-tag\" in Service.Tags", "\"another-tag\" in Service.Tags"},
 			&HealthServiceQuery{
