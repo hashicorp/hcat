@@ -111,15 +111,14 @@ func healthServiceQueryV1(service string, connect bool, opts []string) (*HealthS
 			switch query {
 			case "dc", "datacenter":
 				healthServiceQuery.dc = value
+				continue
 			case "ns", "namespace":
 				healthServiceQuery.ns = value
+				continue
 			case "near":
 				healthServiceQuery.near = value
-			default:
-				return nil, fmt.Errorf(
-					"health.service: invalid query parameter: %q for %q", opt, service)
+				continue
 			}
-			continue
 		}
 
 		if strings.Contains(opt, "Checks.Status") {
