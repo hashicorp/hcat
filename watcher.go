@@ -552,12 +552,16 @@ func (t *tracker) initialized(viewID string) bool {
 // ie. it returns true if all values have been fetched
 func (t *tracker) complete(n Notifier) bool {
 	for _, tp := range t.tracked {
-		thisNotifier := tp.notify == n.ID()
-		if thisNotifier && tp.inUse && !t.initialized(tp.view) {
+		if tp.notify == n.ID() {
+			if tp.inUse && t.initialized(tp.view) {
+				return true
+			}
 			return false
 		}
 	}
-	return true
+
+	// Return false if the notifier is not found
+	return false
 }
 
 // Clean out un-used trackedPair entries, views and notifiers
@@ -566,12 +570,11 @@ func (t *tracker) sweep(n Notifier) {
 	t.Lock()
 	defer t.Unlock()
 	used := make(map[string]struct{})
-	// remove tracked that were used
 	tmp := t.tracked[:0]
 	for _, tp := range t.tracked {
 		otherNotifier := tp.notify != n.ID()
 		if tp.inUse || otherNotifier {
-			tmp = append(tmp, tp.refresh())
+			tmp = append(tmp, tp)
 			used[tp.view] = struct{}{}
 			used[tp.notify] = struct{}{}
 		}
@@ -583,9 +586,9 @@ func (t *tracker) sweep(n Notifier) {
 			delete(t.views, v)
 		}
 	}
-	for n := range t.notifiers {
-		if _, ok := used[n]; !ok {
-			delete(t.views, n)
+	for notifierID := range t.notifiers {
+		if _, ok := used[notifierID]; !ok {
+			delete(t.notifiers, notifierID)
 		}
 	}
 }
