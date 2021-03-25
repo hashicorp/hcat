@@ -60,6 +60,23 @@ func TestWatcherAdd(t *testing.T) {
 			// Got data, which means the poll was started
 		}
 	})
+	t.Run("consul-retry-func", func(t *testing.T) {
+		w := newWatcher(t)
+		w.retryFuncConsul = func(n int) (bool, time.Duration) {
+			return false, 0 * time.Second
+		}
+		defer w.Stop()
+
+		d := &idep.FakeDep{}
+		n := fakeNotifier("foo")
+		added := w.register(n, d)
+		if added == nil {
+			t.Fatal("Register returned nil")
+		}
+		if added.retryFunc == nil {
+			t.Fatal("Retry func was nil")
+		}
+	})
 }
 
 func TestWatcherWatching(t *testing.T) {
@@ -162,8 +179,8 @@ func TestWatcherWatching(t *testing.T) {
 		w := newWatcher(t)
 		defer w.Stop()
 
-		d0 := &idep.FakeDep{"taco"}    // dep for foo and bar
-		d1 := &idep.FakeDep{"burrito"} // dep for bar
+		d0 := &idep.FakeDep{Name: "taco"}    // dep for foo and bar
+		d1 := &idep.FakeDep{Name: "burrito"} // dep for bar
 		nFoo := fakeNotifier("foo")
 		nBar := fakeNotifier("bar")
 		w.Register(nFoo, d0)
