@@ -193,7 +193,7 @@ func (w *Watcher) Wait(ctx context.Context) error {
 				select {
 				case view := <-w.dataCh:
 					dataUpdate(view)
-				case <-time.After(time.Microsecond):
+				case <-time.After(time.Second):
 					return nil
 				}
 			}
