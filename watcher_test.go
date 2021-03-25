@@ -125,6 +125,17 @@ func TestWatcherWatching(t *testing.T) {
 		if len(w.tracker.tracked) != 2 {
 			t.Errorf("should have 2 entries")
 		}
+
+		if w.Complete(n0) {
+			t.Errorf("dep has not received data, should not be completed: %s", n0.ID())
+		}
+		if w.Complete(n1) {
+			t.Errorf("dep has not received data, should not be completed: %s", n1.ID())
+		}
+
+		if notifiers := w.tracker.notifiersFor(v0); len(notifiers) != 2 {
+			t.Errorf("unexpected number of notifiers for view: %s %v", d.String(), notifiers)
+		}
 	})
 	t.Run("same-notifier-multiple-deps", func(t *testing.T) {
 		w := newWatcher(t)
@@ -144,6 +155,59 @@ func TestWatcherWatching(t *testing.T) {
 		}
 		if len(w.tracker.tracked) != 2 {
 			t.Errorf("should have 2 entries")
+		}
+	})
+
+	t.Run("multi-notifiers-multi-dep", func(t *testing.T) {
+		w := newWatcher(t)
+		defer w.Stop()
+
+		d0 := &idep.FakeDep{"taco"}    // dep for foo and bar
+		d1 := &idep.FakeDep{"burrito"} // dep for bar
+		nFoo := fakeNotifier("foo")
+		nBar := fakeNotifier("bar")
+		w.Register(nFoo, d0)
+		w.Register(nBar, d0)
+		w.Register(nBar, d1)
+
+		// Test that 2 views were created for the 2 dependencies
+		if w.tracker.viewCount() != 2 {
+			t.Errorf("unexpected number of views, expected 2: %d", w.tracker.viewCount())
+		}
+
+		if w.Watching(d0.String()) == false {
+			t.Errorf("expected to be Watching: %s", d0.String())
+		}
+		if w.Watching(d1.String()) == false {
+			t.Errorf("expected to be Watching: %s", d1.String())
+		}
+
+		// 2 tracked pairs for foo (taco and burrito), 1 tracked pair for bar (burrito)
+		if len(w.tracker.tracked) != 3 {
+			t.Errorf("should have 3 entries")
+		}
+
+		if w.Complete(nFoo) {
+			t.Fatalf("dep has not received data, should not be completed: %s", nFoo.ID())
+		}
+		if w.Complete(nBar) {
+			t.Fatalf("dep has not received data, should not be completed: %s", nBar.ID())
+		}
+
+		v0 := w.tracker.view(d0.String())
+		if v0 == nil || w.Watching(d0.String()) == false {
+			t.Errorf("expected to be Watching after Complete: %s", d0.String())
+		}
+		if notifiers := w.tracker.notifiersFor(v0); len(notifiers) != 2 {
+			t.Errorf("unexpected number of notifiers for view: %s %v", d0.String(), notifiers)
+		}
+
+		v1 := w.tracker.view(d1.String())
+		if v1 == nil || w.Watching(d1.String()) == false {
+			t.Errorf("expected to be Watching after Complete: %s", d1.String())
+		}
+		if notifiers := w.tracker.notifiersFor(v1); len(notifiers) != 1 {
+			t.Errorf("unexpected number of notifiers for view: %s %v", d1.String(), notifiers)
 		}
 	})
 }
@@ -435,7 +499,7 @@ func TestWatcherWait(t *testing.T) {
 		}
 		w.Wait(context.Background())
 		if n.count() != 2 {
-			t.Fatal("didn't recieve all notifications")
+			t.Fatal("didn't receive all notifications")
 		}
 		if len(w.tracker.views) != 1 {
 			t.Fatal("duplicate views for same dependency")
