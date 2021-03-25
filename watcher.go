@@ -406,6 +406,9 @@ func (tp trackedPair) used() trackedPair {
 }
 
 // returns new pair to keep as value
+//
+// TODO: refresh tracking is not fully implemented in that dependencies are not
+// re-added after removed. This is no longer used within sweep() until then.
 func (tp trackedPair) refresh() trackedPair {
 	tp.inUse = false
 	return tp
@@ -566,6 +569,10 @@ func (t *tracker) complete(n Notifier) bool {
 
 // Clean out un-used trackedPair entries, views and notifiers
 // Checks based on passed in notifier, ignores others.
+//
+// sweep is useful to cleanup nested dependencies. This is a possible case
+// with Consul Template when the root dep no longer exists and the child dep
+// monitoring needs to be cleaned up.
 func (t *tracker) sweep(n Notifier) {
 	t.Lock()
 	defer t.Unlock()
