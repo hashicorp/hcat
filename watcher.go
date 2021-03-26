@@ -194,6 +194,9 @@ func (w *Watcher) Wait(ctx context.Context) error {
 				case view := <-w.dataCh:
 					dataUpdate(view)
 				case <-time.After(time.Second):
+					// 1 second is a high value used as as temporary workaround
+					// to mitigate the initial flood of data on the first run
+					// before the template rendering races with unprocessed data.
 					return nil
 				}
 			}
