@@ -555,16 +555,12 @@ func (t *tracker) initialized(viewID string) bool {
 // ie. it returns true if all values have been fetched
 func (t *tracker) complete(n Notifier) bool {
 	for _, tp := range t.tracked {
-		if tp.notify == n.ID() {
-			if tp.inUse && t.initialized(tp.view) {
-				return true
-			}
+		thisNotifier := tp.notify == n.ID()
+		if thisNotifier && tp.inUse && !t.initialized(tp.view) {
 			return false
 		}
 	}
-
-	// Return false if the notifier is not found
-	return false
+	return true
 }
 
 // Clean out un-used trackedPair entries, views and notifiers
