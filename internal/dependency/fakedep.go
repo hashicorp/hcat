@@ -12,6 +12,7 @@ import (
 ////////////
 // FakeDep is a fake dependency that does not actually speaks to a server.
 type FakeDep struct {
+	isConsul
 	Name string
 }
 

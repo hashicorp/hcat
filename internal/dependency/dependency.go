@@ -33,17 +33,17 @@ type BlockingQuery interface {
 	blockingQuery()
 }
 type VaultType interface {
-	isVault()
+	Vault()
 }
 type ConsulType interface {
-	isConsul()
+	Consul()
 }
 type isConsul struct{}
 type isVault struct{}
 type isBlocking struct{}
 
-func (isConsul) isConsul()        {}
-func (isVault) isVault()          {}
+func (isConsul) Consul()          {}
+func (isVault) Vault()            {}
 func (isBlocking) blockingQuery() {}
 
 // This specifies all the fields internally required by dependencies.
