@@ -103,7 +103,7 @@ type FakeDepFetchError struct {
 
 func (d *FakeDepFetchError) Fetch(dep.Clients) (interface{}, *dep.ResponseMetadata, error) {
 	time.Sleep(time.Microsecond)
-	return nil, nil, fmt.Errorf("failed to contact server")
+	return nil, nil, fmt.Errorf("failed to contact server: connection refused")
 }
 
 func (d *FakeDepFetchError) CanShare() bool {

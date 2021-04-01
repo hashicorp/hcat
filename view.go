@@ -183,6 +183,17 @@ func (v *view) poll(viewCh chan<- *view, errCh chan<- error) {
 			retries = 0
 			goto WAIT
 		case err := <-fetchErrCh:
+			if strings.Contains(err.Error(), "connection refused") {
+				// This indicates that Consul may have restarted. If Consul
+				// restarted, the current lastIndex will be stale and cause the
+				// next blocking query to hang until the wait time expires. To
+				// be safe, reset the lastIndex=0 so that the next query will not
+				// block and retrieve the latest lastIndex
+				v.dataLock.Lock()
+				v.lastIndex = 0
+				v.dataLock.Unlock()
+			}
+
 			if v.retryFunc != nil {
 				retry, sleep := v.retryFunc(retries)
 				if retry {

@@ -35,6 +35,7 @@ func TestPoll_returnsErrCh(t *testing.T) {
 	vw := newView(&newViewInput{
 		Dependency: &dep.FakeDepFetchError{},
 	})
+	vw.lastIndex = 15 // test that it will be reset to 0
 
 	viewCh := make(chan *view)
 	errCh := make(chan error)
@@ -46,9 +47,12 @@ func TestPoll_returnsErrCh(t *testing.T) {
 	case data := <-viewCh:
 		t.Errorf("expected no data, but got %+v", data)
 	case err := <-errCh:
-		expected := "failed to contact server"
+		expected := "failed to contact server: connection refused"
 		if err.Error() != expected {
 			t.Errorf("expected %q to be %q", err.Error(), expected)
+		}
+		if vw.lastIndex != 0 {
+			t.Errorf("expected last index to be 0 but %q", vw.lastIndex)
 		}
 	case <-vw.stopCh:
 		t.Errorf("poll received premature stop")
@@ -188,7 +192,7 @@ func TestFetch_returnsErrCh(t *testing.T) {
 	case <-doneCh:
 		t.Errorf("expected error, but received doneCh")
 	case err := <-errCh:
-		expected := "failed to contact server"
+		expected := "failed to contact server: connection refused"
 		if err.Error() != expected {
 			t.Fatalf("expected error %q to be %q", err.Error(), expected)
 		}
