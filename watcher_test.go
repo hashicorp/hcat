@@ -227,6 +227,50 @@ func TestWatcherWatching(t *testing.T) {
 			t.Errorf("unexpected number of notifiers for view: %s %v", d1.String(), notifiers)
 		}
 	})
+
+	// GH-44
+	t.Run("register-complete-race", func(t *testing.T) {
+		w := newWatcher(t)
+		defer w.Stop()
+
+		// fake template/notifier and dependencies (fields in template)
+		n := fakeNotifier("foo") // template stand-in
+		d0 := &idep.FakeDep{Name: "taco"}
+		d1 := &idep.FakeDep{Name: "burrito"}
+
+		// The race is between template's Execute and watcher's Complete.
+		// First Execute renders the template, registering dependencies
+		// and starting the polling. The polling then returns before the
+		// Complete call marking everything as retrieved and Complete
+		// erroneously returns true. It should require a second pass of the
+		// template to render the values into the form before being Complete.
+		//
+		// To replicate we want to manually force the condition instead of
+		// relying on the race, so we're testing by replicating the
+		// corresponding behavior sans some timing aspects (no rate limiting,
+		// etc.)
+
+		// First template Execute call..
+		// 1. each dependency gets registered
+		v0 := w.register(n, d0)
+		v1 := w.register(n, d1)
+		// 2. polling should start, but we'll simulate that manually below
+		// Template Execute is now done.
+
+		// Polling now returns data, stores it on the view and marks the
+		// view as having received the data (view.receivedData = true)
+		fakePollReturn := func(v *view, d dep.Dependency) {
+			v.store(d.String())
+		}
+		fakePollReturn(v0, d0)
+		fakePollReturn(v1, d1)
+
+		// Then the Complete check happens. Should return false as the data
+		// hasn't been rendered into the template yet.
+		if w.Complete(n) {
+			t.Fatalf("Complete should return false until the notifier says it's done.")
+		}
+	})
 }
 
 func TestWatcherRemove(t *testing.T) {
