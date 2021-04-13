@@ -257,8 +257,8 @@ func (w *Watcher) Register(n Notifier, d dep.Dependency) {
 // Returned view is useful internally and for testing.
 // Private as we don't want `view` public at this point.
 func (w *Watcher) register(n Notifier, d dep.Dependency) *view {
+	w.tracker.inUse(n, d)
 	if v, ok := w.tracker.lookup(n, d); ok {
-		w.tracker.usedID(v.ID())
 		return v
 	}
 	// Choose the correct retry function based off of the dependency's type.
@@ -280,7 +280,6 @@ func (w *Watcher) register(n Notifier, d dep.Dependency) *view {
 		RetryFunc:     retryFunc,
 	})
 	w.tracker.add(v, n)
-	w.tracker.usedID(v.ID())
 	return v
 }
 
@@ -320,8 +319,21 @@ func (w *Watcher) Recaller(n Notifier) Recaller {
 // Complete checks if all values in use have been fetched.
 // ..also cleans out data no longer used.
 func (w *Watcher) Complete(n Notifier) bool {
-	defer w.tracker.sweep(n)
 	return w.tracker.complete(n)
+}
+
+// Mark-n-Sweep garbage-collector-like cleaning of views that are no in use.
+// Stops the views and removes all references.
+// Should be used before/after the code that uses the dependencies (eg. template).
+//
+// Mark's all tracked dependencies as being *not* in use.
+func (w *Watcher) Mark(n Notifier) {
+	w.tracker.mark(n)
+}
+
+// Stop and dereference all views for dependencies still marked as *not* in use.
+func (w *Watcher) Sweep(n Notifier) {
+	w.tracker.sweep(n)
 }
 
 // SetBufferPeriod sets a buffer period to accumulate dependency changes for
@@ -403,17 +415,14 @@ type trackedPair struct {
 	cacheAccessed bool
 }
 
-// returns new pair to keep as value
-func (tp trackedPair) used() trackedPair {
+// markUsed sets as inUse (=true) and returns new pair to keep as value
+func (tp trackedPair) markInUse() trackedPair {
 	tp.inUse = true
 	return tp
 }
 
-// returns new pair to keep as value
-//
-// TODO: refresh tracking is not fully implemented in that dependencies are not
-// re-added after removed. This is no longer used within sweep() until then.
-func (tp trackedPair) refresh() trackedPair {
+// clearUse clears inUse (=false) and returns new pair to keep as value
+func (tp trackedPair) clearInUse() trackedPair {
 	tp.inUse = false
 	return tp
 }
@@ -513,12 +522,13 @@ func (t *tracker) add(v *view, n Notifier) {
 }
 
 // Marks all trackedPairs w/ a view as having been used
-func (t *tracker) usedID(viewID string) {
+func (t *tracker) inUse(n Notifier, d dep.Dependency) {
+	notifierID, depID := n.ID(), d.String()
 	t.Lock()
 	defer t.Unlock()
-	for idx, tp := range t.tracked {
-		if tp.view == viewID {
-			t.tracked[idx] = tp.used()
+	for i, tp := range t.tracked {
+		if tp.view == depID && tp.notify == notifierID {
+			t.tracked[i] = tp.markInUse()
 		}
 	}
 }
@@ -586,12 +596,23 @@ func (t *tracker) complete(n Notifier) bool {
 	return true
 }
 
-// Clean out un-used trackedPair entries, views and notifiers
+// Clean out un-used trackedPair entries and their views (if the last use).
 // Checks based on passed in notifier, ignores others.
 //
-// sweep is useful to cleanup nested dependencies. This is a possible case
-// with Consul Template when the root dep no longer exists and the child dep
-// monitoring needs to be cleaned up.
+// mark all pairs used by this notifier not used (used with sweep)
+func (t *tracker) mark(n Notifier) {
+	t.Lock()
+	defer t.Unlock()
+	for i, tp := range t.tracked {
+		if tp.notify == n.ID() && tp.inUse {
+			t.tracked[i] = tp.clearInUse()
+		}
+	}
+}
+
+// sweep (delete) unused pairs and views. It stops views before deleting their
+// reference.
+// Notifiers are not handled as they aren't internal objects.
 func (t *tracker) sweep(n Notifier) {
 	t.Lock()
 	defer t.Unlock()
@@ -607,14 +628,10 @@ func (t *tracker) sweep(n Notifier) {
 	}
 	t.tracked = tmp
 	// remove views/notifiers no longer referenced
-	for v := range t.views {
-		if _, ok := used[v]; !ok {
-			delete(t.views, v)
-		}
-	}
-	for notifierID := range t.notifiers {
-		if _, ok := used[notifierID]; !ok {
-			delete(t.notifiers, notifierID)
+	for viewId, view := range t.views {
+		if _, ok := used[viewId]; !ok {
+			delete(t.views, viewId)
+			view.stop()
 		}
 	}
 }

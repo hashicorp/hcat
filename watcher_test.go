@@ -454,24 +454,6 @@ func TestWatcherWait(t *testing.T) {
 			t.Fatal("None or Unexpected Error;", err)
 		}
 	})
-	t.Run("remove-old-dependency", func(t *testing.T) {
-		w := newWatcher(t)
-		defer w.Stop()
-		d := &idep.FakeDep{Name: "foo"}
-		n := fakeNotifier("foo")
-		w.Register(n, d)
-		if !w.tracker.notUsed(n.ID(), d.String()) {
-			t.Fatal("Couldn't find registered dependency")
-		}
-
-		if !w.Watching(d.String()) {
-			t.Error("expected dependency to be present")
-		}
-		w.Complete(n)
-		if w.Watching(d.String()) {
-			t.Error("expected dependency to be removed")
-		}
-	})
 	// Test cache updates
 	t.Run("simple-update", func(t *testing.T) {
 		w := newWatcher(t)
@@ -645,6 +627,55 @@ func TestWatcherWait(t *testing.T) {
 			t.Fatal("Stop->Wait shouldn't stop Wait")
 		}
 		w.Stop()
+	})
+}
+
+func TestWatcherMarkSweep(t *testing.T) {
+	t.Run("remove-old-dependency", func(t *testing.T) {
+		w := newWatcher(t)
+		defer w.Stop()
+		fdep := &idep.FakeDep{Name: "foo"}
+		bdep := &idep.FakeDep{Name: "bar"}
+		n := fakeNotifier("zed")
+		w.Register(n, fdep)
+		w.Register(n, bdep)
+
+		// checks that dependencies are watched and have active views
+		checkDeps := func(deps ...*idep.FakeDep) {
+			t.Helper() // fixes line numbers
+			for _, d := range deps {
+				if !w.Watching(d.String()) {
+					t.Errorf("expected dependency to be present (%s)", d)
+				}
+				if v := w.view(d.String()); v == nil {
+					t.Errorf("expected dependency '%v' to be present", d)
+				}
+			}
+		}
+		// everything watched
+		checkDeps(fdep, bdep)
+		// marks all dependencies of this notifier as being unused
+		w.Mark(n)
+		// everything still watched
+		checkDeps(fdep, bdep)
+
+		// simulate recaller calling register
+		w.register(n, fdep)
+
+		// everything still here
+		checkDeps(fdep, bdep)
+
+		// should delete dep that did *not* register (bdep)
+		w.Sweep(n)
+		// fdep was registered, should still be present
+		checkDeps(fdep)
+		// bdep was un-registered, should be gone
+		if w.Watching(bdep.String()) {
+			t.Error("expected dependency bar to no longer be watched")
+		}
+		if v := w.view(bdep.String()); v != nil {
+			t.Error("expected dependency bar to be removed")
+		}
 	})
 }
 
