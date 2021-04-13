@@ -385,7 +385,7 @@ func TestWatcherWait(t *testing.T) {
 		if err != nil {
 			t.Fatal("Error not expected")
 		}
-		dur := time.Now().Sub(t1)
+		dur := time.Since(t1)
 		if dur < time.Microsecond*100 || dur > time.Millisecond*10 {
 			t.Fatal("Wait call was off;", dur)
 		}
@@ -401,7 +401,7 @@ func TestWatcherWait(t *testing.T) {
 		if err != nil {
 			t.Fatal("Error not expected")
 		}
-		dur := time.Now().Sub(t1)
+		dur := time.Since(t1)
 		if dur < time.Microsecond*100 || dur > time.Millisecond*10 {
 			t.Fatal("Wait call was off;", dur)
 		}
@@ -437,7 +437,7 @@ func TestWatcherWait(t *testing.T) {
 			w.errCh <- testerr
 		}()
 		w.Wait(context.Background())
-		dur := time.Now().Sub(t1)
+		dur := time.Since(t1)
 		if dur < time.Microsecond*100 || dur > time.Millisecond*10 {
 			t.Fatal("Wait call was off;", dur)
 		}
@@ -538,7 +538,6 @@ func TestWatcherWait(t *testing.T) {
 		for i := 0; i < 2; i++ {
 			foodep := &idep.FakeDep{Name: "foo"}
 			w.dataCh <- w.register(n, foodep)
-			//w.dataCh <- w.tracker.views[foodep.String()]
 		}
 		w.Wait(context.Background())
 		if n.count() != 2 {
@@ -572,10 +571,7 @@ func TestWatcherWait(t *testing.T) {
 		errCh := make(chan error)
 		ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond)
 		go func() {
-			select {
-			case err := <-w.WaitCh(ctx):
-				errCh <- err
-			}
+			errCh <- <-w.WaitCh(ctx)
 		}()
 		cancel()
 		err := <-errCh

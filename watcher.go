@@ -469,17 +469,6 @@ func (t *tracker) viewCount() int {
 	return len(t.views)
 }
 
-// notUsed clears the inUse flag, for testing
-func (t *tracker) notUsed(notifierID, viewID string) bool {
-	for i, tp := range t.tracked {
-		if tp.view == viewID && tp.notify == notifierID {
-			t.tracked[i] = tp.refresh()
-			return true
-		}
-	}
-	return false
-}
-
 // lookup returns the view and true, or nil and false
 // true is returned if the notifier and depencency match a tracked pair
 // returns the view as it is the 1 thing that you don't have yet
@@ -573,14 +562,6 @@ func (t *tracker) notifiersFor(v *view) []Notifier {
 	return results
 }
 
-// initialized returns true if the view has had its data fetched at least once
-func (t *tracker) initialized(viewID string) bool {
-	if v, ok := t.views[viewID]; ok {
-		return v.receivedData
-	}
-	return false
-}
-
 // complete returns true if every dependency used has been initialized
 // ie. it returns true if all values have been fetched
 func (t *tracker) complete(n Notifier) bool {
@@ -650,13 +631,4 @@ func (n *dummyNotifier) ID() string {
 }
 func (n *dummyNotifier) count() int {
 	return len(n.deps)
-}
-func (n *dummyNotifier) ids() []string {
-	results := make([]string, len(n.deps))
-	for i := 0; i < len(n.deps); i++ {
-		d := <-n.deps
-		results[i] = d.String()
-		n.deps <- d
-	}
-	return results
 }
