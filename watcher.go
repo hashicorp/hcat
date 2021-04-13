@@ -307,7 +307,10 @@ func (w *Watcher) Recaller(n Notifier) Recaller {
 	return func(dep dep.Dependency) (interface{}, bool) {
 		w.register(n, dep)
 		data, ok := w.cache.Recall(dep.String())
-		if !ok {
+		switch {
+		case ok:
+			w.tracker.cacheAccessed(n, dep)
+		default:
 			w.Poll(dep)
 		}
 		return data, ok
@@ -392,11 +395,12 @@ func newTracker() *tracker {
 
 // 1 view/notifier pair. Think many-2-many RDBMS table with annotations.
 type trackedPair struct {
-	// viewed: id of view watched, notified: id of external thing
-	// notified, client, consumer
+	// view: id of view watched, notify: id of notifier (eg. template)
 	view, notify string
 	// inUse flag gets off pre-render and back on at use
 	inUse bool
+	// cacheAccessed is set when recalled from cache the first time
+	cacheAccessed bool
 }
 
 // returns new pair to keep as value
@@ -411,6 +415,13 @@ func (tp trackedPair) used() trackedPair {
 // re-added after removed. This is no longer used within sweep() until then.
 func (tp trackedPair) refresh() trackedPair {
 	tp.inUse = false
+	return tp
+}
+
+// markDataUsed sets fetched data as being used
+// this is only important for new dependencies, so only needs to be set once
+func (tp trackedPair) markCacheAccessed() trackedPair {
+	tp.cacheAccessed = true
 	return tp
 }
 
@@ -431,6 +442,18 @@ type tracker struct {
 	views map[string]*view
 	// stringID -> Notifier (stringID is usually template-id)
 	notifiers map[string]Notifier
+}
+
+// cacheAccessed records that the fetched data was used at least once
+func (t *tracker) cacheAccessed(n Notifier, d dep.Dependency) {
+	notifierID, depID := n.ID(), d.String()
+	t.Lock()
+	defer t.Unlock()
+	for i, tp := range t.tracked {
+		if !tp.cacheAccessed && tp.view == depID && tp.notify == notifierID {
+			t.tracked[i] = tp.markCacheAccessed()
+		}
+	}
 }
 
 // viewCount returns the number of views watched
@@ -556,7 +579,7 @@ func (t *tracker) initialized(viewID string) bool {
 func (t *tracker) complete(n Notifier) bool {
 	for _, tp := range t.tracked {
 		thisNotifier := tp.notify == n.ID()
-		if thisNotifier && tp.inUse && !t.initialized(tp.view) {
+		if thisNotifier && tp.inUse && !tp.cacheAccessed {
 			return false
 		}
 	}
