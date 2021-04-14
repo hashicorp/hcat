@@ -57,6 +57,16 @@ type Renderer interface {
 	Render(contents []byte) (RenderResult, error)
 }
 
+// Interface that indicates it implements Mark and Sweep "garbage" collection
+// to track and collect (stop/dereference) dependencies and views that are no
+// longer in use. This happens over longer runs with nested dependencies
+// (EG. loop over all services and lookup each service instance, instance
+// goes away) and results in goroutine leaks if not managed.
+type Collector interface {
+	Mark(Notifier)
+	Sweep(Notifier)
+}
+
 // Recaller is the read interface for the cache
 // Implemented by Store and Watcher (which wraps Store)
 type Recaller func(dep.Dependency) (value interface{}, found bool)
@@ -170,12 +180,24 @@ func (t *Template) Execute(w Watcherer) ([]byte, error) {
 		return nil, errors.Wrap(err, "parse")
 	}
 
-	// Execute the template into the writer
-	var b bytes.Buffer
-	if err := tmpl.Execute(&b, nil); err != nil {
-		return nil, errors.Wrap(err, "execute")
+	// If Watcherer supports it, wrap the template call with the Mark-n-Sweep
+	// garbage collector to stop and dereference the old/unused views.
+	gcViews := func(f func() error) error { return f() }
+	if c, ok := w.(Collector); ok {
+		gcViews = func(f func() error) error {
+			c.Mark(t)
+			defer c.Sweep(t)
+			return f()
+		}
 	}
 
+	// Execute the template into the writer
+	var b bytes.Buffer
+	if err := gcViews(func() error {
+		return tmpl.Execute(&b, nil)
+	}); err != nil {
+		return nil, errors.Wrap(err, "execute")
+	}
 	// Checks if all values in use have been fetched.
 	// Also cleans out data no longer used by this template.
 	if !w.Complete(t) {

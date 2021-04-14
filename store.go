@@ -42,7 +42,7 @@ func (s *Store) Recall(id string) (interface{}, bool) {
 }
 
 // Forget accepts a dependency and removes all associated data with this
-// dependency. It also resets the "receivedData" internal map.
+// dependency.
 func (s *Store) Delete(id string) {
 	s.Lock()
 	defer s.Unlock()

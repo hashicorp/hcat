@@ -22,7 +22,7 @@ func TestResolverRun(t *testing.T) {
 		if err != nil {
 			t.Fatal("Run() error:", err)
 		}
-		if r.missing == false {
+		if r.missing != true {
 			t.Fatal("missing should be true")
 		}
 	})
@@ -125,18 +125,12 @@ func TestResolverRun(t *testing.T) {
 	// actually run using injected fake dependencies
 	// dep1 returns a list of words where dep2 echos each
 	t.Run("multi-pass-run", func(t *testing.T) {
-		// Changing the wait time allows hashicat to process more data in one loop
-		// and it's possible that this tests the behavior of trackedPair.refresh()
-		// which is half implemented. Skipping until that gets flushed out.
-		// TODO: This test needs to be updated to the improved process
-		t.Skip("skipping this test until it can be refactored.")
-		
 		rv := NewResolver()
 		tt := echoListTemplate(t, "foo", "bar")
 		w := blindWatcher(t)
 		defer w.Stop()
 
-		// Run 1, 'words' is missing
+		// Run 1, 'words' is registered
 		r, err := rv.Run(tt, w)
 		if err != nil {
 			t.Fatal("Run() error:", err)
@@ -145,9 +139,9 @@ func TestResolverRun(t *testing.T) {
 			t.Fatal("missing should be true")
 		}
 		ctx := context.Background()
-		w.Wait(ctx) // wait for (fake/instantaneous) dependency resolution
+		w.Wait(ctx)
 
-		// Run 2, 'echo foo' is missing
+		// Run 2, loops and registers both nested 'echo' calls
 		r, err = rv.Run(tt, w)
 		if err != nil {
 			t.Fatal("Run() error:", err)
@@ -157,20 +151,20 @@ func TestResolverRun(t *testing.T) {
 		}
 		w.Wait(ctx)
 
-		// Run 3, 'echo bar' is missing
-		r, err = rv.Run(tt, w)
-		if err != nil {
-			t.Fatal("Run() error:", err)
-		}
-		if r.missing == false {
-			t.Fatal("missing should be true")
-		}
-		w.Wait(ctx)
-
-		// Run 4, complete
-		r, err = rv.Run(tt, w)
-		if err != nil {
-			t.Fatal("Run() error:", err)
+		// Run 3-4, fetched 'echo' data comes in and completes the template.
+		// Due to asynchronous nature of the test, it is indeterminate whether
+		// the data will be received and used in 1 or 2 checks. So we need to
+		// loop twice. At the end the 2nd loop the template will be complete or
+		// something went wrong.
+		for i := 0; i < 2; i++ {
+			r, err = rv.Run(tt, w)
+			if err != nil {
+				t.Fatal("Run() error:", err)
+			}
+			if r.Complete {
+				break // complete in 1 pass, break before Wait or it will hang
+			}
+			w.Wait(ctx)
 		}
 		if r.missing == true {
 			t.Fatal("missing should be false")

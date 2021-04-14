@@ -227,6 +227,50 @@ func TestWatcherWatching(t *testing.T) {
 			t.Errorf("unexpected number of notifiers for view: %s %v", d1.String(), notifiers)
 		}
 	})
+
+	// GH-44
+	t.Run("register-complete-race", func(t *testing.T) {
+		w := newWatcher(t)
+		defer w.Stop()
+
+		// fake template/notifier and dependencies (fields in template)
+		n := fakeNotifier("foo") // template stand-in
+		d0 := &idep.FakeDep{Name: "taco"}
+		d1 := &idep.FakeDep{Name: "burrito"}
+
+		// The race is between template's Execute and watcher's Complete.
+		// First Execute renders the template, registering dependencies
+		// and starting the polling. The polling then returns before the
+		// Complete call marking everything as retrieved and Complete
+		// erroneously returns true. It should require a second pass of the
+		// template to render the values into the form before being Complete.
+		//
+		// To replicate we want to manually force the condition instead of
+		// relying on the race, so we're testing by replicating the
+		// corresponding behavior sans some timing aspects (no rate limiting,
+		// etc.)
+
+		// First template Execute call..
+		// 1. each dependency gets registered
+		v0 := w.register(n, d0)
+		v1 := w.register(n, d1)
+		// 2. polling should start, but we'll simulate that manually below
+		// Template Execute is now done.
+
+		// Polling now returns data, stores it on the view and marks the
+		// view as having received the data (view.receivedData = true)
+		fakePollReturn := func(v *view, d dep.Dependency) {
+			v.store(d.String())
+		}
+		fakePollReturn(v0, d0)
+		fakePollReturn(v1, d1)
+
+		// Then the Complete check happens. Should return false as the data
+		// hasn't been rendered into the template yet.
+		if w.Complete(n) {
+			t.Fatalf("Complete should return false until the notifier says it's done.")
+		}
+	})
 }
 
 func TestWatcherRemove(t *testing.T) {
@@ -341,7 +385,7 @@ func TestWatcherWait(t *testing.T) {
 		if err != nil {
 			t.Fatal("Error not expected")
 		}
-		dur := time.Now().Sub(t1)
+		dur := time.Since(t1)
 		if dur < time.Microsecond*100 || dur > time.Millisecond*10 {
 			t.Fatal("Wait call was off;", dur)
 		}
@@ -357,7 +401,7 @@ func TestWatcherWait(t *testing.T) {
 		if err != nil {
 			t.Fatal("Error not expected")
 		}
-		dur := time.Now().Sub(t1)
+		dur := time.Since(t1)
 		if dur < time.Microsecond*100 || dur > time.Millisecond*10 {
 			t.Fatal("Wait call was off;", dur)
 		}
@@ -393,7 +437,7 @@ func TestWatcherWait(t *testing.T) {
 			w.errCh <- testerr
 		}()
 		w.Wait(context.Background())
-		dur := time.Now().Sub(t1)
+		dur := time.Since(t1)
 		if dur < time.Microsecond*100 || dur > time.Millisecond*10 {
 			t.Fatal("Wait call was off;", dur)
 		}
@@ -408,24 +452,6 @@ func TestWatcherWait(t *testing.T) {
 		err := w.Wait(context.Background())
 		if err != testerr {
 			t.Fatal("None or Unexpected Error;", err)
-		}
-	})
-	t.Run("remove-old-dependency", func(t *testing.T) {
-		w := newWatcher(t)
-		defer w.Stop()
-		d := &idep.FakeDep{Name: "foo"}
-		n := fakeNotifier("foo")
-		w.Register(n, d)
-		if !w.tracker.notUsed(n.ID(), d.String()) {
-			t.Fatal("Couldn't find registered dependency")
-		}
-
-		if !w.Watching(d.String()) {
-			t.Error("expected dependency to be present")
-		}
-		w.Complete(n)
-		if w.Watching(d.String()) {
-			t.Error("expected dependency to be removed")
 		}
 	})
 	// Test cache updates
@@ -512,7 +538,6 @@ func TestWatcherWait(t *testing.T) {
 		for i := 0; i < 2; i++ {
 			foodep := &idep.FakeDep{Name: "foo"}
 			w.dataCh <- w.register(n, foodep)
-			//w.dataCh <- w.tracker.views[foodep.String()]
 		}
 		w.Wait(context.Background())
 		if n.count() != 2 {
@@ -546,10 +571,7 @@ func TestWatcherWait(t *testing.T) {
 		errCh := make(chan error)
 		ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond)
 		go func() {
-			select {
-			case err := <-w.WaitCh(ctx):
-				errCh <- err
-			}
+			errCh <- <-w.WaitCh(ctx)
 		}()
 		cancel()
 		err := <-errCh
@@ -601,6 +623,55 @@ func TestWatcherWait(t *testing.T) {
 			t.Fatal("Stop->Wait shouldn't stop Wait")
 		}
 		w.Stop()
+	})
+}
+
+func TestWatcherMarkSweep(t *testing.T) {
+	t.Run("remove-old-dependency", func(t *testing.T) {
+		w := newWatcher(t)
+		defer w.Stop()
+		fdep := &idep.FakeDep{Name: "foo"}
+		bdep := &idep.FakeDep{Name: "bar"}
+		n := fakeNotifier("zed")
+		w.Register(n, fdep)
+		w.Register(n, bdep)
+
+		// checks that dependencies are watched and have active views
+		checkDeps := func(deps ...*idep.FakeDep) {
+			t.Helper() // fixes line numbers
+			for _, d := range deps {
+				if !w.Watching(d.String()) {
+					t.Errorf("expected dependency to be present (%s)", d)
+				}
+				if v := w.view(d.String()); v == nil {
+					t.Errorf("expected dependency '%v' to be present", d)
+				}
+			}
+		}
+		// everything watched
+		checkDeps(fdep, bdep)
+		// marks all dependencies of this notifier as being unused
+		w.Mark(n)
+		// everything still watched
+		checkDeps(fdep, bdep)
+
+		// simulate recaller calling register
+		w.register(n, fdep)
+
+		// everything still here
+		checkDeps(fdep, bdep)
+
+		// should delete dep that did *not* register (bdep)
+		w.Sweep(n)
+		// fdep was registered, should still be present
+		checkDeps(fdep)
+		// bdep was un-registered, should be gone
+		if w.Watching(bdep.String()) {
+			t.Error("expected dependency bar to no longer be watched")
+		}
+		if v := w.view(bdep.String()); v != nil {
+			t.Error("expected dependency bar to be removed")
+		}
 	})
 }
 
