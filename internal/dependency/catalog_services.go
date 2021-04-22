@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"regexp"
 	"sort"
+	"strings"
 
 	"github.com/hashicorp/hcat/dep"
 	"github.com/pkg/errors"
@@ -30,6 +31,37 @@ type CatalogServicesQuery struct {
 
 	dc   string
 	opts QueryOptions
+}
+
+// NewCatalogServicesQueryV1 processes options in the format of "key=value"
+// e.g. "dc=dc1"
+func NewCatalogServicesQueryV1(opts []string) (*CatalogServicesQuery, error) {
+	catalogServicesQuery := CatalogServicesQuery{
+		stopCh: make(chan struct{}, 1),
+	}
+
+	for _, opt := range opts {
+		if strings.TrimSpace(opt) == "" {
+			continue
+		}
+
+		queryParam := strings.Split(opt, "=")
+		if len(queryParam) != 2 {
+			return nil, fmt.Errorf(
+				"catalog.services: invalid query parameter format: %q", opt)
+		}
+		query := strings.TrimSpace(queryParam[0])
+		value := strings.TrimSpace(queryParam[1])
+		switch query {
+		case "dc", "datacenter":
+			catalogServicesQuery.dc = value
+		default:
+			return nil, fmt.Errorf(
+				"catalog.services: invalid query parameter: %q", opt)
+		}
+	}
+
+	return &catalogServicesQuery, nil
 }
 
 // NewCatalogServicesQuery parses a string of the format @dc.

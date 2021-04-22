@@ -15,15 +15,15 @@ var errFuncNotImplemented = fmt.Errorf("function is not implemented")
 // namespaces.
 func FuncMapConsulV1() template.FuncMap {
 	return template.FuncMap{
-		"service": v1ServiceFunc,
-		"connect": v1ConnectFunc,
+		"service":  v1ServiceFunc,
+		"connect":  v1ConnectFunc,
+		"services": v1ServicesFunc,
 
 		// Set of Consul functions that are not yet implemented for v1. These
 		// intentionally error instead of defaulting to the v0 implementations
 		// to avoid introducing breaking changes when they are supported.
-		"node":     v1TODOFunc,
-		"nodes":    v1TODOFunc,
-		"services": v1TODOFunc,
+		"node":  v1TODOFunc,
+		"nodes": v1TODOFunc,
 	}
 }
 
@@ -32,6 +32,27 @@ func FuncMapConsulV1() template.FuncMap {
 func v1TODOFunc(recall Recaller) interface{} {
 	return func(s ...string) (interface{}, error) {
 		return nil, errFuncNotImplemented
+	}
+}
+
+// v1ServicesFunc returns information on registered Consul services
+//
+// Endpoint: /v1/catalog/services
+// Template: {{ services <filter options> ... }}
+func v1ServicesFunc(recall Recaller) interface{} {
+	return func(opts ...string) ([]*dep.CatalogSnippet, error) {
+		result := []*dep.CatalogSnippet{}
+
+		d, err := idep.NewCatalogServicesQueryV1(opts)
+		if err != nil {
+			return nil, err
+		}
+
+		if value, ok := recall(d); ok {
+			return value.([]*dep.CatalogSnippet), nil
+		}
+
+		return result, nil
 	}
 }
 

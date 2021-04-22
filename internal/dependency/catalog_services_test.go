@@ -55,6 +55,61 @@ func TestNewCatalogServicesQuery(t *testing.T) {
 	}
 }
 
+func TestNewCatalogServicesQueryV1(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name string
+		opts []string
+		exp  *CatalogServicesQuery
+		err  bool
+	}{
+		{
+			"no opts",
+			[]string{},
+			&CatalogServicesQuery{},
+			false,
+		},
+		{
+			"dc",
+			[]string{"dc=dc1"},
+			&CatalogServicesQuery{
+				dc: "dc1",
+			},
+			false,
+		},
+		{
+			"invalid query",
+			[]string{"invalid=true"},
+			nil,
+			true,
+		},
+		{
+			"invalid query format",
+			[]string{"dc1"},
+			nil,
+			true,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			act, err := NewCatalogServicesQueryV1(tc.opts)
+			if tc.err {
+				assert.Error(t, err)
+				return
+			}
+
+			if act != nil {
+				act.stopCh = nil
+			}
+
+			assert.NoError(t, err, err)
+			assert.Equal(t, tc.exp, act)
+		})
+	}
+}
+
 func TestCatalogServicesQuery_Fetch(t *testing.T) {
 	t.Parallel()
 
