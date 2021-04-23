@@ -93,9 +93,26 @@ func TestTemplateExecute_consul_v1(t *testing.T) {
 			TemplateInput{
 				Contents: `{{ range services }}{{ .Name }}{{ end }}`,
 			},
-			nil,
-			"",
-			true,
+			func() *Store {
+				st := NewStore()
+				d, err := idep.NewCatalogServicesQueryV1([]string{})
+				if err != nil {
+					t.Fatal(err)
+				}
+				st.Save(d.String(), []*dep.CatalogSnippet{
+					{
+						Name: "web",
+						Tags: dep.ServiceTags([]string{"tag1", "tag2"}),
+					},
+					{
+						Name: "api",
+						Tags: dep.ServiceTags([]string{"tag3"}),
+					},
+				})
+				return st
+			}(),
+			"webapi",
+			false,
 		}, {
 			"func_datacenters_v0",
 			TemplateInput{
