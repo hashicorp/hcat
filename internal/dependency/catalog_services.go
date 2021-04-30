@@ -29,8 +29,10 @@ type CatalogServicesQuery struct {
 	isConsul
 	stopCh chan struct{}
 
-	dc   string
-	opts QueryOptions
+	dc       string
+	ns       string
+	nodeMeta map[string]string
+	opts     QueryOptions
 }
 
 // NewCatalogServicesQueryV1 processes options in the format of "key=value"
@@ -45,16 +47,28 @@ func NewCatalogServicesQueryV1(opts []string) (*CatalogServicesQuery, error) {
 			continue
 		}
 
-		queryParam := strings.Split(opt, "=")
-		if len(queryParam) != 2 {
+		query, value, err := stringsSplit2(opt, "=")
+		if err != nil {
 			return nil, fmt.Errorf(
 				"catalog.services: invalid query parameter format: %q", opt)
 		}
-		query := strings.TrimSpace(queryParam[0])
-		value := strings.TrimSpace(queryParam[1])
 		switch query {
 		case "dc", "datacenter":
 			catalogServicesQuery.dc = value
+		case "ns", "namespace":
+			catalogServicesQuery.ns = value
+		case "node-meta":
+			if catalogServicesQuery.nodeMeta == nil {
+				catalogServicesQuery.nodeMeta = make(map[string]string)
+			}
+			k, v, err := stringsSplit2(value, ":")
+			if err != nil {
+				return nil, fmt.Errorf(
+					"catalog.services: invalid format for query parameter %q: %s",
+					query, value,
+				)
+			}
+			catalogServicesQuery.nodeMeta[k] = v
 		default:
 			return nil, fmt.Errorf(
 				"catalog.services: invalid query parameter: %q", opt)
@@ -88,14 +102,18 @@ func (d *CatalogServicesQuery) Fetch(clients dep.Clients) (interface{}, *dep.Res
 
 	opts := d.opts.Merge(&QueryOptions{
 		Datacenter: d.dc,
-	})
+		Namespace:  d.ns,
+	}).ToConsulOpts()
+	// node-meta is handled specifically for /v1/catalog/services endpoint since
+	// it does not support the preferred filter option.
+	opts.NodeMeta = d.nodeMeta
 
 	//log.Printf("[TRACE] %s: GET %s", d, &url.URL{
 	//	Path:     "/v1/catalog/services",
 	//	RawQuery: opts.String(),
 	//})
 
-	entries, qm, err := clients.Consul().Catalog().Services(opts.ToConsulOpts())
+	entries, qm, err := clients.Consul().Catalog().Services(opts)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, d.String())
 	}
@@ -127,8 +145,19 @@ func (d *CatalogServicesQuery) CanShare() bool {
 
 // String returns the human-friendly version of this dependency.
 func (d *CatalogServicesQuery) String() string {
+	var opts []string
 	if d.dc != "" {
-		return fmt.Sprintf("catalog.services(@%s)", d.dc)
+		opts = append(opts, fmt.Sprintf("@%s", d.dc))
+	}
+	if d.ns != "" {
+		opts = append(opts, fmt.Sprintf("ns=%s", d.ns))
+	}
+	for k, v := range d.nodeMeta {
+		opts = append(opts, fmt.Sprintf("node-meta=%s:%s", k, v))
+	}
+	if len(opts) > 0 {
+		sort.Strings(opts)
+		return fmt.Sprintf("catalog.services(%s)", strings.Join(opts, "&"))
 	}
 	return "catalog.services"
 }
@@ -152,4 +181,13 @@ func (s ByName) Less(i, j int) bool {
 		return true
 	}
 	return false
+}
+
+// stringsSplit2 splits a string
+func stringsSplit2(s string, sep string) (string, string, error) {
+	split := strings.Split(s, sep)
+	if len(split) != 2 {
+		return "", "", fmt.Errorf("unexpected split on separator %q: %s", sep, s)
+	}
+	return strings.TrimSpace(split[0]), strings.TrimSpace(split[1]), nil
 }

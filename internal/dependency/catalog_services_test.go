@@ -79,6 +79,32 @@ func TestNewCatalogServicesQueryV1(t *testing.T) {
 			false,
 		},
 		{
+			"ns",
+			[]string{"ns=namespace"},
+			&CatalogServicesQuery{
+				ns: "namespace",
+			},
+			false,
+		},
+		{
+			"node-meta",
+			[]string{"node-meta=k:v", "node-meta=foo:bar"},
+			&CatalogServicesQuery{
+				nodeMeta: map[string]string{"k": "v", "foo": "bar"},
+			},
+			false,
+		},
+		{
+			"multiple",
+			[]string{"node-meta=k:v", "ns=namespace", "dc=dc1"},
+			&CatalogServicesQuery{
+				dc:       "dc1",
+				ns:       "namespace",
+				nodeMeta: map[string]string{"k": "v"},
+			},
+			false,
+		},
+		{
 			"invalid query",
 			[]string{"invalid=true"},
 			nil,
@@ -178,6 +204,52 @@ func TestCatalogServicesQuery_String(t *testing.T) {
 	for i, tc := range cases {
 		t.Run(fmt.Sprintf("%d_%s", i, tc.name), func(t *testing.T) {
 			d, err := NewCatalogServicesQuery(tc.i)
+			if err != nil {
+				t.Fatal(err)
+			}
+			assert.Equal(t, tc.exp, d.String())
+		})
+	}
+}
+
+func TestCatalogServicesQueryV1_String(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name string
+		i    []string
+		exp  string
+	}{
+		{
+			"empty",
+			[]string{},
+			"catalog.services",
+		},
+		{
+			"datacenter",
+			[]string{"dc=dc1"},
+			"catalog.services(@dc1)",
+		},
+		{
+			"namespace",
+			[]string{"ns=namespace"},
+			"catalog.services(ns=namespace)",
+		},
+		{
+			"node-meta",
+			[]string{"node-meta=k:v", "node-meta=foo:bar"},
+			"catalog.services(node-meta=foo:bar&node-meta=k:v)",
+		},
+		{
+			"multiple",
+			[]string{"node-meta=k:v", "dc=dc1", "ns=namespace"},
+			"catalog.services(@dc1&node-meta=k:v&ns=namespace)",
+		},
+	}
+
+	for i, tc := range cases {
+		t.Run(fmt.Sprintf("%d_%s", i, tc.name), func(t *testing.T) {
+			d, err := NewCatalogServicesQueryV1(tc.i)
 			if err != nil {
 				t.Fatal(err)
 			}
