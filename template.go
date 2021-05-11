@@ -134,11 +134,12 @@ func (t *Template) ID() string {
 }
 
 // Notify template that a dependency it relies on has been updated.
-func (t *Template) Notify(dep.Dependency) {
+func (t *Template) Notify(interface{}) bool {
 	select {
 	case t.dirty <- struct{}{}:
 	default:
 	}
+	return true
 }
 
 // Check and clear dirty flag
