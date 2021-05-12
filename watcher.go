@@ -314,7 +314,6 @@ func (w *Watcher) Recaller(n Notifier) Recaller {
 }
 
 // Complete checks if all values in use have been fetched.
-// ..also cleans out data no longer used.
 func (w *Watcher) Complete(n Notifier) bool {
 	return w.tracker.complete(n)
 }
@@ -324,13 +323,13 @@ func (w *Watcher) Complete(n Notifier) bool {
 // Should be used before/after the code that uses the dependencies (eg. template).
 //
 // Mark's all tracked dependencies as being *not* in use.
-func (w *Watcher) Mark(n Notifier) {
-	w.tracker.mark(n)
+func (w *Watcher) Mark(notifier IDer) {
+	w.tracker.mark(notifier)
 }
 
 // Stop and dereference all views for dependencies still marked as *not* in use.
-func (w *Watcher) Sweep(n Notifier) {
-	w.tracker.sweep(n, w.cache)
+func (w *Watcher) Sweep(notifier IDer) {
+	w.tracker.sweep(notifier, w.cache)
 }
 
 // SetBufferPeriod sets a buffer period to accumulate dependency changes for
@@ -420,9 +419,15 @@ func (tp trackedPair) markCacheAccessed() trackedPair {
 	return tp
 }
 
-type Notifier interface {
-	Notify(dep.Dependency)
+// IDer an interface that supports and ID
+type IDer interface {
 	ID() string
+}
+
+// Notifier indicates support for notifications
+type Notifier interface {
+	IDer
+	Notify(dep.Dependency)
 }
 
 // If performance of looping through tracked gets to be to much build 2 indexes
@@ -440,8 +445,8 @@ type tracker struct {
 }
 
 // cacheAccessed records that the fetched data was used at least once
-func (t *tracker) cacheAccessed(n Notifier, d dep.Dependency) {
-	notifierID, depID := n.ID(), d.String()
+func (t *tracker) cacheAccessed(notifier IDer, d dep.Dependency) {
+	notifierID, depID := notifier.ID(), d.String()
 	t.Lock()
 	defer t.Unlock()
 	for i, tp := range t.tracked {
@@ -462,8 +467,8 @@ func (t *tracker) viewCount() int {
 // true is returned if the notifier and depencency match a tracked pair
 // returns the view as it is the 1 thing that you don't have yet
 // note that a view's and dependency's IDs are interchangeable (identical)
-func (t *tracker) lookup(n Notifier, d dep.Dependency) (*view, bool) {
-	notifierID, depID := n.ID(), d.String()
+func (t *tracker) lookup(notifier IDer, d dep.Dependency) (*view, bool) {
+	notifierID, depID := notifier.ID(), d.String()
 	t.Lock()
 	defer t.Unlock()
 	for _, tp := range t.tracked {
@@ -497,8 +502,8 @@ func (t *tracker) add(v *view, n Notifier) {
 }
 
 // Marks all trackedPairs w/ a view as having been used
-func (t *tracker) inUse(n Notifier, d dep.Dependency) {
-	notifierID, depID := n.ID(), d.String()
+func (t *tracker) inUse(notifier IDer, d dep.Dependency) {
+	notifierID, depID := notifier.ID(), d.String()
 	t.Lock()
 	defer t.Unlock()
 	for i, tp := range t.tracked {
@@ -521,9 +526,9 @@ func (t *tracker) stopViews() {
 	}
 }
 
-// Return all views for a notifier
-func (t *tracker) notifiersFor(v *view) []Notifier {
-	viewID := v.ID()
+// Return all Notifiers for a view
+func (t *tracker) notifiersFor(view IDer) []Notifier {
+	viewID := view.ID()
 	results := make([]Notifier, 0, 8)
 	for _, tp := range t.tracked {
 		if tp.view == viewID {
@@ -535,9 +540,9 @@ func (t *tracker) notifiersFor(v *view) []Notifier {
 
 // complete returns true if every dependency used has been initialized
 // ie. it returns true if all values have been fetched
-func (t *tracker) complete(n Notifier) bool {
+func (t *tracker) complete(notifier IDer) bool {
 	for _, tp := range t.tracked {
-		thisNotifier := tp.notify == n.ID()
+		thisNotifier := tp.notify == notifier.ID()
 		if thisNotifier && tp.inUse && !tp.cacheAccessed {
 			return false
 		}
@@ -549,11 +554,11 @@ func (t *tracker) complete(n Notifier) bool {
 // Checks based on passed in notifier, ignores others.
 //
 // mark all pairs used by this notifier not used (used with sweep)
-func (t *tracker) mark(n Notifier) {
+func (t *tracker) mark(notifier IDer) {
 	t.Lock()
 	defer t.Unlock()
 	for i, tp := range t.tracked {
-		if tp.notify == n.ID() && tp.inUse {
+		if tp.notify == notifier.ID() && tp.inUse {
 			t.tracked[i] = tp.clearInUse()
 		}
 	}
@@ -562,13 +567,13 @@ func (t *tracker) mark(n Notifier) {
 // sweep (delete) unused pairs and views. It stops views before deleting their
 // reference.
 // Notifiers are not handled as they aren't internal objects.
-func (t *tracker) sweep(n Notifier, cache Cacher) {
+func (t *tracker) sweep(notifier IDer, cache Cacher) {
 	t.Lock()
 	defer t.Unlock()
 	used := make(map[string]struct{})
 	tmp := t.tracked[:0]
 	for _, tp := range t.tracked {
-		otherNotifier := tp.notify != n.ID()
+		otherNotifier := tp.notify != notifier.ID()
 		if tp.inUse || otherNotifier {
 			tmp = append(tmp, tp)
 			used[tp.view] = struct{}{}
