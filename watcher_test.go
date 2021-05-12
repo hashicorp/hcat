@@ -273,37 +273,6 @@ func TestWatcherWatching(t *testing.T) {
 	})
 }
 
-func TestWatcherRemove(t *testing.T) {
-	t.Run("exists", func(t *testing.T) {
-		w := newWatcher(t)
-		defer w.Stop()
-
-		d := &idep.FakeDep{Name: "foo"}
-		n := fakeNotifier("foo")
-		w.Register(n, d)
-
-		removed := w.remove(d.String())
-		if removed != true {
-			t.Error("expected Remove to return true")
-		}
-
-		if w.Watching(d.String()) {
-			t.Error("expected dependency to be removed")
-		}
-	})
-
-	t.Run("does-not-exist", func(t *testing.T) {
-		w := newWatcher(t)
-		defer w.Stop()
-
-		var fd idep.FakeDep
-		removed := w.remove(fd.String())
-		if removed != false {
-			t.Fatal("expected Remove to return false")
-		}
-	})
-}
-
 func TestWatcherVaultToken(t *testing.T) {
 	t.Run("empty-token", func(t *testing.T) {
 		w := newWatcher(t)
@@ -633,8 +602,10 @@ func TestWatcherMarkSweep(t *testing.T) {
 		fdep := &idep.FakeDep{Name: "foo"}
 		bdep := &idep.FakeDep{Name: "bar"}
 		n := fakeNotifier("zed")
-		w.Register(n, fdep)
-		w.Register(n, bdep)
+		w.register(n, fdep).store(fdep.Name)
+		w.register(n, bdep).store(bdep.Name)
+		w.cache.Save(fdep.String(), fdep.Name)
+		w.cache.Save(bdep.String(), bdep.Name)
 
 		// checks that dependencies are watched and have active views
 		checkDeps := func(deps ...*idep.FakeDep) {
@@ -645,6 +616,9 @@ func TestWatcherMarkSweep(t *testing.T) {
 				}
 				if v := w.view(d.String()); v == nil {
 					t.Errorf("expected dependency '%v' to be present", d)
+				}
+				if _, found := w.cache.Recall(d.String()); !found {
+					t.Errorf("expected to find cache for '%v'", d.String())
 				}
 			}
 		}
@@ -671,6 +645,9 @@ func TestWatcherMarkSweep(t *testing.T) {
 		}
 		if v := w.view(bdep.String()); v != nil {
 			t.Error("expected dependency bar to be removed")
+		}
+		if _, found := w.cache.Recall(bdep.String()); found {
+			t.Errorf("expected *no* cache for '%v'", bdep.String())
 		}
 	})
 }
