@@ -602,8 +602,10 @@ func TestWatcherMarkSweep(t *testing.T) {
 		fdep := &idep.FakeDep{Name: "foo"}
 		bdep := &idep.FakeDep{Name: "bar"}
 		n := fakeNotifier("zed")
-		w.Register(n, fdep)
-		w.Register(n, bdep)
+		w.register(n, fdep).store(fdep.Name)
+		w.register(n, bdep).store(bdep.Name)
+		w.cache.Save(fdep.String(), fdep.Name)
+		w.cache.Save(bdep.String(), bdep.Name)
 
 		// checks that dependencies are watched and have active views
 		checkDeps := func(deps ...*idep.FakeDep) {
@@ -614,6 +616,9 @@ func TestWatcherMarkSweep(t *testing.T) {
 				}
 				if v := w.view(d.String()); v == nil {
 					t.Errorf("expected dependency '%v' to be present", d)
+				}
+				if _, found := w.cache.Recall(d.String()); !found {
+					t.Errorf("expected to find cache for '%v'", d.String())
 				}
 			}
 		}
@@ -640,6 +645,9 @@ func TestWatcherMarkSweep(t *testing.T) {
 		}
 		if v := w.view(bdep.String()); v != nil {
 			t.Error("expected dependency bar to be removed")
+		}
+		if _, found := w.cache.Recall(bdep.String()); found {
+			t.Errorf("expected *no* cache for '%v'", bdep.String())
 		}
 	})
 }

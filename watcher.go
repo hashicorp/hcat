@@ -330,7 +330,7 @@ func (w *Watcher) Mark(n Notifier) {
 
 // Stop and dereference all views for dependencies still marked as *not* in use.
 func (w *Watcher) Sweep(n Notifier) {
-	w.tracker.sweep(n)
+	w.tracker.sweep(n, w.cache)
 }
 
 // SetBufferPeriod sets a buffer period to accumulate dependency changes for
@@ -562,7 +562,7 @@ func (t *tracker) mark(n Notifier) {
 // sweep (delete) unused pairs and views. It stops views before deleting their
 // reference.
 // Notifiers are not handled as they aren't internal objects.
-func (t *tracker) sweep(n Notifier) {
+func (t *tracker) sweep(n Notifier, cache Cacher) {
 	t.Lock()
 	defer t.Unlock()
 	used := make(map[string]struct{})
@@ -581,6 +581,7 @@ func (t *tracker) sweep(n Notifier) {
 		if _, ok := used[viewId]; !ok {
 			delete(t.views, viewId)
 			view.stop()
+			cache.Delete(viewId)
 		}
 	}
 }
