@@ -273,37 +273,6 @@ func TestWatcherWatching(t *testing.T) {
 	})
 }
 
-func TestWatcherRemove(t *testing.T) {
-	t.Run("exists", func(t *testing.T) {
-		w := newWatcher(t)
-		defer w.Stop()
-
-		d := &idep.FakeDep{Name: "foo"}
-		n := fakeNotifier("foo")
-		w.Register(n, d)
-
-		removed := w.remove(d.String())
-		if removed != true {
-			t.Error("expected Remove to return true")
-		}
-
-		if w.Watching(d.String()) {
-			t.Error("expected dependency to be removed")
-		}
-	})
-
-	t.Run("does-not-exist", func(t *testing.T) {
-		w := newWatcher(t)
-		defer w.Stop()
-
-		var fd idep.FakeDep
-		removed := w.remove(fd.String())
-		if removed != false {
-			t.Fatal("expected Remove to return false")
-		}
-	})
-}
-
 func TestWatcherVaultToken(t *testing.T) {
 	t.Run("empty-token", func(t *testing.T) {
 		w := newWatcher(t)

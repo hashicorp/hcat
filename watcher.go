@@ -368,17 +368,6 @@ func (w *Watcher) Size() int {
 	return w.tracker.viewCount()
 }
 
-// Remove-s the given dependency from the list and stops the
-// associated view. If a view for the given dependency does not exist, this
-// function will return false. If the view does exist, this function will return
-// true upon successful deletion.
-func (w *Watcher) remove(id string) bool {
-	//log.Printf("[DEBUG] (watcher) removing %s", id)
-
-	defer w.cache.Delete(id)
-	return w.tracker.remove(id)
-}
-
 // Watching determines if the given dependency (id) is being watched.
 func (w *Watcher) Watching(id string) bool {
 	v := w.tracker.view(id)
@@ -517,24 +506,6 @@ func (t *tracker) inUse(n Notifier, d dep.Dependency) {
 			t.tracked[i] = tp.markInUse()
 		}
 	}
-}
-
-// Remove view and all trackedPairs that contained it
-func (t *tracker) remove(viewID string) bool {
-	t.Lock()
-	defer t.Unlock()
-	delete(t.views, viewID)
-	tmp := t.tracked[:0]
-	var removed bool
-	for _, tp := range t.tracked {
-		if tp.view != viewID {
-			tmp = append(tmp, tp)
-		} else {
-			removed = true
-		}
-	}
-	t.tracked = tmp
-	return removed
 }
 
 // stop all view from polling/watching
