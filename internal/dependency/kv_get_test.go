@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/hcat/dep"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -194,12 +195,12 @@ func TestKVGetQuery_Fetch(t *testing.T) {
 		{
 			"exists",
 			"test-kv-get/key",
-			"value",
+			dep.KvValue("value"),
 		},
 		{
 			"exists_empty_string",
 			"test-kv-get/key_empty",
-			"",
+			dep.KvValue(""),
 		},
 		{
 			"no_exist",
@@ -293,7 +294,7 @@ func TestKVGetQuery_Fetch(t *testing.T) {
 		case err := <-errCh:
 			t.Fatal(err)
 		case data := <-dataCh:
-			assert.Equal(t, data, "new-value")
+			assert.Equal(t, data, dep.KvValue("new-value"))
 		}
 	})
 }

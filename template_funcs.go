@@ -63,10 +63,14 @@ func keyFunc(recall Recaller) func(string) (string, error) {
 		}
 
 		if value, ok := recall(d); ok {
-			if value == nil {
+			switch v := value.(type) {
+			case nil:
 				return "", nil
+			case string:
+				return v, nil
+			case dep.KvValue:
+				return string(v), nil
 			}
-			return value.(string), nil
 		}
 
 		return "", nil

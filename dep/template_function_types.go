@@ -63,6 +63,9 @@ type HealthService struct {
 	Namespace           string
 }
 
+// KvValue is here to type the KV return string
+type KvValue string
+
 // KeyPair is a simple Key-Value pair
 type KeyPair struct {
 	Path  string
