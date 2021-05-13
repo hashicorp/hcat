@@ -63,8 +63,8 @@ type Renderer interface {
 // (EG. loop over all services and lookup each service instance, instance
 // goes away) and results in goroutine leaks if not managed.
 type Collector interface {
-	Mark(Notifier)
-	Sweep(Notifier)
+	Mark(IDer)
+	Sweep(IDer)
 }
 
 // Recaller is the read interface for the cache
@@ -133,12 +133,15 @@ func (t *Template) ID() string {
 	return t.hexMD5
 }
 
-// Notify template that a dependency it relies on has been updated.
-func (t *Template) Notify(dep.Dependency) {
+// Notify template that a dependency it relies on has been updated. Works by
+// marking the template so it knows it has new data to process when Execute is
+// called.
+func (t *Template) Notify(interface{}) bool {
 	select {
 	case t.dirty <- struct{}{}:
 	default:
 	}
+	return true
 }
 
 // Check and clear dirty flag
@@ -157,7 +160,7 @@ func (t *Template) Render(content []byte) (RenderResult, error) {
 }
 
 // Execute evaluates this template in the provided context.
-func (t *Template) Execute(w Watcherer) ([]byte, error) {
+func (t *Template) Execute(rec Recaller) ([]byte, error) {
 	if !t.isDirty() {
 		return nil, ErrNoNewValues
 	}
@@ -165,7 +168,7 @@ func (t *Template) Execute(w Watcherer) ([]byte, error) {
 	tmpl := template.New(t.ID())
 	tmpl.Delims(t.leftDelim, t.rightDelim)
 	tmpl.Funcs(funcMap(&funcMapInput{
-		recaller:     w.Recaller(t),
+		recaller:     rec,
 		funcMapMerge: t.funcMapMerge,
 	}))
 
@@ -180,28 +183,10 @@ func (t *Template) Execute(w Watcherer) ([]byte, error) {
 		return nil, errors.Wrap(err, "parse")
 	}
 
-	// If Watcherer supports it, wrap the template call with the Mark-n-Sweep
-	// garbage collector to stop and dereference the old/unused views.
-	gcViews := func(f func() error) error { return f() }
-	if c, ok := w.(Collector); ok {
-		gcViews = func(f func() error) error {
-			c.Mark(t)
-			defer c.Sweep(t)
-			return f()
-		}
-	}
-
 	// Execute the template into the writer
 	var b bytes.Buffer
-	if err := gcViews(func() error {
-		return tmpl.Execute(&b, nil)
-	}); err != nil {
+	if err := tmpl.Execute(&b, nil); err != nil {
 		return nil, errors.Wrap(err, "execute")
-	}
-	// Checks if all values in use have been fetched.
-	// Also cleans out data no longer used by this template.
-	if !w.Complete(t) {
-		return nil, ErrMissingValues
 	}
 
 	return b.Bytes(), nil

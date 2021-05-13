@@ -175,29 +175,36 @@ func (w *Watcher) Wait(ctx context.Context) error {
 	}
 
 	// combine cache and changed updates so we don't forget one
-	dataUpdate := func(v *view) {
-		id := v.Dependency().String()
+	dataUpdate := func(v *view) (notify bool) {
+		id := v.ID()
 		w.cache.Save(id, v.Data())
 		for _, n := range w.tracker.notifiersFor(v) {
-			n.Notify(v.Dependency())
+			if n.Notify(v.Data()) {
+				notify = true
+			}
 		}
+		return notify
 	}
 	for {
 		select {
 		case view := <-w.dataCh:
-			dataUpdate(view)
+			notify := dataUpdate(view)
 			// Drain all dependency data. Prevents re-rendering templates over
 			// and over when a large batch of dependencies are updated.
 			// See consul-template GH-168 for background.
-			for {
+			for drain := true; drain; {
 				select {
 				case view := <-w.dataCh:
-					dataUpdate(view)
+					if dataUpdate(view) && !notify {
+						notify = true
+					}
 				case <-time.After(time.Microsecond):
-					return nil
+					drain = false
 				}
 			}
-
+			if notify {
+				return nil
+			}
 		case <-w.bufferTrigger:
 			// A template is now ready to be rendered, though there might be a
 			// few ready around the same time if they have the same dependencies.
@@ -427,7 +434,7 @@ type IDer interface {
 // Notifier indicates support for notifications
 type Notifier interface {
 	IDer
-	Notify(dep.Dependency)
+	Notify(interface{}) bool
 }
 
 // If performance of looping through tracked gets to be to much build 2 indexes
@@ -593,15 +600,18 @@ func (t *tracker) sweep(notifier IDer, cache Cacher) {
 
 // dummy Notifier for use by vault token above and in tests
 type dummyNotifier struct {
-	name string
-	deps chan dep.Dependency
+	name   string
+	notify bool
+	deps   chan interface{}
 }
 
 func fakeNotifier(name string) *dummyNotifier {
-	return &dummyNotifier{name: name, deps: make(chan dep.Dependency, 100)}
+	return &dummyNotifier{name: name, notify: true,
+		deps: make(chan interface{}, 100)}
 }
-func (n *dummyNotifier) Notify(d dep.Dependency) {
+func (n *dummyNotifier) Notify(d interface{}) bool {
 	n.deps <- d
+	return n.notify
 }
 func (n *dummyNotifier) ID() string {
 	return string(n.name)

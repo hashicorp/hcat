@@ -35,8 +35,8 @@ type Watcherer interface {
 // Templater the interface the Template provides.
 // The interface is used to make the used/required API explicit.
 type Templater interface {
-	Execute(Watcherer) ([]byte, error)
-	ID() string
+	Notifier
+	Execute(Recaller) ([]byte, error)
 }
 
 // Run the template Execute once. You should repeat calling this until
@@ -50,16 +50,32 @@ func (r *Resolver) Run(tmpl Templater, w Watcherer) (ResolveEvent, error) {
 		return ResolveEvent{Complete: false}, nil
 	}
 
+	// If Watcherer supports it, wrap the template call with the Mark-n-Sweep
+	// garbage collector to stop and dereference the old/unused views.
+	gcViews := func(f func() ([]byte, error)) ([]byte, error) { return f() }
+	if c, ok := w.(Collector); ok {
+		gcViews = func(f func() ([]byte, error)) (data []byte, err error) {
+			c.Mark(tmpl)
+			if data, err = f(); err == nil {
+				c.Sweep(tmpl)
+			}
+			return data, err
+		}
+	}
+
 	// Attempt to render the template, returning any missing dependencies and
 	// the rendered contents. If there are any missing dependencies, the
 	// contents cannot be rendered or trusted!
-	output, err := tmpl.Execute(w)
-	switch err {
-	case nil:
-	case ErrMissingValues:
-		return ResolveEvent{missing: true}, nil
-	case ErrNoNewValues:
+	output, err := gcViews(func() ([]byte, error) {
+		return tmpl.Execute(w.Recaller(tmpl))
+	})
+
+	switch { // specific to general
+	case err == ErrNoNewValues:
 		return ResolveEvent{}, nil
+	case !w.Complete(tmpl):
+		return ResolveEvent{missing: true}, nil
+	case err == nil:
 	default:
 		return ResolveEvent{}, err
 	}
