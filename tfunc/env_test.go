@@ -41,7 +41,7 @@ func TestEnvExecute(t *testing.T) {
 		t.Run(fmt.Sprintf("%d_%s", i, tc.name), func(t *testing.T) {
 			tpl := NewTemplate(tc.ti)
 
-			a, err := tpl.Execute(tc.i)
+			a, err := tpl.Execute(tc.i.Recaller(tpl))
 			if (err != nil) != tc.err {
 				t.Fatal(err)
 			}

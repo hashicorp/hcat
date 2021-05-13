@@ -700,7 +700,7 @@ func TestTemplate_Execute(t *testing.T) {
 			tpl := NewTemplate(tc.ti)
 
 			w := fakeWatcher{tc.i}
-			a, err := tpl.Execute(w)
+			a, err := tpl.Execute(w.Recaller(tpl))
 			if (err != nil) != tc.err {
 				t.Fatal(err)
 			}
