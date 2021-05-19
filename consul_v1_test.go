@@ -138,7 +138,7 @@ func TestTemplateExecute_consul_v1(t *testing.T) {
 			tpl := NewTemplate(tc.ti)
 
 			w := fakeWatcher{tc.i}
-			a, err := tpl.Execute(w)
+			a, err := tpl.Execute(w.Recaller(tpl))
 			if tc.err {
 				assert.Error(t, err, "expected: funcNotImplementedError")
 				assert.Contains(t, err.Error(), errFuncNotImplemented.Error())

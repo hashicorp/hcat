@@ -428,10 +428,8 @@ func TestWatcherWait(t *testing.T) {
 		w := newWatcher(t)
 		defer w.Stop()
 		foodep := &idep.FakeDep{Name: "foo"}
-		view := newView(&newViewInput{
-			Dependency: foodep,
-		})
-		w.dataCh <- view
+		n := fakeNotifier("foo")
+		w.dataCh <- w.register(n, foodep)
 		w.Wait(context.Background())
 		store := w.cache.(*Store)
 		if _, ok := store.data[foodep.String()]; !ok {
@@ -441,17 +439,12 @@ func TestWatcherWait(t *testing.T) {
 	t.Run("multi-update", func(t *testing.T) {
 		w := newWatcher(t)
 		defer w.Stop()
+		n := fakeNotifier("foo")
 		deps := make([]dep.Dependency, 5)
-		views := make([]*view, 5)
 		for i := 0; i < 5; i++ {
 			deps[i] = &idep.FakeDep{Name: strconv.Itoa(i)}
-			views[i] = newView(&newViewInput{
-				Dependency: deps[i],
-			})
-		}
-		// doesn't need goroutine as dataCh has a large buffer
-		for _, v := range views {
-			w.dataCh <- v
+			// doesn't need goroutine as dataCh has a large buffer
+			w.dataCh <- w.register(n, deps[i])
 		}
 		w.Wait(context.Background())
 		store := w.cache.(*Store)
@@ -467,13 +460,8 @@ func TestWatcherWait(t *testing.T) {
 		w := newWatcher(t)
 		defer w.Stop()
 		foodep := &idep.FakeDep{Name: "foo"}
-		view := newView(&newViewInput{
-			Dependency: foodep,
-		})
-		view.data = "foo"
 		n := fakeNotifier("foo")
-		w.Register(n, foodep)
-		w.dataCh <- view
+		w.dataCh <- w.register(n, foodep)
 		w.Wait(context.Background())
 
 		if len(w.tracker.tracked) != 1 {
@@ -519,11 +507,9 @@ func TestWatcherWait(t *testing.T) {
 	t.Run("wait-channel", func(t *testing.T) {
 		w := newWatcher(t)
 		defer w.Stop()
+		n := fakeNotifier("foo")
 		foodep := &idep.FakeDep{Name: "foo"}
-		view := newView(&newViewInput{
-			Dependency: foodep,
-		})
-		w.dataCh <- view
+		w.dataCh <- w.register(n, foodep)
 		err := <-w.WaitCh(context.Background())
 		if err != nil {
 			t.Fatal("wait error:", err)
@@ -592,6 +578,120 @@ func TestWatcherWait(t *testing.T) {
 			t.Fatal("Stop->Wait shouldn't stop Wait")
 		}
 		w.Stop()
+	})
+}
+
+func TestWatcherNotify(t *testing.T) {
+	t.Run("single-notify-true", func(t *testing.T) {
+		w := newWatcher(t)
+		defer w.Stop()
+		foodep := &idep.FakeDep{Name: "foo"}
+		n := fakeNotifier("foo")
+		w.dataCh <- w.register(n, foodep)
+		ctx, cc := context.WithCancel(context.Background())
+		go func() { time.Sleep(time.Millisecond); cc() }()
+		if err := w.Wait(ctx); err != nil {
+			t.Fatalf("wait should have returned nil, got: %v\n", err)
+		}
+	})
+	t.Run("single-notify-false", func(t *testing.T) {
+		w := newWatcher(t)
+		defer w.Stop()
+		foodep := &idep.FakeDep{Name: "foo"}
+		n := fakeNotifier("foo")
+		w.dataCh <- w.register(n, foodep)
+		ctx, cc := context.WithCancel(context.Background())
+		go func() { time.Sleep(time.Millisecond); cc() }()
+		n.notify = false
+		if err := w.Wait(ctx); err != context.Canceled {
+			t.Fatalf("wait should have returned context.Canceled, got: %v", err)
+		}
+	})
+	t.Run("multi-notify-true", func(t *testing.T) {
+		w := newWatcher(t)
+		defer w.Stop()
+		foodep := &idep.FakeDep{Name: "foo"}
+		bardep := &idep.FakeDep{Name: "bar"}
+		n := fakeNotifier("foo")
+		w.dataCh <- w.register(n, foodep)
+		w.dataCh <- w.register(n, bardep)
+		ctx, cc := context.WithCancel(context.Background())
+		go func() { time.Sleep(time.Millisecond); cc() }()
+		if err := w.Wait(ctx); err != nil {
+			t.Fatalf("wait should have returned nil, got: %v\n", err)
+		}
+	})
+	t.Run("multi-notify-false", func(t *testing.T) {
+		w := newWatcher(t)
+		defer w.Stop()
+		foodep := &idep.FakeDep{Name: "foo"}
+		bardep := &idep.FakeDep{Name: "bar"}
+		n := fakeNotifier("foo")
+		n.notify = false
+		w.dataCh <- w.register(n, foodep)
+		w.dataCh <- w.register(n, bardep)
+		ctx, cc := context.WithCancel(context.Background())
+		go func() { time.Sleep(time.Millisecond); cc() }()
+		if err := w.Wait(ctx); err != context.Canceled {
+			t.Fatalf("wait should have returned context.Canceled, got: %v", err)
+		}
+	})
+	t.Run("notify-true-then-false", func(t *testing.T) {
+		w := newWatcher(t)
+		defer w.Stop()
+		foodep := &idep.FakeDep{Name: "foo"}
+		nf := fakeNotifier("foo")
+		bardep := &idep.FakeDep{Name: "bar"}
+		nb := fakeNotifier("bar")
+		nb.notify = false
+		w.dataCh <- w.register(nf, foodep)
+		w.dataCh <- w.register(nb, bardep)
+		ctx, cc := context.WithCancel(context.Background())
+		go func() { time.Sleep(time.Millisecond); cc() }()
+		if err := w.Wait(ctx); err != nil {
+			t.Fatalf("wait should have returned nil, got: %v\n", err)
+		}
+	})
+	t.Run("notify-false-then-true", func(t *testing.T) {
+		w := newWatcher(t)
+		defer w.Stop()
+		foodep := &idep.FakeDep{Name: "foo"}
+		nf := fakeNotifier("foo")
+		nf.notify = false
+		bardep := &idep.FakeDep{Name: "bar"}
+		nb := fakeNotifier("bar")
+		w.dataCh <- w.register(nf, foodep)
+		w.dataCh <- w.register(nb, bardep)
+
+		ctx, cc := context.WithCancel(context.Background())
+		go func() { time.Sleep(time.Millisecond); cc() }()
+
+		if err := w.Wait(ctx); err != nil {
+			t.Fatalf("wait should have returned nil, got: %v\n", err)
+		}
+	})
+	t.Run("notify-assert", func(t *testing.T) {
+		w := newWatcher(t)
+		defer w.Stop()
+		foodep := &idep.FakeDep{Name: "foo"}
+		bardep := &idep.FakeListDep{Name: "bar"}
+		n := fakeNotifier("foo")
+		fooview := w.register(n, foodep)
+		fooview.store("foo")
+		barview := w.register(n, bardep)
+		barview.store([]string{"bar", "zed"})
+		w.dataCh <- fooview
+		w.dataCh <- barview
+
+		w.Wait(context.Background())
+		for i := 0; i < 2; i++ {
+			d := <-n.deps
+			switch d.(type) {
+			case string, []string:
+			default:
+				t.Fatalf("Bad type of test data: %T\n", d)
+			}
+		}
 	})
 }
 

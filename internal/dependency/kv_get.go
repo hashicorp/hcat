@@ -101,7 +101,7 @@ func (d *KVGetQuery) Fetch(clients dep.Clients) (interface{}, *dep.ResponseMetad
 		return nil, rm, nil
 	}
 
-	value := string(pair.Value)
+	value := dep.KvValue(pair.Value)
 	//log.Printf("[TRACE] %s: returned %q", d, value)
 	return value, rm, nil
 }
