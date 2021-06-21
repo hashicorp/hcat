@@ -27,7 +27,7 @@ func TestResolverRun(t *testing.T) {
 		}
 	})
 
-	t.Run("skip-dueto-no-changes", func(t *testing.T) {
+	t.Run("no-changes", func(t *testing.T) {
 		rv := NewResolver()
 		tt := fooTemplate(t)
 		tt.isDirty() // flush dirty mark set on new templates
@@ -52,12 +52,15 @@ func TestResolverRun(t *testing.T) {
 		if string(r.Contents) != "" {
 			t.Fatal("bad contents")
 		}
+		if r.NoChange != true {
+			t.Fatal("NoChange should be true")
+		}
 		if r.missing == true {
 			t.Fatal("missing should be false")
 		}
 	})
 
-	t.Run("complete", func(t *testing.T) {
+	t.Run("complete-changes", func(t *testing.T) {
 		rv := NewResolver()
 		tt := fooTemplate(t)
 		w := blindWatcher(t)
@@ -83,6 +86,9 @@ func TestResolverRun(t *testing.T) {
 		}
 		if string(r.Contents) != "bar" {
 			t.Fatal("bad contents")
+		}
+		if r.NoChange != false {
+			t.Fatal("NoChange should be false")
 		}
 		if r.missing == true {
 			t.Fatal("missing should be false")
@@ -116,6 +122,9 @@ func TestResolverRun(t *testing.T) {
 		}
 		if r.Complete == false {
 			t.Fatal("Complete should be true")
+		}
+		if r.NoChange != false {
+			t.Fatal("NoChange should be false")
 		}
 		if string(r.Contents) != "foo" {
 			t.Fatal("Wrong contents:", string(r.Contents))
@@ -171,6 +180,9 @@ func TestResolverRun(t *testing.T) {
 		}
 		if r.Complete == false {
 			t.Fatal("Complete should be true")
+		}
+		if r.NoChange != false {
+			t.Fatal("NoChange should be false")
 		}
 		if string(r.Contents) != "foobar" {
 			t.Fatal("Wrong contents:", string(r.Contents))

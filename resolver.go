@@ -15,6 +15,10 @@ type ResolveEvent struct {
 	// Only returned when Complete is true.
 	Contents []byte
 
+	// NoChange is true if no dependencies have changes in values and therefore
+	// templates were not re-rendered.
+	NoChange bool
+
 	// for testing, need way to test for missing dependencies case
 	missing bool
 }
@@ -72,7 +76,7 @@ func (r *Resolver) Run(tmpl Templater, w Watcherer) (ResolveEvent, error) {
 
 	switch { // specific to general
 	case err == ErrNoNewValues:
-		return ResolveEvent{}, nil
+		return ResolveEvent{NoChange: true}, nil
 	case !w.Complete(tmpl):
 		return ResolveEvent{missing: true}, nil
 	case err == nil:
