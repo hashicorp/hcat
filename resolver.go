@@ -8,7 +8,7 @@ type Resolver struct{}
 // resolved and rendered in memory.
 type ResolveEvent struct {
 	// Complete is true if all dependencies have values and the template
-	// is is fully rendered.
+	// is fully rendered (in memory).
 	Complete bool
 
 	// Contents is the rendered contents from the template.
@@ -18,9 +18,6 @@ type ResolveEvent struct {
 	// NoChange is true if no dependencies have changes in values and therefore
 	// templates were not re-rendered.
 	NoChange bool
-
-	// for testing, need way to test for missing dependencies case
-	missing bool
 }
 
 // Basic constructor, here for consistency and future flexibility.
@@ -73,16 +70,15 @@ func (r *Resolver) Run(tmpl Templater, w Watcherer) (ResolveEvent, error) {
 	output, err := gcViews(func() ([]byte, error) {
 		return tmpl.Execute(w.Recaller(tmpl))
 	})
-
-	switch { // specific to general
-	case err == ErrNoNewValues:
-		return ResolveEvent{NoChange: true}, nil
-	case !w.Complete(tmpl):
-		return ResolveEvent{missing: true}, nil
-	case err == nil:
+	switch {
+	case err == ErrNoNewValues || err == nil:
 	default:
 		return ResolveEvent{}, err
 	}
 
-	return ResolveEvent{Complete: true, Contents: output}, nil
+	return ResolveEvent{
+		Complete: w.Complete(tmpl),
+		Contents: output,
+		NoChange: err == ErrNoNewValues,
+	}, nil
 }
