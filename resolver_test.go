@@ -23,8 +23,8 @@ func TestResolverRun(t *testing.T) {
 		if err != nil {
 			t.Fatal("Run() error:", err)
 		}
-		if r.missing != true {
-			t.Fatal("missing should be true")
+		if r.Complete != false {
+			t.Fatal("Complete should be false")
 		}
 	})
 
@@ -47,17 +47,15 @@ func TestResolverRun(t *testing.T) {
 		if err != nil {
 			t.Fatal("Run() error:", err)
 		}
-		if r.Complete != false {
-			t.Fatal("Complete should be false")
-		}
+
 		if string(r.Contents) != "" {
 			t.Fatal("bad contents")
 		}
 		if r.NoChange != true {
 			t.Fatal("NoChange should be true")
 		}
-		if r.missing == true {
-			t.Fatal("missing should be false")
+		if r.Complete != true {
+			t.Fatal("Complete should be true")
 		}
 	})
 
@@ -91,8 +89,8 @@ func TestResolverRun(t *testing.T) {
 		if r.NoChange != false {
 			t.Fatal("NoChange should be false")
 		}
-		if r.missing == true {
-			t.Fatal("missing should be false")
+		if r.Complete != true {
+			t.Fatal("Complete should be true")
 		}
 	})
 
@@ -108,8 +106,8 @@ func TestResolverRun(t *testing.T) {
 		if err != nil {
 			t.Fatal("Run() error:", err)
 		}
-		if r.missing == false {
-			t.Fatal("missing should be true")
+		if r.Complete != false {
+			t.Fatal("Complete should be false")
 		}
 		ctx := context.Background()
 		w.Wait(ctx) // wait for (fake/instantaneous) dependency resolution
@@ -117,9 +115,6 @@ func TestResolverRun(t *testing.T) {
 		r, err = rv.Run(tt, w)
 		if err != nil {
 			t.Fatal("Run() error:", err)
-		}
-		if r.missing == true {
-			t.Fatal("missing should be false")
 		}
 		if r.Complete == false {
 			t.Fatal("Complete should be true")
@@ -144,18 +139,12 @@ func TestResolverRun(t *testing.T) {
 		if err != nil {
 			t.Fatal("Run() error:", err)
 		}
-		if r.missing == false {
-			t.Fatal("missing should be true")
-		}
 		ctx := context.Background()
 		w.Wait(ctx) // wait for (fake/instantaneous) dependency resolution
 
 		r, err = rv.Run(tt, w)
 		if err != nil {
 			t.Fatal("Run() error:", err)
-		}
-		if r.missing == true {
-			t.Fatal("missing should be false")
 		}
 		if r.Complete == false {
 			t.Fatal("Complete should be true")
@@ -181,8 +170,8 @@ func TestResolverRun(t *testing.T) {
 		if err != nil {
 			t.Fatal("Run() error:", err)
 		}
-		if r.missing == false {
-			t.Fatal("missing should be true")
+		if r.Complete != false {
+			t.Fatal("Complete should be flase")
 		}
 		ctx := context.Background()
 		w.Wait(ctx)
@@ -192,8 +181,8 @@ func TestResolverRun(t *testing.T) {
 		if err != nil {
 			t.Fatal("Run() error:", err)
 		}
-		if r.missing == false {
-			t.Fatal("missing should be true")
+		if r.Complete != false {
+			t.Fatal("Complete should be false")
 		}
 		w.Wait(ctx)
 
@@ -212,8 +201,8 @@ func TestResolverRun(t *testing.T) {
 			}
 			w.Wait(ctx)
 		}
-		if r.missing == true {
-			t.Fatal("missing should be false")
+		if r.Complete != true {
+			t.Fatal("Complete should be true")
 		}
 		if r.Complete == false {
 			t.Fatal("Complete should be true")
