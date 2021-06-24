@@ -209,6 +209,7 @@ func TestVaultWriteQuery_Fetch(t *testing.T) {
 				act.(*dep.Secret).LeaseID = ""
 				act.(*dep.Secret).LeaseDuration = 0
 				act.(*dep.Secret).Renewable = false
+				delete(act.(*dep.Secret).Data, "key_version")
 				if act.(*dep.Secret).Data["ciphertext"] != "" {
 					act.(*dep.Secret).Data["ciphertext"] = ""
 				}
