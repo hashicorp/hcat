@@ -482,8 +482,8 @@ func TestWatcherWait(t *testing.T) {
 		for i := 0; i < 5; i++ {
 			deps[i] = &idep.FakeDep{Name: strconv.Itoa(i)}
 			w.dataCh <- w.register(n, deps[i])
+			w.Wait(context.Background())
 		}
-		w.Wait(context.Background())
 		if n.count() != len(deps) {
 			t.Fatal("failed to track updated dependency")
 		}

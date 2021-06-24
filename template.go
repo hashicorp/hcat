@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"crypto/md5"
 	"encoding/hex"
+	"sync"
+	"sync/atomic"
 	"text/template"
 
 	"github.com/hashicorp/hcat/dep"
@@ -49,6 +51,10 @@ type Template struct {
 
 	// Renderer is the default renderer used for this template
 	renderer Renderer
+
+	// cache for the current rendered template content
+	cache atomic.Value
+	once  sync.Once // for cache init
 }
 
 // Renderer defines the interface used to render (output) and template.
@@ -104,10 +110,7 @@ type TemplateInput struct {
 	Renderer Renderer
 }
 
-// NewTemplate creates and parses a new Consul Template template at the given
-// path. If the template does not exist, an error is returned. During
-// initialization, the template is read and is parsed for dependencies. Any
-// errors that occur are returned.
+// NewTemplate creates a new Template and primes it for the initial run.
 func NewTemplate(i TemplateInput) *Template {
 
 	var t Template
@@ -161,8 +164,9 @@ func (t *Template) Render(content []byte) (RenderResult, error) {
 
 // Execute evaluates this template in the provided context.
 func (t *Template) Execute(rec Recaller) ([]byte, error) {
+	t.once.Do(func() { t.cache.Store([]byte{}) }) // init cache
 	if !t.isDirty() {
-		return nil, ErrNoNewValues
+		return t.cache.Load().([]byte), ErrNoNewValues
 	}
 
 	tmpl := template.New(t.ID())
@@ -188,8 +192,10 @@ func (t *Template) Execute(rec Recaller) ([]byte, error) {
 	if err := tmpl.Execute(&b, nil); err != nil {
 		return nil, errors.Wrap(err, "execute")
 	}
+	content := b.Bytes()
+	t.cache.Store(content)
 
-	return b.Bytes(), nil
+	return content, nil
 }
 
 // funcMapInput is input to the funcMap, which builds the template functions.

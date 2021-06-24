@@ -711,6 +711,40 @@ func TestTemplate_Execute(t *testing.T) {
 	}
 }
 
+func TestCachedTemplate(t *testing.T) {
+	t.Run("cache-is-used", func(t *testing.T) {
+		ti := TemplateInput{
+			Contents: `{{ key "key" }}`,
+		}
+		rec := func() *Store {
+			st := NewStore()
+			d, err := idep.NewKVGetQuery("key")
+			if err != nil {
+				t.Fatal(err)
+			}
+			st.Save(d.String(), "value")
+			return st
+		}()
+		tpl := NewTemplate(ti)
+		w := fakeWatcher{rec}
+		content, err := tpl.Execute(w.Recaller(tpl))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !bytes.Equal(content, []byte("value")) {
+			t.Fatal("bad content:", string(content))
+		}
+		// Cache used here
+		content, err = tpl.Execute(w.Recaller(tpl))
+		if err != ErrNoNewValues {
+			t.Fatal("error should be ErrNoNewValues")
+		}
+		if !bytes.Equal(content, []byte("value")) {
+			t.Fatal("bad content:", string(content))
+		}
+	})
+}
+
 type fakeWatcher struct {
 	*Store
 }
