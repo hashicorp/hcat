@@ -14,8 +14,8 @@ func TestResolverRun(t *testing.T) {
 	t.Parallel()
 	t.Run("first-run", func(t *testing.T) {
 		rv := NewResolver()
-		tt := fooTemplate(t)
-		w := blindWatcher(t)
+		tt := fooTemplate()
+		w := blindWatcher()
 		defer w.Stop()
 
 		r, err := rv.Run(tt, w)
@@ -29,9 +29,9 @@ func TestResolverRun(t *testing.T) {
 
 	t.Run("no-changes", func(t *testing.T) {
 		rv := NewResolver()
-		tt := fooTemplate(t)
+		tt := fooTemplate()
 		tt.isDirty() // flush dirty mark set on new templates
-		w := blindWatcher(t)
+		w := blindWatcher()
 		d, _ := idep.NewKVGetQuery("foo")
 		defer w.Stop()
 
@@ -62,8 +62,8 @@ func TestResolverRun(t *testing.T) {
 
 	t.Run("complete-changes", func(t *testing.T) {
 		rv := NewResolver()
-		tt := fooTemplate(t)
-		w := blindWatcher(t)
+		tt := fooTemplate()
+		w := blindWatcher()
 		defer w.Stop()
 		d, _ := idep.NewKVGetQuery("foo")
 
@@ -99,8 +99,8 @@ func TestResolverRun(t *testing.T) {
 	// test dependency echo's back the string arg
 	t.Run("single-pass-run", func(t *testing.T) {
 		rv := NewResolver()
-		tt := echoTemplate(t, "foo")
-		w := blindWatcher(t)
+		tt := echoTemplate("foo")
+		w := blindWatcher()
 		defer w.Stop()
 
 		r, err := rv.Run(tt, w)
@@ -135,8 +135,8 @@ func TestResolverRun(t *testing.T) {
 	// dep1 returns a list of words where dep2 echos each
 	t.Run("multi-pass-run", func(t *testing.T) {
 		rv := NewResolver()
-		tt := echoListTemplate(t, "foo", "bar")
-		w := blindWatcher(t)
+		tt := echoListTemplate("foo", "bar")
+		w := blindWatcher()
 		defer w.Stop()
 
 		// Run 1, 'words' is registered
@@ -193,14 +193,14 @@ func TestResolverRun(t *testing.T) {
 //////////////////////////
 // Helpers
 
-func fooTemplate(t *testing.T) *Template {
+func fooTemplate() *Template {
 	return NewTemplate(
 		TemplateInput{
 			Contents: `{{key "foo"}}`,
 		})
 }
 
-func echoTemplate(t *testing.T, data string) *Template {
+func echoTemplate(data string) *Template {
 	return NewTemplate(
 		TemplateInput{
 			Contents:     `{{echo "` + data + `"}}`,
@@ -237,7 +237,7 @@ func wordListFunc(recall Recaller) interface{} {
 	}
 }
 
-func echoListTemplate(t *testing.T, data ...string) *Template {
+func echoListTemplate(data ...string) *Template {
 	list := strings.Join(data, `" "`)
 	return NewTemplate(
 		TemplateInput{
@@ -249,6 +249,6 @@ func echoListTemplate(t *testing.T, data ...string) *Template {
 }
 
 // watcher with no Looker
-func blindWatcher(t *testing.T) *Watcher {
+func blindWatcher() *Watcher {
 	return NewWatcher(WatcherInput{Cache: NewStore()})
 }

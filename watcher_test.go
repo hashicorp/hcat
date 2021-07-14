@@ -14,7 +14,7 @@ import (
 
 func TestWatcherAdd(t *testing.T) {
 	t.Run("updates-tracker", func(t *testing.T) {
-		w := newWatcher(t)
+		w := newWatcher()
 		defer w.Stop()
 
 		d := &idep.FakeDep{}
@@ -28,7 +28,7 @@ func TestWatcherAdd(t *testing.T) {
 		}
 	})
 	t.Run("exists", func(t *testing.T) {
-		w := newWatcher(t)
+		w := newWatcher()
 		defer w.Stop()
 
 		d := &idep.FakeDep{}
@@ -43,7 +43,7 @@ func TestWatcherAdd(t *testing.T) {
 		}
 	})
 	t.Run("startsViewPoll", func(t *testing.T) {
-		w := newWatcher(t)
+		w := newWatcher()
 		defer w.Stop()
 
 		d := &idep.FakeDep{}
@@ -61,7 +61,7 @@ func TestWatcherAdd(t *testing.T) {
 		}
 	})
 	t.Run("consul-retry-func", func(t *testing.T) {
-		w := newWatcher(t)
+		w := newWatcher()
 		w.retryFuncConsul = func(n int) (bool, time.Duration) {
 			return false, 0 * time.Second
 		}
@@ -81,7 +81,7 @@ func TestWatcherAdd(t *testing.T) {
 
 func TestWatcherWatching(t *testing.T) {
 	t.Run("not-exists", func(t *testing.T) {
-		w := newWatcher(t)
+		w := newWatcher()
 		defer w.Stop()
 
 		d := &idep.FakeDep{}
@@ -91,7 +91,7 @@ func TestWatcherWatching(t *testing.T) {
 	})
 
 	t.Run("exists", func(t *testing.T) {
-		w := newWatcher(t)
+		w := newWatcher()
 		defer w.Stop()
 
 		d := &idep.FakeDep{}
@@ -104,7 +104,7 @@ func TestWatcherWatching(t *testing.T) {
 	})
 	// below are tracking related
 	t.Run("ignore-duplicates", func(t *testing.T) {
-		w := newWatcher(t)
+		w := newWatcher()
 		defer w.Stop()
 
 		d := &idep.FakeDep{}
@@ -120,7 +120,7 @@ func TestWatcherWatching(t *testing.T) {
 		}
 	})
 	t.Run("multi-notifiers-same-dep", func(t *testing.T) {
-		w := newWatcher(t)
+		w := newWatcher()
 		defer w.Stop()
 
 		d := &idep.FakeDep{}
@@ -155,7 +155,7 @@ func TestWatcherWatching(t *testing.T) {
 		}
 	})
 	t.Run("same-notifier-multiple-deps", func(t *testing.T) {
-		w := newWatcher(t)
+		w := newWatcher()
 		defer w.Stop()
 
 		d0 := &idep.FakeDep{Name: "foo"}
@@ -176,7 +176,7 @@ func TestWatcherWatching(t *testing.T) {
 	})
 
 	t.Run("multi-notifiers-multi-dep", func(t *testing.T) {
-		w := newWatcher(t)
+		w := newWatcher()
 		defer w.Stop()
 
 		d0 := &idep.FakeDep{Name: "taco"}    // dep for foo and bar
@@ -230,7 +230,7 @@ func TestWatcherWatching(t *testing.T) {
 
 	// GH-44
 	t.Run("register-complete-race", func(t *testing.T) {
-		w := newWatcher(t)
+		w := newWatcher()
 		defer w.Stop()
 
 		// fake template/notifier and dependencies (fields in template)
@@ -275,7 +275,7 @@ func TestWatcherWatching(t *testing.T) {
 
 func TestWatcherVaultToken(t *testing.T) {
 	t.Run("empty-token", func(t *testing.T) {
-		w := newWatcher(t)
+		w := newWatcher()
 		defer w.Stop()
 		err := w.WatchVaultToken("")
 		if err != nil {
@@ -286,7 +286,7 @@ func TestWatcherVaultToken(t *testing.T) {
 		}
 	})
 	t.Run("token-added", func(t *testing.T) {
-		w := newWatcher(t)
+		w := newWatcher()
 		defer w.Stop()
 		err := w.WatchVaultToken("fake-token")
 		if err != nil {
@@ -299,7 +299,7 @@ func TestWatcherVaultToken(t *testing.T) {
 		}
 	})
 	t.Run("not-cleaned", func(t *testing.T) {
-		w := newWatcher(t)
+		w := newWatcher()
 		defer w.Stop()
 		err := w.WatchVaultToken("fake-token")
 		if err != nil {
@@ -319,7 +319,7 @@ func TestWatcherVaultToken(t *testing.T) {
 
 func TestWatcherSize(t *testing.T) {
 	t.Run("empty", func(t *testing.T) {
-		w := newWatcher(t)
+		w := newWatcher()
 		defer w.Stop()
 
 		if w.Size() != 0 {
@@ -328,7 +328,7 @@ func TestWatcherSize(t *testing.T) {
 	})
 
 	t.Run("returns-num-views", func(t *testing.T) {
-		w := newWatcher(t)
+		w := newWatcher()
 		defer w.Stop()
 
 		for i := 0; i < 10; i++ {
@@ -345,7 +345,7 @@ func TestWatcherSize(t *testing.T) {
 
 func TestWatcherWait(t *testing.T) {
 	t.Run("timeout", func(t *testing.T) {
-		w := newWatcher(t)
+		w := newWatcher()
 		defer w.Stop()
 		t1 := time.Now()
 		ctx, cancel := context.WithTimeout(context.Background(), time.Microsecond*100)
@@ -360,7 +360,7 @@ func TestWatcherWait(t *testing.T) {
 		}
 	})
 	t.Run("deadline", func(t *testing.T) {
-		w := newWatcher(t)
+		w := newWatcher()
 		defer w.Stop()
 		t1 := time.Now()
 		ctx, cancel := context.WithDeadline(context.Background(),
@@ -376,7 +376,7 @@ func TestWatcherWait(t *testing.T) {
 		}
 	})
 	t.Run("cancel", func(t *testing.T) {
-		w := newWatcher(t)
+		w := newWatcher()
 		defer w.Stop()
 
 		errCh := make(chan error)
@@ -397,7 +397,7 @@ func TestWatcherWait(t *testing.T) {
 		}
 	})
 	t.Run("0-timeout", func(t *testing.T) {
-		w := newWatcher(t)
+		w := newWatcher()
 		defer w.Stop()
 		t1 := time.Now()
 		testerr := errors.New("test")
@@ -412,7 +412,7 @@ func TestWatcherWait(t *testing.T) {
 		}
 	})
 	t.Run("error", func(t *testing.T) {
-		w := newWatcher(t)
+		w := newWatcher()
 		defer w.Stop()
 		testerr := errors.New("test")
 		go func() {
@@ -425,7 +425,7 @@ func TestWatcherWait(t *testing.T) {
 	})
 	// Test cache updates
 	t.Run("simple-update", func(t *testing.T) {
-		w := newWatcher(t)
+		w := newWatcher()
 		defer w.Stop()
 		foodep := &idep.FakeDep{Name: "foo"}
 		n := fakeNotifier("foo")
@@ -437,7 +437,7 @@ func TestWatcherWait(t *testing.T) {
 		}
 	})
 	t.Run("multi-update", func(t *testing.T) {
-		w := newWatcher(t)
+		w := newWatcher()
 		defer w.Stop()
 		n := fakeNotifier("foo")
 		deps := make([]dep.Dependency, 5)
@@ -457,7 +457,7 @@ func TestWatcherWait(t *testing.T) {
 	})
 	// test tracking of updated dependencies
 	t.Run("simple-updated-tracking", func(t *testing.T) {
-		w := newWatcher(t)
+		w := newWatcher()
 		defer w.Stop()
 		foodep := &idep.FakeDep{Name: "foo"}
 		n := fakeNotifier("foo")
@@ -475,7 +475,7 @@ func TestWatcherWait(t *testing.T) {
 		}
 	})
 	t.Run("multi-updated-tracking", func(t *testing.T) {
-		w := newWatcher(t)
+		w := newWatcher()
 		n := fakeNotifier("multi")
 		defer w.Stop()
 		deps := make([]dep.Dependency, 5)
@@ -489,7 +489,7 @@ func TestWatcherWait(t *testing.T) {
 		}
 	})
 	t.Run("duplicate-updated-tracking", func(t *testing.T) {
-		w := newWatcher(t)
+		w := newWatcher()
 		n := fakeNotifier("dup")
 		defer w.Stop()
 		for i := 0; i < 2; i++ {
@@ -505,7 +505,7 @@ func TestWatcherWait(t *testing.T) {
 		}
 	})
 	t.Run("wait-channel", func(t *testing.T) {
-		w := newWatcher(t)
+		w := newWatcher()
 		defer w.Stop()
 		n := fakeNotifier("foo")
 		foodep := &idep.FakeDep{Name: "foo"}
@@ -520,7 +520,7 @@ func TestWatcherWait(t *testing.T) {
 		}
 	})
 	t.Run("wait-channel-cancel", func(t *testing.T) {
-		w := newWatcher(t)
+		w := newWatcher()
 		defer w.Stop()
 
 		errCh := make(chan error)
@@ -538,7 +538,7 @@ func TestWatcherWait(t *testing.T) {
 		}
 	})
 	t.Run("wait-stop-leak", func(t *testing.T) {
-		w := newWatcher(t)
+		w := newWatcher()
 		errCh := make(chan error)
 		go func() {
 			errCh <- w.Wait(context.Background())
@@ -558,7 +558,7 @@ func TestWatcherWait(t *testing.T) {
 		}
 	})
 	t.Run("wait-stop-order", func(t *testing.T) {
-		w := newWatcher(t)
+		w := newWatcher()
 		// can Stop can be run before Wait and have Wait work correctly
 		w.Stop()
 		errCh := make(chan error)
@@ -583,7 +583,7 @@ func TestWatcherWait(t *testing.T) {
 
 func TestWatcherNotify(t *testing.T) {
 	t.Run("single-notify-true", func(t *testing.T) {
-		w := newWatcher(t)
+		w := newWatcher()
 		defer w.Stop()
 		foodep := &idep.FakeDep{Name: "foo"}
 		n := fakeNotifier("foo")
@@ -595,7 +595,7 @@ func TestWatcherNotify(t *testing.T) {
 		}
 	})
 	t.Run("single-notify-false", func(t *testing.T) {
-		w := newWatcher(t)
+		w := newWatcher()
 		defer w.Stop()
 		foodep := &idep.FakeDep{Name: "foo"}
 		n := fakeNotifier("foo")
@@ -608,7 +608,7 @@ func TestWatcherNotify(t *testing.T) {
 		}
 	})
 	t.Run("multi-notify-true", func(t *testing.T) {
-		w := newWatcher(t)
+		w := newWatcher()
 		defer w.Stop()
 		foodep := &idep.FakeDep{Name: "foo"}
 		bardep := &idep.FakeDep{Name: "bar"}
@@ -622,7 +622,7 @@ func TestWatcherNotify(t *testing.T) {
 		}
 	})
 	t.Run("multi-notify-false", func(t *testing.T) {
-		w := newWatcher(t)
+		w := newWatcher()
 		defer w.Stop()
 		foodep := &idep.FakeDep{Name: "foo"}
 		bardep := &idep.FakeDep{Name: "bar"}
@@ -637,7 +637,7 @@ func TestWatcherNotify(t *testing.T) {
 		}
 	})
 	t.Run("notify-true-then-false", func(t *testing.T) {
-		w := newWatcher(t)
+		w := newWatcher()
 		defer w.Stop()
 		foodep := &idep.FakeDep{Name: "foo"}
 		nf := fakeNotifier("foo")
@@ -653,7 +653,7 @@ func TestWatcherNotify(t *testing.T) {
 		}
 	})
 	t.Run("notify-false-then-true", func(t *testing.T) {
-		w := newWatcher(t)
+		w := newWatcher()
 		defer w.Stop()
 		foodep := &idep.FakeDep{Name: "foo"}
 		nf := fakeNotifier("foo")
@@ -671,7 +671,7 @@ func TestWatcherNotify(t *testing.T) {
 		}
 	})
 	t.Run("notify-assert", func(t *testing.T) {
-		w := newWatcher(t)
+		w := newWatcher()
 		defer w.Stop()
 		foodep := &idep.FakeDep{Name: "foo"}
 		bardep := &idep.FakeListDep{Name: "bar"}
@@ -697,7 +697,7 @@ func TestWatcherNotify(t *testing.T) {
 
 func TestWatcherMarkSweep(t *testing.T) {
 	t.Run("remove-old-dependency", func(t *testing.T) {
-		w := newWatcher(t)
+		w := newWatcher()
 		defer w.Stop()
 		fdep := &idep.FakeDep{Name: "foo"}
 		bdep := &idep.FakeDep{Name: "bar"}
@@ -752,7 +752,7 @@ func TestWatcherMarkSweep(t *testing.T) {
 	})
 }
 
-func newWatcher(t *testing.T) *Watcher {
+func newWatcher() *Watcher {
 	return NewWatcher(WatcherInput{
 		Clients: NewClientSet(),
 		Cache:   NewStore(),
