@@ -19,7 +19,8 @@ func TestWatcherAdd(t *testing.T) {
 
 		d := &idep.FakeDep{}
 		n := fakeNotifier("foo")
-		if added := w.register(n, d); added == nil {
+		w.Register(n)
+		if added := w.track(n, d); added == nil {
 			t.Fatal("Register returned nil")
 		}
 
@@ -33,11 +34,12 @@ func TestWatcherAdd(t *testing.T) {
 
 		d := &idep.FakeDep{}
 		n := fakeNotifier("foo")
+		w.Register(n)
 		var added *view
-		if added = w.register(n, d); added == nil {
+		if added = w.track(n, d); added == nil {
 			t.Fatal("Register returned nil")
 		}
-		if readded := w.register(n, d); readded != added {
+		if readded := w.track(n, d); readded != added {
 			t.Fatal("Register should have returned the already created"+
 				"view, instead got:", added)
 		}
@@ -48,7 +50,8 @@ func TestWatcherAdd(t *testing.T) {
 
 		d := &idep.FakeDep{}
 		n := fakeNotifier("foo")
-		if added := w.register(n, d); added == nil {
+		w.Register(n)
+		if added := w.track(n, d); added == nil {
 			t.Fatal("Register returned nil")
 		}
 		w.Poll(d)
@@ -69,12 +72,38 @@ func TestWatcherAdd(t *testing.T) {
 
 		d := &idep.FakeDep{}
 		n := fakeNotifier("foo")
-		added := w.register(n, d)
+		w.Register(n)
+		added := w.track(n, d)
 		if added == nil {
 			t.Fatal("Register returned nil")
 		}
 		if added.retryFunc == nil {
 			t.Fatal("Retry func was nil")
+		}
+	})
+}
+
+func TestWatcherRegisty(t *testing.T) {
+
+	t.Run("base", func(t *testing.T) {
+		w := blindWatcher()
+		tt := echoTemplate("foo")
+		if err := w.Register(tt); err != nil {
+			t.Fatal("error should be nil, got:", err)
+		}
+		if _, ok := w.tracker.notifiers[tt.ID()]; !ok {
+			t.Fatal("registered template not tracked")
+		}
+	})
+
+	t.Run("duplicate-template-error", func(t *testing.T) {
+		w := blindWatcher()
+		tt := echoTemplate("foo")
+		if err := w.Register(tt); err != nil {
+			t.Fatal("error should be nil, got:", err)
+		}
+		if err := w.Register(tt); err != RegistryErr {
+			t.Fatal("should have errored")
 		}
 	})
 }
@@ -96,7 +125,7 @@ func TestWatcherWatching(t *testing.T) {
 
 		d := &idep.FakeDep{}
 		n := fakeNotifier("foo")
-		w.Register(n, d)
+		w.Track(n, d)
 
 		if w.Watching(d.String()) == false {
 			t.Errorf("expected to be Watching")
@@ -109,8 +138,7 @@ func TestWatcherWatching(t *testing.T) {
 
 		d := &idep.FakeDep{}
 		n := fakeNotifier("foo")
-		w.Register(n, d)
-		w.Register(n, d)
+		w.Track(n, d)
 
 		if w.Watching(d.String()) == false {
 			t.Errorf("expected to be Watching")
@@ -126,9 +154,9 @@ func TestWatcherWatching(t *testing.T) {
 		d := &idep.FakeDep{}
 		n0 := fakeNotifier("foo")
 		n1 := fakeNotifier("bar")
-		w.Register(n0, d)
+		w.Track(n0, d)
 		v0 := w.tracker.view(d.String())
-		w.Register(n1, d)
+		w.Track(n1, d)
 		v1 := w.tracker.view(d.String())
 
 		// be sure view created for dependency is reused
@@ -161,8 +189,8 @@ func TestWatcherWatching(t *testing.T) {
 		d0 := &idep.FakeDep{Name: "foo"}
 		d1 := &idep.FakeDep{Name: "bar"}
 		n := fakeNotifier("foo")
-		w.Register(n, d0)
-		w.Register(n, d1)
+		w.Track(n, d0)
+		w.Track(n, d1)
 
 		if w.Watching(d0.String()) == false {
 			t.Errorf("expected to be Watching")
@@ -183,9 +211,9 @@ func TestWatcherWatching(t *testing.T) {
 		d1 := &idep.FakeDep{Name: "burrito"} // dep for bar
 		nFoo := fakeNotifier("foo")
 		nBar := fakeNotifier("bar")
-		w.Register(nFoo, d0)
-		w.Register(nBar, d0)
-		w.Register(nBar, d1)
+		w.Track(nFoo, d0)
+		w.Track(nBar, d0)
+		w.Track(nBar, d1)
 
 		// Test that 2 views were created for the 2 dependencies
 		if w.tracker.viewCount() != 2 {
@@ -235,6 +263,7 @@ func TestWatcherWatching(t *testing.T) {
 
 		// fake template/notifier and dependencies (fields in template)
 		n := fakeNotifier("foo") // template stand-in
+		w.Register(n)
 		d0 := &idep.FakeDep{Name: "taco"}
 		d1 := &idep.FakeDep{Name: "burrito"}
 
@@ -252,8 +281,8 @@ func TestWatcherWatching(t *testing.T) {
 
 		// First template Execute call..
 		// 1. each dependency gets registered
-		v0 := w.register(n, d0)
-		v1 := w.register(n, d1)
+		v0 := w.track(n, d0)
+		v1 := w.track(n, d1)
 		// 2. polling should start, but we'll simulate that manually below
 		// Template Execute is now done.
 
@@ -334,7 +363,7 @@ func TestWatcherSize(t *testing.T) {
 		for i := 0; i < 10; i++ {
 			d := &idep.FakeDep{Name: fmt.Sprintf("%d", i)}
 			n := fakeNotifier("foo")
-			w.Register(n, d)
+			w.Track(n, d)
 		}
 
 		if w.Size() != 10 {
@@ -429,7 +458,8 @@ func TestWatcherWait(t *testing.T) {
 		defer w.Stop()
 		foodep := &idep.FakeDep{Name: "foo"}
 		n := fakeNotifier("foo")
-		w.dataCh <- w.register(n, foodep)
+		w.Register(n)
+		w.dataCh <- w.track(n, foodep)
 		w.Wait(context.Background())
 		store := w.cache.(*Store)
 		if _, ok := store.data[foodep.String()]; !ok {
@@ -440,11 +470,12 @@ func TestWatcherWait(t *testing.T) {
 		w := newWatcher()
 		defer w.Stop()
 		n := fakeNotifier("foo")
+		w.Register(n)
 		deps := make([]dep.Dependency, 5)
 		for i := 0; i < 5; i++ {
 			deps[i] = &idep.FakeDep{Name: strconv.Itoa(i)}
 			// doesn't need goroutine as dataCh has a large buffer
-			w.dataCh <- w.register(n, deps[i])
+			w.dataCh <- w.track(n, deps[i])
 		}
 		w.Wait(context.Background())
 		store := w.cache.(*Store)
@@ -461,7 +492,8 @@ func TestWatcherWait(t *testing.T) {
 		defer w.Stop()
 		foodep := &idep.FakeDep{Name: "foo"}
 		n := fakeNotifier("foo")
-		w.dataCh <- w.register(n, foodep)
+		w.Register(n)
+		w.dataCh <- w.track(n, foodep)
 		w.Wait(context.Background())
 
 		if len(w.tracker.tracked) != 1 {
@@ -477,11 +509,12 @@ func TestWatcherWait(t *testing.T) {
 	t.Run("multi-updated-tracking", func(t *testing.T) {
 		w := newWatcher()
 		n := fakeNotifier("multi")
+		w.Register(n)
 		defer w.Stop()
 		deps := make([]dep.Dependency, 5)
 		for i := 0; i < 5; i++ {
 			deps[i] = &idep.FakeDep{Name: strconv.Itoa(i)}
-			w.dataCh <- w.register(n, deps[i])
+			w.dataCh <- w.track(n, deps[i])
 			w.Wait(context.Background())
 		}
 		if n.count() != len(deps) {
@@ -491,10 +524,11 @@ func TestWatcherWait(t *testing.T) {
 	t.Run("duplicate-updated-tracking", func(t *testing.T) {
 		w := newWatcher()
 		n := fakeNotifier("dup")
+		w.Register(n)
 		defer w.Stop()
 		for i := 0; i < 2; i++ {
 			foodep := &idep.FakeDep{Name: "foo"}
-			w.dataCh <- w.register(n, foodep)
+			w.dataCh <- w.track(n, foodep)
 		}
 		w.Wait(context.Background())
 		if n.count() != 2 {
@@ -508,8 +542,9 @@ func TestWatcherWait(t *testing.T) {
 		w := newWatcher()
 		defer w.Stop()
 		n := fakeNotifier("foo")
+		w.Register(n)
 		foodep := &idep.FakeDep{Name: "foo"}
-		w.dataCh <- w.register(n, foodep)
+		w.dataCh <- w.track(n, foodep)
 		err := <-w.WaitCh(context.Background())
 		if err != nil {
 			t.Fatal("wait error:", err)
@@ -587,7 +622,8 @@ func TestWatcherNotify(t *testing.T) {
 		defer w.Stop()
 		foodep := &idep.FakeDep{Name: "foo"}
 		n := fakeNotifier("foo")
-		w.dataCh <- w.register(n, foodep)
+		w.Register(n)
+		w.dataCh <- w.track(n, foodep)
 		ctx, cc := context.WithCancel(context.Background())
 		go func() { time.Sleep(time.Millisecond); cc() }()
 		if err := w.Wait(ctx); err != nil {
@@ -599,7 +635,8 @@ func TestWatcherNotify(t *testing.T) {
 		defer w.Stop()
 		foodep := &idep.FakeDep{Name: "foo"}
 		n := fakeNotifier("foo")
-		w.dataCh <- w.register(n, foodep)
+		w.Register(n)
+		w.dataCh <- w.track(n, foodep)
 		ctx, cc := context.WithCancel(context.Background())
 		go func() { time.Sleep(time.Millisecond); cc() }()
 		n.notify = false
@@ -613,8 +650,9 @@ func TestWatcherNotify(t *testing.T) {
 		foodep := &idep.FakeDep{Name: "foo"}
 		bardep := &idep.FakeDep{Name: "bar"}
 		n := fakeNotifier("foo")
-		w.dataCh <- w.register(n, foodep)
-		w.dataCh <- w.register(n, bardep)
+		w.Register(n)
+		w.dataCh <- w.track(n, foodep)
+		w.dataCh <- w.track(n, bardep)
 		ctx, cc := context.WithCancel(context.Background())
 		go func() { time.Sleep(time.Millisecond); cc() }()
 		if err := w.Wait(ctx); err != nil {
@@ -627,9 +665,10 @@ func TestWatcherNotify(t *testing.T) {
 		foodep := &idep.FakeDep{Name: "foo"}
 		bardep := &idep.FakeDep{Name: "bar"}
 		n := fakeNotifier("foo")
+		w.Register(n)
 		n.notify = false
-		w.dataCh <- w.register(n, foodep)
-		w.dataCh <- w.register(n, bardep)
+		w.dataCh <- w.track(n, foodep)
+		w.dataCh <- w.track(n, bardep)
 		ctx, cc := context.WithCancel(context.Background())
 		go func() { time.Sleep(time.Millisecond); cc() }()
 		if err := w.Wait(ctx); err != context.Canceled {
@@ -643,9 +682,10 @@ func TestWatcherNotify(t *testing.T) {
 		nf := fakeNotifier("foo")
 		bardep := &idep.FakeDep{Name: "bar"}
 		nb := fakeNotifier("bar")
+		w.Register(nf, nb)
 		nb.notify = false
-		w.dataCh <- w.register(nf, foodep)
-		w.dataCh <- w.register(nb, bardep)
+		w.dataCh <- w.track(nf, foodep)
+		w.dataCh <- w.track(nb, bardep)
 		ctx, cc := context.WithCancel(context.Background())
 		go func() { time.Sleep(time.Millisecond); cc() }()
 		if err := w.Wait(ctx); err != nil {
@@ -660,8 +700,9 @@ func TestWatcherNotify(t *testing.T) {
 		nf.notify = false
 		bardep := &idep.FakeDep{Name: "bar"}
 		nb := fakeNotifier("bar")
-		w.dataCh <- w.register(nf, foodep)
-		w.dataCh <- w.register(nb, bardep)
+		w.Register(nf, nb)
+		w.dataCh <- w.track(nf, foodep)
+		w.dataCh <- w.track(nb, bardep)
 
 		ctx, cc := context.WithCancel(context.Background())
 		go func() { time.Sleep(time.Millisecond); cc() }()
@@ -676,9 +717,10 @@ func TestWatcherNotify(t *testing.T) {
 		foodep := &idep.FakeDep{Name: "foo"}
 		bardep := &idep.FakeListDep{Name: "bar"}
 		n := fakeNotifier("foo")
-		fooview := w.register(n, foodep)
+		w.Register(n)
+		fooview := w.track(n, foodep)
 		fooview.store("foo")
-		barview := w.register(n, bardep)
+		barview := w.track(n, bardep)
 		barview.store([]string{"bar", "zed"})
 		w.dataCh <- fooview
 		w.dataCh <- barview
@@ -702,8 +744,9 @@ func TestWatcherMarkSweep(t *testing.T) {
 		fdep := &idep.FakeDep{Name: "foo"}
 		bdep := &idep.FakeDep{Name: "bar"}
 		n := fakeNotifier("zed")
-		w.register(n, fdep).store(fdep.Name)
-		w.register(n, bdep).store(bdep.Name)
+		w.Register(n)
+		w.track(n, fdep).store(fdep.Name)
+		w.track(n, bdep).store(bdep.Name)
 		w.cache.Save(fdep.String(), fdep.Name)
 		w.cache.Save(bdep.String(), bdep.Name)
 
@@ -730,7 +773,7 @@ func TestWatcherMarkSweep(t *testing.T) {
 		checkDeps(fdep, bdep)
 
 		// simulate recaller calling register
-		w.register(n, fdep)
+		w.track(n, fdep)
 
 		// everything still here
 		checkDeps(fdep, bdep)

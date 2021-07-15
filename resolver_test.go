@@ -18,6 +18,7 @@ func TestResolverRun(t *testing.T) {
 		tt := fooTemplate()
 		w := blindWatcher()
 		defer w.Stop()
+		w.Register(tt)
 
 		r, err := rv.Run(tt, w)
 		if err != nil {
@@ -35,10 +36,11 @@ func TestResolverRun(t *testing.T) {
 		w := blindWatcher()
 		d, _ := idep.NewKVGetQuery("foo")
 		defer w.Stop()
+		w.Register(tt)
 
 		// seed the dependency tracking
 		// otherwise it will trigger first run
-		w.Register(tt, d)
+		w.Track(tt, d)
 		// set receivedData to true to make it think it has it already
 		v := w.tracker.view(d.String())
 		v.receivedData = true
@@ -61,15 +63,16 @@ func TestResolverRun(t *testing.T) {
 
 	t.Run("complete-changes", func(t *testing.T) {
 		rv := NewResolver()
-		tt := fooTemplate()
 		w := blindWatcher()
 		defer w.Stop()
+		tt := fooTemplate()
+		w.Register(tt)
 		d, _ := idep.NewKVGetQuery("foo")
 
 		// seed the cache and the dependency tracking
 		// maybe abstract out into separate function
 		regSave := func(d dep.Dependency, value interface{}) {
-			v := w.register(tt, d)      // register with watcher
+			v := w.track(tt, d)         // register with watcher
 			v.store(value)              // view received and recorded data
 			w.cache.Save(v.ID(), value) // saves data to cache
 		}
@@ -98,9 +101,10 @@ func TestResolverRun(t *testing.T) {
 	// test dependency echo's back the string arg
 	t.Run("single-pass-run", func(t *testing.T) {
 		rv := NewResolver()
-		tt := echoTemplate("foo")
 		w := blindWatcher()
 		defer w.Stop()
+		tt := echoTemplate("foo")
+		w.Register(tt)
 
 		r, err := rv.Run(tt, w)
 		if err != nil {
@@ -161,9 +165,10 @@ func TestResolverRun(t *testing.T) {
 	// dep1 returns a list of words where dep2 echos each
 	t.Run("multi-pass-run", func(t *testing.T) {
 		rv := NewResolver()
-		tt := echoListTemplate("foo", "bar")
 		w := blindWatcher()
 		defer w.Stop()
+		tt := echoListTemplate("foo", "bar")
+		w.Register(tt)
 
 		// Run 1, 'words' is registered
 		r, err := rv.Run(tt, w)
@@ -235,15 +240,15 @@ func echoTemplate(data string) *Template {
 }
 
 func echoFunc(recall Recaller) interface{} {
-	return func(s string) (interface{}, error) {
+	return func(s string) interface{} {
 		d := &idep.FakeDep{Name: s}
 		if value, ok := recall(d); ok {
 			if value == nil {
-				return "", nil
+				return ""
 			}
-			return value.(string), nil
+			return value.(string)
 		}
-		return "", nil
+		return ""
 	}
 }
 

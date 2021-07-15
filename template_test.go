@@ -24,15 +24,17 @@ func TestNewTemplate(t *testing.T) {
 	}{
 		{
 			"nil",
-			TemplateInput{},
-			NewTemplate(TemplateInput{}),
+			TemplateInput{Name: "nil"},
+			NewTemplate(TemplateInput{Name: "nil"}),
 		},
 		{
 			"contents",
 			TemplateInput{
+				Name:     "test",
 				Contents: "test",
 			},
 			&Template{
+				name:     "test",
 				contents: "test",
 				hexMD5:   "098f6bcd4621d373cade4e832627b4f6",
 			},
@@ -40,11 +42,13 @@ func TestNewTemplate(t *testing.T) {
 		{
 			"custom_delims",
 			TemplateInput{
+				Name:       "test",
 				Contents:   "test",
 				LeftDelim:  "<<",
 				RightDelim: ">>",
 			},
 			&Template{
+				name:       "test",
 				contents:   "test",
 				hexMD5:     "098f6bcd4621d373cade4e832627b4f6",
 				leftDelim:  "<<",
@@ -54,10 +58,12 @@ func TestNewTemplate(t *testing.T) {
 		{
 			"err_missing_key",
 			TemplateInput{
+				Name:          "test",
 				Contents:      "test",
 				ErrMissingKey: true,
 			},
 			&Template{
+				name:          "test",
 				contents:      "test",
 				hexMD5:        "098f6bcd4621d373cade4e832627b4f6",
 				errMissingKey: true,
@@ -74,6 +80,29 @@ func TestNewTemplate(t *testing.T) {
 			}
 		})
 	}
+
+	t.Run("explicit_name_checks", func(t *testing.T) {
+		contentsMD5 := "098f6bcd4621d373cade4e832627b4f6"
+
+		tmpl := NewTemplate(
+			TemplateInput{
+				Name:     "foo",
+				Contents: "test",
+			})
+		if tmpl.ID() != (contentsMD5 + "_foo") {
+			t.Fatalf("ID is wrong, got '%s', want '%s'\n", tmpl.ID(),
+				contentsMD5+"_foo")
+		}
+
+		tmpl = NewTemplate(
+			TemplateInput{
+				Contents: "test",
+			})
+		if tmpl.ID() != contentsMD5 {
+			t.Fatalf("ID is wrong, got '%s', want '%s'\n", tmpl.ID(), contentsMD5)
+		}
+
+	})
 }
 
 func TestTemplate_Execute(t *testing.T) {
