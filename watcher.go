@@ -116,7 +116,7 @@ func NewWatcher(i WatcherInput) *Watcher {
 		cache:           cache,
 		dataCh:          make(chan *view, dataBufferSize),
 		errCh:           make(chan error),
-		waitingCh:       make(chan struct{}),
+		waitingCh:       make(chan struct{}, 1),
 		stopCh:          make(chan struct{}, 1),
 		tracker:         newTracker(),
 		bufferTrigger:   bufferTriggerCh,
