@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 	"text/template"
+	"time"
 
 	"github.com/hashicorp/hcat/dep"
 	idep "github.com/hashicorp/hcat/internal/dependency"
@@ -102,6 +103,42 @@ func TestResolverRun(t *testing.T) {
 		tt := echoTemplate("foo")
 		w := blindWatcher()
 		defer w.Stop()
+
+		r, err := rv.Run(tt, w)
+		if err != nil {
+			t.Fatal("Run() error:", err)
+		}
+		if r.missing == false {
+			t.Fatal("missing should be true")
+		}
+		ctx := context.Background()
+		w.Wait(ctx) // wait for (fake/instantaneous) dependency resolution
+
+		r, err = rv.Run(tt, w)
+		if err != nil {
+			t.Fatal("Run() error:", err)
+		}
+		if r.missing == true {
+			t.Fatal("missing should be false")
+		}
+		if r.Complete == false {
+			t.Fatal("Complete should be true")
+		}
+		if r.NoChange != false {
+			t.Fatal("NoChange should be false")
+		}
+		if string(r.Contents) != "foo" {
+			t.Fatal("Wrong contents:", string(r.Contents))
+		}
+	})
+
+	// same as above, but with buffering enabled to verify things work with it
+	t.Run("buffered-single-pass-run", func(t *testing.T) {
+		rv := NewResolver()
+		w := blindWatcher()
+		defer w.Stop()
+		tt := echoTemplate("foo")
+		w.SetBufferPeriod(time.Millisecond, time.Second, tt.ID())
 
 		r, err := rv.Run(tt, w)
 		if err != nil {
