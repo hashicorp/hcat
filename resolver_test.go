@@ -137,6 +137,7 @@ func TestResolverRun(t *testing.T) {
 		w := blindWatcher()
 		defer w.Stop()
 		tt := echoTemplate("foo")
+		w.Register(tt)
 		w.SetBufferPeriod(time.Millisecond, time.Second, tt.ID())
 
 		r, err := rv.Run(tt, w)

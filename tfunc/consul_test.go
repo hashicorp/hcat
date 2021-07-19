@@ -200,7 +200,7 @@ type fakeWatcher struct {
 	*hcat.Store
 }
 
-func (fakeWatcher) Buffer(string) bool            { return false }
+func (fakeWatcher) Buffer(hcat.Notifier) bool     { return false }
 func (f fakeWatcher) Complete(hcat.Notifier) bool { return true }
 func (f fakeWatcher) Recaller(hcat.Notifier) hcat.Recaller {
 	return func(d dep.Dependency) (value interface{}, found bool) {

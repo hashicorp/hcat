@@ -247,14 +247,12 @@ func (w *Watcher) Wait(ctx context.Context) error {
 // period. If the template has not been initalized or a buffer period is not
 // configured for the template, it will skip the buffering.
 // period.
-func (w *Watcher) Buffer(tmplID string) bool {
+func (w *Watcher) Buffer(n Notifier) bool {
 	// first pass skips buffering.
-	_, initialized := w.tracker.notifiers[tmplID]
-	if !initialized {
+	if !w.tracker.notifierTracked(n) {
 		return false
 	}
-
-	return w.bufferTemplates.Buffer(tmplID)
+	return w.bufferTemplates.Buffer(n.ID())
 }
 
 // Register's one or more Notifiers with the Watcher for future use.
@@ -504,6 +502,19 @@ func (t *tracker) registerNotifiers(ns ...Notifier) error {
 		t.notifiers[n.ID()] = n
 	}
 	return nil
+}
+
+// notifierTracked tests if a registered notifier has been paired with a
+// dependency (a tracked_pair added) and thus used at least once
+func (t *tracker) notifierTracked(n Notifier) bool {
+	t.Lock()
+	defer t.Unlock()
+	for _, tp := range t.tracked {
+		if tp.notify == n.ID() {
+			return true
+		}
+	}
+	return false
 }
 
 // lookup returns the view and true, or nil and false
