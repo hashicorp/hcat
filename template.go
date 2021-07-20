@@ -21,6 +21,9 @@ var ErrNoNewValues = errors.New("no new values for template")
 // The template retains the relationship between it's contents and is
 // responsible for it's own execution.
 type Template struct {
+	// template name, appened to ID (random if not specified)
+	name string
+
 	// contents is the string contents for the template. It is either given
 	// during template creation or read from disk when initialized.
 	contents string
@@ -79,6 +82,11 @@ type Recaller func(dep.Dependency) (value interface{}, found bool)
 
 // TemplateInput is used as input when creating the template.
 type TemplateInput struct {
+
+	// Optional name for the template. Appended to the ID. Required if you want
+	// to use the same content in more than one template with the same Watcher.
+	Name string
+
 	// Contents are the raw template contents.
 	Contents string
 
@@ -114,6 +122,7 @@ type TemplateInput struct {
 func NewTemplate(i TemplateInput) *Template {
 
 	var t Template
+	t.name = i.Name
 	t.contents = i.Contents
 	t.leftDelim = i.LeftDelim
 	t.rightDelim = i.RightDelim
@@ -132,7 +141,11 @@ func NewTemplate(i TemplateInput) *Template {
 }
 
 // ID returns the identifier for this template.
+// Used to uniquely identify this template object for dependency management.
 func (t *Template) ID() string {
+	if t.name != "" {
+		return t.hexMD5 + "_" + t.name
+	}
 	return t.hexMD5
 }
 

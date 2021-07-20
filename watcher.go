@@ -2,6 +2,7 @@ package hcat
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"time"
 
@@ -12,6 +13,9 @@ import (
 
 // dataBufferSize is the default number of views to process in a batch.
 const dataBufferSize = 2048
+
+// standard error returned when you try to register the same notifier twice
+var RegistryErr = fmt.Errorf("duplicate watcher registry entry")
 
 // RetryFunc defines the function type used to determine how many and how often
 // to retry calls to the external services.
@@ -147,7 +151,11 @@ func (w *Watcher) WatchVaultToken(token string) error {
 			return errors.Wrap(err, "watcher")
 		}
 		// fakeNotifier is defined near end of file
-		w.Register(fakeNotifier(vaultTokenDummyTemplateID), vt)
+		n := fakeNotifier(vaultTokenDummyTemplateID)
+		if err := w.Register(n); err != nil {
+			return err
+		}
+		w.Track(n, vt)
 		w.Poll(vt)
 	}
 	return nil
@@ -239,28 +247,37 @@ func (w *Watcher) Wait(ctx context.Context) error {
 // period. If the template has not been initalized or a buffer period is not
 // configured for the template, it will skip the buffering.
 // period.
-func (w *Watcher) Buffer(tmplID string) bool {
+func (w *Watcher) Buffer(n Notifier) bool {
 	// first pass skips buffering.
-	_, initialized := w.tracker.notifiers[tmplID]
-	if !initialized {
+	if !w.tracker.notifierTracked(n) {
 		return false
 	}
-
-	return w.bufferTemplates.Buffer(tmplID)
+	return w.bufferTemplates.Buffer(n.ID())
 }
 
-// Register is used to add dependencies to be monitored by the watcher. It sets
+// Register's one or more Notifiers with the Watcher for future use.
+// Trying to register the same Notifier twice will result in an error and none
+// of the Notifiers will be registered (all or nothing).
+// Trying to use a Notifier without Registering it will result in a *panic*.
+func (w *Watcher) Register(ns ...Notifier) error {
+	return w.tracker.registerNotifiers(ns...)
+}
+
+// Track is used to add dependencies to be monitored by the watcher. It sets
 // everything up but stops short of running the polling, waiting for an
-// explicit start.
+// explicit start (see Poll below).
+// It calls Register as a convenience, but ignores the returned error so it can
+// be used with already Registered Notifiers.
 // If the dependency is already registered, no action is taken.
-func (w *Watcher) Register(n Notifier, d dep.Dependency) {
-	w.register(n, d)
+func (w *Watcher) Track(n Notifier, d dep.Dependency) {
+	w.Register(n)
+	w.track(n, d)
 }
 
-// register is private form of Register that returns the new view.
+// track is the private form of Track that returns the new view.
 // Returned view is useful internally and for testing.
 // Private as we don't want `view` public at this point.
-func (w *Watcher) register(n Notifier, d dep.Dependency) *view {
+func (w *Watcher) track(n Notifier, d dep.Dependency) *view {
 	w.tracker.inUse(n, d)
 	if v, ok := w.tracker.lookup(n, d); ok {
 		return v
@@ -308,7 +325,7 @@ func (w *Watcher) Poll(deps ...dep.Dependency) {
 // to enable tracking dependencies on the Watcher.
 func (w *Watcher) Recaller(n Notifier) Recaller {
 	return func(dep dep.Dependency) (interface{}, bool) {
-		w.register(n, dep)
+		w.track(n, dep)
 		data, ok := w.cache.Recall(dep.String())
 		switch {
 		case ok:
@@ -326,7 +343,7 @@ func (w *Watcher) Complete(n Notifier) bool {
 }
 
 // Mark-n-Sweep garbage-collector-like cleaning of views that are no in use.
-// Stops the views and removes all references.
+// Stops the (garbage) views and removes all references.
 // Should be used before/after the code that uses the dependencies (eg. template).
 //
 // Mark's all tracked dependencies as being *not* in use.
@@ -470,6 +487,36 @@ func (t *tracker) viewCount() int {
 	return len(t.views)
 }
 
+// registerNotifiers adds the notifiers to those tracked, it returns an error
+// if a notifier (indexed by n.ID()) has already been registered. If an error
+// occurs none of the notifiers will be added (all or nothing).
+func (t *tracker) registerNotifiers(ns ...Notifier) error {
+	t.Lock()
+	defer t.Unlock()
+	for _, n := range ns {
+		if _, ok := t.notifiers[n.ID()]; ok {
+			return RegistryErr
+		}
+	}
+	for _, n := range ns {
+		t.notifiers[n.ID()] = n
+	}
+	return nil
+}
+
+// notifierTracked tests if a registered notifier has been paired with a
+// dependency (a tracked_pair added) and thus used at least once
+func (t *tracker) notifierTracked(n Notifier) bool {
+	t.Lock()
+	defer t.Unlock()
+	for _, tp := range t.tracked {
+		if tp.notify == n.ID() {
+			return true
+		}
+	}
+	return false
+}
+
 // lookup returns the view and true, or nil and false
 // true is returned if the notifier and depencency match a tracked pair
 // returns the view as it is the 1 thing that you don't have yet
@@ -502,7 +549,7 @@ func (t *tracker) add(v *view, n Notifier) {
 		t.views[v.ID()] = v
 	}
 	if _, ok := t.notifiers[n.ID()]; !ok {
-		t.notifiers[n.ID()] = n
+		panic("attempt to use an unregistered notifier")
 	}
 	t.tracked = append(t.tracked,
 		trackedPair{view: v.ID(), notify: n.ID(), inUse: true})
