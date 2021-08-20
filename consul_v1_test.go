@@ -130,6 +130,32 @@ func TestTemplateExecute_consul_v1(t *testing.T) {
 			"[dc1 dc2]",
 			false,
 		},
+		{
+			"func_keys",
+			TemplateInput{
+				Contents: `{{ range keys "key" }}{{ .Key }}:{{ .Value }};{{ end }}`,
+			},
+			func() *Store {
+				st := NewStore()
+				d, err := idep.NewKVListQueryV1("key", []string{})
+				if err != nil {
+					t.Fatal(err)
+				}
+				st.Save(d.String(), []*dep.KeyPair{
+					{
+						Key:   "key",
+						Value: "value-1",
+					},
+					{
+						Key:   "key/test",
+						Value: "value-2",
+					},
+				})
+				return st
+			}(),
+			"key:value-1;key/test:value-2;",
+			false,
+		},
 	}
 
 	for _, tc := range cases {

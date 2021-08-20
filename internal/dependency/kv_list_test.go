@@ -145,6 +145,183 @@ func TestNewKVListQuery(t *testing.T) {
 	}
 }
 
+func TestNewKVListQueryV1(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name   string
+		prefix string
+		opts   []string
+		exp    *KVListQuery
+		err    bool
+	}{
+		{
+			"empty",
+			"",
+			[]string{},
+			nil,
+			true,
+		},
+		{
+			"prefix",
+			"prefix",
+			[]string{},
+			&KVListQuery{
+				prefix: "prefix",
+			},
+			false,
+		},
+		{
+			"query_parameters_without_prefix",
+			"",
+			[]string{"dc=dc1"},
+			nil,
+			true,
+		},
+		{
+			"dc",
+			"prefix",
+			[]string{"dc=dc1"},
+			&KVListQuery{
+				prefix: "prefix",
+				dc:     "dc1",
+			},
+			false,
+		},
+		{
+			"namespace",
+			"prefix",
+			[]string{"ns=test"},
+			&KVListQuery{
+				prefix: "prefix",
+				ns:     "test",
+			},
+			false,
+		},
+		{
+			"all_parameters",
+			"prefix",
+			[]string{"dc=dc1", "ns=test"},
+			&KVListQuery{
+				prefix: "prefix",
+				dc:     "dc1",
+				ns:     "test",
+			},
+			false,
+		},
+		{
+			"invalid_parameter",
+			"",
+			[]string{"invalid=param"},
+			nil,
+			true,
+		},
+		{
+			"dots",
+			"prefix.with.dots",
+			[]string{},
+			&KVListQuery{
+				prefix: "prefix.with.dots",
+			},
+			false,
+		},
+		{
+			"slashes",
+			"prefix/with/slashes",
+			[]string{},
+			&KVListQuery{
+				prefix: "prefix/with/slashes",
+			},
+			false,
+		},
+		{
+			"dashes",
+			"prefix-with-dashes",
+			[]string{},
+			&KVListQuery{
+				prefix: "prefix-with-dashes",
+			},
+			false,
+		},
+		{
+			"leading_slash",
+			"/leading/slash",
+			[]string{},
+			&KVListQuery{
+				prefix: "leading/slash",
+			},
+			false,
+		},
+		{
+			"trailing_slash",
+			"trailing/slash/",
+			[]string{},
+			&KVListQuery{
+				prefix: "trailing/slash/",
+			},
+			false,
+		},
+		{
+			"underscores",
+			"prefix_with_underscores",
+			[]string{},
+			&KVListQuery{
+				prefix: "prefix_with_underscores",
+			},
+			false,
+		},
+		{
+			"special_characters",
+			"config/facet:größe-lf-si",
+			[]string{},
+			&KVListQuery{
+				prefix: "config/facet:größe-lf-si",
+			},
+			false,
+		},
+		{
+			"splat",
+			"config/*/timeouts/",
+			[]string{},
+			&KVListQuery{
+				prefix: "config/*/timeouts/",
+			},
+			false,
+		},
+		{
+			"slash",
+			"/",
+			[]string{},
+			nil,
+			true,
+		},
+		{
+			"slash-slash",
+			"//",
+			[]string{},
+			&KVListQuery{
+				prefix: "/",
+			},
+			false,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			act, err := NewKVListQueryV1(tc.prefix, tc.opts)
+			if act != nil {
+				act.stopCh = nil
+			}
+
+			if tc.err {
+				assert.Error(t, err)
+			} else {
+				assert.Equal(t, tc.exp, act)
+			}
+		})
+	}
+}
+
 func TestKVListQuery_Fetch(t *testing.T) {
 	t.Parallel()
 

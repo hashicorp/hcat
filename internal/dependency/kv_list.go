@@ -29,7 +29,46 @@ type KVListQuery struct {
 
 	dc     string
 	prefix string
+	ns     string
 	opts   QueryOptions
+}
+
+// NewKVListQuery processes options in the format of "prefix key=value"
+// e.g. "key_prefix dc=dc1"
+func NewKVListQueryV1(prefix string, opts []string) (*KVListQuery, error) {
+	if prefix == "" || prefix == "/" {
+		return nil, fmt.Errorf("kv.list: prefix required")
+	}
+
+	q := KVListQuery{
+		stopCh: make(chan struct{}, 1),
+		prefix: strings.TrimPrefix(prefix, "/"),
+	}
+
+	for _, opt := range opts {
+		if strings.TrimSpace(opt) == "" {
+			continue
+		}
+
+		queryParam := strings.Split(opt, "=")
+		if len(queryParam) != 2 {
+			return nil, fmt.Errorf(
+				"kv.list: invalid query parameter format: %q", opt)
+		}
+		query := strings.TrimSpace(queryParam[0])
+		value := strings.TrimSpace(queryParam[1])
+		switch query {
+		case "dc", "datacenter":
+			q.dc = value
+		case "ns", "namespace":
+			q.ns = value
+		default:
+			return nil, fmt.Errorf(
+				"kv.list: invalid query parameter: %q", opt)
+		}
+	}
+
+	return &q, nil
 }
 
 // NewKVListQuery parses a string into a dependency.
@@ -56,6 +95,7 @@ func (d *KVListQuery) Fetch(clients dep.Clients) (interface{}, *dep.ResponseMeta
 
 	opts := d.opts.Merge(&QueryOptions{
 		Datacenter: d.dc,
+		Namespace:  d.ns,
 	})
 
 	//log.Printf("[TRACE] %s: GET %s", d, &url.URL{
