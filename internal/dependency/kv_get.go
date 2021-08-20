@@ -3,6 +3,7 @@ package dependency
 import (
 	"fmt"
 	"regexp"
+	"strings"
 
 	"github.com/hashicorp/hcat/dep"
 	"github.com/pkg/errors"
@@ -24,6 +25,7 @@ type KVExistsQuery struct {
 
 	dc   string
 	key  string
+	ns   string
 	opts QueryOptions
 }
 
@@ -46,6 +48,42 @@ func (d *KVExistsQuery) String() string {
 	return fmt.Sprintf("kv.exists(%s)", key)
 }
 
+// NewKVGetQueryV1 processes options in the format of "key key=value"
+// e.g. "my/key dc=dc1"
+func NewKVExistsQueryV1(key string, opts []string) (*KVExistsQuery, error) {
+	if key == "" || key == "/" {
+		return nil, fmt.Errorf("kv.get: key required")
+	}
+
+	q := KVExistsQuery{
+		stopCh: make(chan struct{}, 1),
+		key:    strings.TrimPrefix(key, "/"),
+	}
+	for _, opt := range opts {
+		if strings.TrimSpace(opt) == "" {
+			continue
+		}
+		queryParam := strings.Split(opt, "=")
+		if len(queryParam) != 2 {
+			return nil, fmt.Errorf(
+				"kv.get: invalid query parameter format: %q", opt)
+		}
+		query := strings.TrimSpace(queryParam[0])
+		value := strings.TrimSpace(queryParam[1])
+		switch query {
+		case "dc", "datacenter":
+			q.dc = value
+		case "ns", "namespace":
+			q.ns = value
+		default:
+			return nil, fmt.Errorf(
+				"kv.get: invalid query parameter: %q", opt)
+		}
+	}
+
+	return &q, nil
+}
+
 // NewKVGetQuery parses a string into a KV lookup.
 func NewKVExistsQuery(s string) (*KVExistsQuery, error) {
 	if s != "" && !KVGetQueryRe.MatchString(s) {
@@ -58,6 +96,20 @@ func NewKVExistsQuery(s string) (*KVExistsQuery, error) {
 		dc:     m["dc"],
 		key:    m["key"],
 	}, nil
+}
+
+// NewKVGetQueryV1 processes options in the format of "key key=value"
+// e.g. "my/key dc=dc1"
+func NewKVGetQueryV1(key string, opts []string) (*KVGetQuery, error) {
+	if key == "" {
+		return nil, fmt.Errorf("kv.get: key required")
+	}
+
+	q, err := NewKVExistsQueryV1(key, opts)
+	if err != nil {
+		return nil, err
+	}
+	return &KVGetQuery{KVExistsQuery: *q}, nil
 }
 
 // NewKVGetQuery parses a string into a (non-blocking) KV lookup.
@@ -79,6 +131,7 @@ func (d *KVGetQuery) Fetch(clients dep.Clients) (interface{}, *dep.ResponseMetad
 
 	opts := d.opts.Merge(&QueryOptions{
 		Datacenter: d.dc,
+		Namespace:  d.ns,
 	})
 
 	//log.Printf("[TRACE] %s: GET %s", d, &url.URL{

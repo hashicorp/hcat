@@ -167,16 +167,181 @@ func TestNewKVGetQuery(t *testing.T) {
 
 	for i, tc := range cases {
 		t.Run(fmt.Sprintf("%d_%s", i, tc.name), func(t *testing.T) {
-			act, err := NewKVExistsQuery(tc.i)
-			if (err != nil) != tc.err {
-				t.Fatal(err)
-			}
+			act, err := NewKVGetQuery(tc.i)
 
 			if act != nil {
 				act.stopCh = nil
 			}
 
-			assert.Equal(t, tc.exp, act)
+			if tc.err {
+				assert.Error(t, err)
+			} else {
+				exp := &KVGetQuery{KVExistsQuery: *tc.exp}
+				assert.Equal(t, exp, act)
+			}
+		})
+	}
+}
+
+func TestNewKVGetQueryV1(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name string
+		i    string
+		opts []string
+		exp  *KVExistsQuery
+		err  bool
+	}{
+		{
+			"empty",
+			"",
+			[]string{},
+			nil,
+			true,
+		},
+		{
+			"key",
+			"key",
+			[]string{},
+			&KVExistsQuery{
+				key: "key",
+			},
+			false,
+		},
+		{
+			"no_key",
+			"",
+			[]string{"dc=dc1"},
+			nil,
+			true,
+		},
+		{
+			"dc",
+			"key",
+			[]string{"dc=dc1"},
+			&KVExistsQuery{
+				key: "key",
+				dc:  "dc1",
+			},
+			false,
+		},
+		{
+			"namespace",
+			"key",
+			[]string{"ns=test-namespace"},
+			&KVExistsQuery{
+				key: "key",
+				ns:  "test-namespace",
+			},
+			false,
+		},
+		{
+			"all_parameters",
+			"key",
+			[]string{"dc=dc1", "ns=test-namespace"},
+			&KVExistsQuery{
+				key: "key",
+				dc:  "dc1",
+				ns:  "test-namespace",
+			},
+			false,
+		},
+		{
+			"invalid_parameter",
+			"key",
+			[]string{"invalid=param"},
+			nil,
+			true,
+		},
+		{
+			"dots",
+			"key.with.dots",
+			[]string{},
+			&KVExistsQuery{
+				key: "key.with.dots",
+			},
+			false,
+		},
+		{
+			"slashes",
+			"key/with/slashes",
+			[]string{},
+			&KVExistsQuery{
+				key: "key/with/slashes",
+			},
+			false,
+		},
+		{
+			"dashes",
+			"key-with-dashes",
+			[]string{},
+			&KVExistsQuery{
+				key: "key-with-dashes",
+			},
+			false,
+		},
+		{
+			"leading_slash",
+			"/leading/slash",
+			[]string{},
+			&KVExistsQuery{
+				key: "leading/slash",
+			},
+			false,
+		},
+		{
+			"trailing_slash",
+			"trailing/slash/",
+			[]string{},
+			&KVExistsQuery{
+				key: "trailing/slash/",
+			},
+			false,
+		},
+		{
+			"underscores",
+			"key_with_underscores",
+			[]string{},
+			&KVExistsQuery{
+				key: "key_with_underscores",
+			},
+			false,
+		},
+		{
+			"special_characters",
+			"config/facet:größe-lf-si",
+			[]string{},
+			&KVExistsQuery{
+				key: "config/facet:größe-lf-si",
+			},
+			false,
+		},
+		{
+			"splat",
+			"config/*/timeouts/",
+			[]string{},
+			&KVExistsQuery{
+				key: "config/*/timeouts/",
+			},
+			false,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			act, err := NewKVGetQueryV1(tc.i, tc.opts)
+
+			if act != nil {
+				act.stopCh = nil
+			}
+
+			if tc.err {
+				assert.Error(t, err)
+			} else {
+				exp := &KVGetQuery{KVExistsQuery: *tc.exp}
+				assert.Equal(t, exp, act)
+			}
 		})
 	}
 }
