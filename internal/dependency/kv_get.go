@@ -3,7 +3,6 @@ package dependency
 import (
 	"fmt"
 	"regexp"
-	"strings"
 
 	"github.com/hashicorp/hcat/dep"
 	"github.com/pkg/errors"
@@ -18,84 +17,10 @@ var (
 	KVGetQueryRe = regexp.MustCompile(`\A` + keyRe + dcRe + `\z`)
 )
 
-// KVExistsQuery uses a non-blocking query with the KV store for key lookup.
-type KVExistsQuery struct {
-	isConsul
-	stopCh chan struct{}
-
-	dc   string
-	key  string
-	ns   string
-	opts QueryOptions
-}
-
 // KVGetQuery queries the KV store for a single key.
 type KVGetQuery struct {
 	KVExistsQuery
 	isBlocking
-}
-
-func (d *KVExistsQuery) SetOptions(opts QueryOptions) {
-	opts.WaitIndex = 0
-	opts.WaitTime = 0
-	d.opts = opts
-}
-func (d *KVExistsQuery) String() string {
-	key := d.key
-	if d.dc != "" {
-		key = key + "@" + d.dc
-	}
-	return fmt.Sprintf("kv.exists(%s)", key)
-}
-
-// NewKVGetQueryV1 processes options in the format of "key key=value"
-// e.g. "my/key dc=dc1"
-func NewKVExistsQueryV1(key string, opts []string) (*KVExistsQuery, error) {
-	if key == "" || key == "/" {
-		return nil, fmt.Errorf("kv.get: key required")
-	}
-
-	q := KVExistsQuery{
-		stopCh: make(chan struct{}, 1),
-		key:    strings.TrimPrefix(key, "/"),
-	}
-	for _, opt := range opts {
-		if strings.TrimSpace(opt) == "" {
-			continue
-		}
-		queryParam := strings.Split(opt, "=")
-		if len(queryParam) != 2 {
-			return nil, fmt.Errorf(
-				"kv.get: invalid query parameter format: %q", opt)
-		}
-		query := strings.TrimSpace(queryParam[0])
-		value := strings.TrimSpace(queryParam[1])
-		switch query {
-		case "dc", "datacenter":
-			q.dc = value
-		case "ns", "namespace":
-			q.ns = value
-		default:
-			return nil, fmt.Errorf(
-				"kv.get: invalid query parameter: %q", opt)
-		}
-	}
-
-	return &q, nil
-}
-
-// NewKVGetQuery parses a string into a KV lookup.
-func NewKVExistsQuery(s string) (*KVExistsQuery, error) {
-	if s != "" && !KVGetQueryRe.MatchString(s) {
-		return nil, fmt.Errorf("kv.get: invalid format: %q", s)
-	}
-
-	m := regexpMatch(KVGetQueryRe, s)
-	return &KVExistsQuery{
-		stopCh: make(chan struct{}, 1),
-		dc:     m["dc"],
-		key:    m["key"],
-	}, nil
 }
 
 // NewKVGetQueryV1 processes options in the format of "key key=value"

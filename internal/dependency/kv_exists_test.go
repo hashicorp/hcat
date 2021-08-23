@@ -1,7 +1,6 @@
 package dependency
 
 import (
-	"fmt"
 	"testing"
 	"time"
 
@@ -9,31 +8,31 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestNewKVGetQuery_Blocking(t *testing.T) {
-	q, err := NewKVGetQuery("")
+func TestNewKVExistsQuery_NonBlocking(t *testing.T) {
+	q, err := NewKVExistsQuery("")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, ok := interface{}(q).(BlockingQuery); !ok {
-		t.Fatal("should be blocking")
+	if _, ok := interface{}(q).(BlockingQuery); ok {
+		t.Fatal("should NOT be blocking")
 	}
 }
 
-func TestKVGetQuery_SetOptions(t *testing.T) {
-	q, err := NewKVGetQuery("")
+func TestKVExistsQuery_SetOptions(t *testing.T) {
+	q, err := NewKVExistsQuery("")
 	if err != nil {
 		t.Fatal(err)
 	}
 	q.SetOptions(QueryOptions{WaitIndex: 100, WaitTime: 100})
-	if q.opts.WaitIndex != 100 {
+	if q.opts.WaitIndex != 0 {
 		t.Fatal("WaitIndex should be zero")
 	}
-	if q.opts.WaitTime != 100 {
+	if q.opts.WaitTime != 0 {
 		t.Fatal("WaitTime should be zero")
 	}
 }
 
-func TestNewKVGetQuery(t *testing.T) {
+func TestNewKVExistsQuery(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
@@ -138,25 +137,23 @@ func TestNewKVGetQuery(t *testing.T) {
 		},
 	}
 
-	for i, tc := range cases {
-		t.Run(fmt.Sprintf("%d_%s", i, tc.name), func(t *testing.T) {
-			act, err := NewKVGetQuery(tc.i)
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			act, err := NewKVExistsQuery(tc.i)
+			if (err != nil) != tc.err {
+				t.Fatal(err)
+			}
 
 			if act != nil {
 				act.stopCh = nil
 			}
 
-			if tc.err {
-				assert.Error(t, err)
-			} else {
-				exp := &KVGetQuery{KVExistsQuery: *tc.exp}
-				assert.Equal(t, exp, act)
-			}
+			assert.Equal(t, tc.exp, act)
 		})
 	}
 }
 
-func TestNewKVGetQueryV1(t *testing.T) {
+func TestNewKVExistsQueryV1(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
@@ -303,7 +300,7 @@ func TestNewKVGetQueryV1(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			act, err := NewKVGetQueryV1(tc.i, tc.opts)
+			act, err := NewKVExistsQueryV1(tc.i, tc.opts)
 
 			if act != nil {
 				act.stopCh = nil
@@ -312,18 +309,17 @@ func TestNewKVGetQueryV1(t *testing.T) {
 			if tc.err {
 				assert.Error(t, err)
 			} else {
-				exp := &KVGetQuery{KVExistsQuery: *tc.exp}
-				assert.Equal(t, exp, act)
+				assert.Equal(t, tc.exp, act)
 			}
 		})
 	}
 }
 
-func TestKVGetQuery_Fetch(t *testing.T) {
+func TestKVExistsQuery_Fetch(t *testing.T) {
 	t.Parallel()
 
-	testConsul.SetKVString(t, "test-kv-get/key", "value")
-	testConsul.SetKVString(t, "test-kv-get/key_empty", "")
+	testConsul.SetKVString(t, "test-kv-exists/key", "value")
+	testConsul.SetKVString(t, "test-kv-exists/key_empty", "")
 
 	cases := []struct {
 		name string
@@ -332,24 +328,24 @@ func TestKVGetQuery_Fetch(t *testing.T) {
 	}{
 		{
 			"exists",
-			"test-kv-get/key",
-			dep.KvValue("value"),
+			"test-kv-exists/key",
+			dep.KVExists(true),
 		},
 		{
 			"exists_empty_string",
-			"test-kv-get/key_empty",
-			dep.KvValue(""),
+			"test-kv-exists/key_empty",
+			dep.KVExists(true),
 		},
 		{
 			"no_exist",
-			"test-kv-get/not/a/real/key/like/ever",
-			nil,
+			"test-kv-exists/not/a/real/key/like/ever",
+			dep.KVExists(false),
 		},
 	}
 
-	for i, tc := range cases {
-		t.Run(fmt.Sprintf("%d_%s", i, tc.name), func(t *testing.T) {
-			d, err := NewKVGetQuery(tc.i)
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			d, err := NewKVExistsQueryV1(tc.i, []string{})
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -364,7 +360,7 @@ func TestKVGetQuery_Fetch(t *testing.T) {
 	}
 
 	t.Run("stops", func(t *testing.T) {
-		d, err := NewKVGetQuery("test-kv-get/key")
+		d, err := NewKVGetQuery("test-kv-exists/key")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -400,44 +396,9 @@ func TestKVGetQuery_Fetch(t *testing.T) {
 		}
 	})
 
-	t.Run("fires_changes", func(t *testing.T) {
-		d, err := NewKVGetQuery("test-kv-get/key")
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		_, qm, err := d.Fetch(testClients)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		dataCh := make(chan interface{}, 1)
-		errCh := make(chan error, 1)
-		go func() {
-			for {
-				d.SetOptions(QueryOptions{WaitIndex: qm.LastIndex})
-				data, _, err := d.Fetch(testClients)
-				if err != nil {
-					errCh <- err
-					return
-				}
-				dataCh <- data
-				return
-			}
-		}()
-
-		testConsul.SetKVString(t, "test-kv-get/key", "new-value")
-
-		select {
-		case err := <-errCh:
-			t.Fatal(err)
-		case data := <-dataCh:
-			assert.Equal(t, data, dep.KvValue("new-value"))
-		}
-	})
 }
 
-func TestKVGetQuery_String(t *testing.T) {
+func TestKVExistsQuery_String(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
@@ -448,18 +409,18 @@ func TestKVGetQuery_String(t *testing.T) {
 		{
 			"key",
 			"key",
-			"kv.get(key)",
+			"kv.exists(key)",
 		},
 		{
 			"dc",
 			"key@dc1",
-			"kv.get(key@dc1)",
+			"kv.exists(key@dc1)",
 		},
 	}
 
-	for i, tc := range cases {
-		t.Run(fmt.Sprintf("%d_%s", i, tc.name), func(t *testing.T) {
-			d, err := NewKVGetQuery(tc.i)
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			d, err := NewKVExistsQuery(tc.i)
 			if err != nil {
 				t.Fatal(err)
 			}

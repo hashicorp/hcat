@@ -173,6 +173,23 @@ func TestTemplateExecute_consul_v1(t *testing.T) {
 			"test",
 			false,
 		},
+		{
+			"func_key_exists",
+			TemplateInput{
+				Contents: `{{ keyExists "key" }}`,
+			},
+			func() *Store {
+				st := NewStore()
+				d, err := idep.NewKVExistsQueryV1("key", []string{})
+				if err != nil {
+					t.Fatal(err)
+				}
+				st.Save(d.String(), dep.KVExists(true))
+				return st
+			}(),
+			"true",
+			false,
+		},
 	}
 
 	for _, tc := range cases {

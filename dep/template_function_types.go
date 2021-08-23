@@ -66,6 +66,8 @@ type HealthService struct {
 // KvValue is here to type the KV return string
 type KvValue string
 
+type KVExists bool
+
 // KeyPair is a simple Key-Value pair
 type KeyPair struct {
 	Path  string
