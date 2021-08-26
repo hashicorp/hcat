@@ -82,6 +82,7 @@ func NewKVListQuery(s string) (*KVListQuery, error) {
 		stopCh: make(chan struct{}, 1),
 		dc:     m["dc"],
 		prefix: m["prefix"],
+		ns:     "",
 	}, nil
 }
 
