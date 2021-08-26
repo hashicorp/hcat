@@ -136,7 +136,7 @@ func v1KVListFunc(recall Recaller) interface{} {
 	}
 }
 
-// v1KVGetKeyFunc returns a single key value if it exists
+// v1KVGetFunc returns a single key value if it exists
 //
 // Endpoint: /v1/kv/:key
 // Template: {{ key "key" <filter options> ... }}
@@ -161,10 +161,10 @@ func v1KVGetFunc(recall Recaller) interface{} {
 	}
 }
 
-// v1KVGetKeyFunc returns if a  key value exists
+// v1KVExistsFunc returns if a  key value exists
 //
 // Endpoint: /v1/kv/:key
-// Template: {{ key "key" <filter options> ... }}
+// Template: {{ keyExists "key" <filter options> ... }}
 func v1KVExistsFunc(recall Recaller) interface{} {
 	return func(key string, opts ...string) (dep.KVExists, error) {
 		var result dep.KVExists

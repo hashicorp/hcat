@@ -2,6 +2,7 @@ package dependency
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/hashicorp/hcat/dep"
@@ -11,6 +12,9 @@ import (
 var (
 	// Ensure implements
 	_ isDependency = (*KVExistsQuery)(nil)
+
+	// KVExistsQueryRe is the regular expression to use.
+	KVExistsQueryRe = regexp.MustCompile(`\A` + keyRe + dcRe + `\z`)
 )
 
 // KVExistsQuery uses a non-blocking query with the KV store for key lookup.
@@ -38,7 +42,7 @@ func (d *KVExistsQuery) String() string {
 	return fmt.Sprintf("kv.exists(%s)", key)
 }
 
-// NewKVGetQueryV1 processes options in the format of "key key=value"
+// NewKVExistsQueryV1 processes options in the format of "key key=value"
 // e.g. "my/key dc=dc1"
 func NewKVExistsQueryV1(key string, opts []string) (*KVExistsQuery, error) {
 	if key == "" || key == "/" {
@@ -74,17 +78,18 @@ func NewKVExistsQueryV1(key string, opts []string) (*KVExistsQuery, error) {
 	return &q, nil
 }
 
-// NewKVGetQuery parses a string into a KV lookup.
+// NewKVExistsQuery parses a string into a KV lookup.
 func NewKVExistsQuery(s string) (*KVExistsQuery, error) {
-	if s != "" && !KVGetQueryRe.MatchString(s) {
+	if s != "" && !KVExistsQueryRe.MatchString(s) {
 		return nil, fmt.Errorf("kv.exists: invalid format: %q", s)
 	}
 
-	m := regexpMatch(KVGetQueryRe, s)
+	m := regexpMatch(KVExistsQueryRe, s)
 	return &KVExistsQuery{
 		stopCh: make(chan struct{}, 1),
 		dc:     m["dc"],
 		key:    m["key"],
+		ns:     "",
 	}, nil
 }
 

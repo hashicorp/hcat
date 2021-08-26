@@ -26,7 +26,7 @@ type KVGetQuery struct {
 // NewKVGetQueryV1 processes options in the format of "key key=value"
 // e.g. "my/key dc=dc1"
 func NewKVGetQueryV1(key string, opts []string) (*KVGetQuery, error) {
-	if key == "" {
+	if key == "" || key == "/" {
 		return nil, fmt.Errorf("kv.get: key required")
 	}
 
