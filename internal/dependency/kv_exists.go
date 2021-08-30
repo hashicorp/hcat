@@ -80,7 +80,7 @@ func NewKVExistsQueryV1(key string, opts []string) (*KVExistsQuery, error) {
 
 // NewKVExistsQuery parses a string into a KV lookup.
 func NewKVExistsQuery(s string) (*KVExistsQuery, error) {
-	if s != "" && !KVExistsQueryRe.MatchString(s) {
+	if !KVExistsQueryRe.MatchString(s) {
 		return nil, fmt.Errorf("kv.exists: invalid format: %q", s)
 	}
 

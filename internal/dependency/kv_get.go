@@ -39,6 +39,10 @@ func NewKVGetQueryV1(key string, opts []string) (*KVGetQuery, error) {
 
 // NewKVGetQuery parses a string into a (non-blocking) KV lookup.
 func NewKVGetQuery(s string) (*KVGetQuery, error) {
+	if !KVGetQueryRe.MatchString(s) {
+		return nil, fmt.Errorf("kv.get: invalid format: %q", s)
+	}
+
 	q, err := NewKVExistsQuery(s)
 	if err != nil {
 		return nil, err
