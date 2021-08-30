@@ -223,6 +223,12 @@ func TestNewKVGetQueryV1WithParameters(t *testing.T) {
 			[]string{"invalid=param"},
 			nil,
 		},
+		{
+			"invalid_format",
+			"key",
+			[]string{"invalid-param"},
+			nil,
+		},
 	}
 
 	for _, tc := range cases {

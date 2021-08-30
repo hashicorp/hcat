@@ -57,13 +57,11 @@ func NewKVExistsQueryV1(key string, opts []string) (*KVExistsQuery, error) {
 		if strings.TrimSpace(opt) == "" {
 			continue
 		}
-		queryParam := strings.Split(opt, "=")
-		if len(queryParam) != 2 {
+		query, value, err := stringsSplit2(opt, "=")
+		if err != nil {
 			return nil, fmt.Errorf(
 				"kv.exists: invalid query parameter format: %q", opt)
 		}
-		query := strings.TrimSpace(queryParam[0])
-		value := strings.TrimSpace(queryParam[1])
 		switch query {
 		case "dc", "datacenter":
 			q.dc = value
