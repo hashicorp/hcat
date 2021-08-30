@@ -18,6 +18,7 @@ func FuncMapConsulV1() template.FuncMap {
 		"service":  v1ServiceFunc,
 		"connect":  v1ConnectFunc,
 		"services": v1ServicesFunc,
+		"keys":     v1KVListFunc,
 
 		// Set of Consul functions that are not yet implemented for v1. These
 		// intentionally error instead of defaulting to the v0 implementations
@@ -102,6 +103,31 @@ func v1ConnectFunc(recall Recaller) interface{} {
 
 		if value, ok := recall(d); ok {
 			return value.([]*dep.HealthService), nil
+		}
+
+		return result, nil
+	}
+}
+
+// v1KVListFunc returns list of key value pairs
+//
+// Endpoint: /v1/kv/:prefix?recurse
+// Template: {{ keys "prefix" <filter options> ... }}
+func v1KVListFunc(recall Recaller) interface{} {
+	return func(prefix string, opts ...string) ([]*dep.KeyPair, error) {
+		result := []*dep.KeyPair{}
+
+		if prefix == "" {
+			return result, nil
+		}
+
+		d, err := idep.NewKVListQueryV1(prefix, opts)
+		if err != nil {
+			return nil, err
+		}
+
+		if value, ok := recall(d); ok {
+			return value.([]*dep.KeyPair), nil
 		}
 
 		return result, nil
