@@ -156,6 +156,40 @@ func TestTemplateExecute_consul_v1(t *testing.T) {
 			"key:value-1;key/test:value-2;",
 			false,
 		},
+		{
+			"func_key",
+			TemplateInput{
+				Contents: `{{ key "key" }}`,
+			},
+			func() *Store {
+				st := NewStore()
+				d, err := idep.NewKVGetQueryV1("key", []string{})
+				if err != nil {
+					t.Fatal(err)
+				}
+				st.Save(d.String(), dep.KvValue("test"))
+				return st
+			}(),
+			"test",
+			false,
+		},
+		{
+			"func_key_exists",
+			TemplateInput{
+				Contents: `{{ keyExists "key" }}`,
+			},
+			func() *Store {
+				st := NewStore()
+				d, err := idep.NewKVExistsQueryV1("key", []string{})
+				if err != nil {
+					t.Fatal(err)
+				}
+				st.Save(d.String(), dep.KVExists(true))
+				return st
+			}(),
+			"true",
+			false,
+		},
 	}
 
 	for _, tc := range cases {

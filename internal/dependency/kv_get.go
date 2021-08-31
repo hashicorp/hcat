@@ -17,51 +17,32 @@ var (
 	KVGetQueryRe = regexp.MustCompile(`\A` + keyRe + dcRe + `\z`)
 )
 
-// KVExistsQuery uses a non-blocking query with the KV store for key lookup.
-type KVExistsQuery struct {
-	isConsul
-	stopCh chan struct{}
-
-	dc   string
-	key  string
-	opts QueryOptions
-}
-
 // KVGetQuery queries the KV store for a single key.
 type KVGetQuery struct {
 	KVExistsQuery
 	isBlocking
 }
 
-func (d *KVExistsQuery) SetOptions(opts QueryOptions) {
-	opts.WaitIndex = 0
-	opts.WaitTime = 0
-	d.opts = opts
-}
-func (d *KVExistsQuery) String() string {
-	key := d.key
-	if d.dc != "" {
-		key = key + "@" + d.dc
-	}
-	return fmt.Sprintf("kv.exists(%s)", key)
-}
-
-// NewKVGetQuery parses a string into a KV lookup.
-func NewKVExistsQuery(s string) (*KVExistsQuery, error) {
-	if s != "" && !KVGetQueryRe.MatchString(s) {
-		return nil, fmt.Errorf("kv.get: invalid format: %q", s)
+// NewKVGetQueryV1 processes options in the format of "key key=value"
+// e.g. "my/key dc=dc1"
+func NewKVGetQueryV1(key string, opts []string) (*KVGetQuery, error) {
+	if key == "" || key == "/" {
+		return nil, fmt.Errorf("kv.get: key required")
 	}
 
-	m := regexpMatch(KVGetQueryRe, s)
-	return &KVExistsQuery{
-		stopCh: make(chan struct{}, 1),
-		dc:     m["dc"],
-		key:    m["key"],
-	}, nil
+	q, err := NewKVExistsQueryV1(key, opts)
+	if err != nil {
+		return nil, err
+	}
+	return &KVGetQuery{KVExistsQuery: *q}, nil
 }
 
 // NewKVGetQuery parses a string into a (non-blocking) KV lookup.
 func NewKVGetQuery(s string) (*KVGetQuery, error) {
+	if !KVGetQueryRe.MatchString(s) {
+		return nil, fmt.Errorf("kv.get: invalid format: %q", s)
+	}
+
 	q, err := NewKVExistsQuery(s)
 	if err != nil {
 		return nil, err
@@ -79,6 +60,7 @@ func (d *KVGetQuery) Fetch(clients dep.Clients) (interface{}, *dep.ResponseMetad
 
 	opts := d.opts.Merge(&QueryOptions{
 		Datacenter: d.dc,
+		Namespace:  d.ns,
 	})
 
 	//log.Printf("[TRACE] %s: GET %s", d, &url.URL{
