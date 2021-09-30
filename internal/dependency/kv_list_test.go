@@ -339,19 +339,22 @@ func TestKVListQuery_Fetch(t *testing.T) {
 			"test-kv-list/prefix",
 			[]*dep.KeyPair{
 				{
-					Path:  "test-kv-list/prefix/foo",
-					Key:   "foo",
-					Value: "bar",
+					Path:   "test-kv-list/prefix/foo",
+					Key:    "foo",
+					Value:  "bar",
+					Exists: true,
 				},
 				{
-					Path:  "test-kv-list/prefix/wave/ocean",
-					Key:   "wave/ocean",
-					Value: "sleek",
+					Path:   "test-kv-list/prefix/wave/ocean",
+					Key:    "wave/ocean",
+					Value:  "sleek",
+					Exists: true,
 				},
 				{
-					Path:  "test-kv-list/prefix/zip",
-					Key:   "zip",
-					Value: "zap",
+					Path:   "test-kv-list/prefix/zip",
+					Key:    "zip",
+					Value:  "zap",
+					Exists: true,
 				},
 			},
 		},
@@ -360,19 +363,22 @@ func TestKVListQuery_Fetch(t *testing.T) {
 			"test-kv-list/prefix/",
 			[]*dep.KeyPair{
 				{
-					Path:  "test-kv-list/prefix/foo",
-					Key:   "foo",
-					Value: "bar",
+					Path:   "test-kv-list/prefix/foo",
+					Key:    "foo",
+					Value:  "bar",
+					Exists: true,
 				},
 				{
-					Path:  "test-kv-list/prefix/wave/ocean",
-					Key:   "wave/ocean",
-					Value: "sleek",
+					Path:   "test-kv-list/prefix/wave/ocean",
+					Key:    "wave/ocean",
+					Value:  "sleek",
+					Exists: true,
 				},
 				{
-					Path:  "test-kv-list/prefix/zip",
-					Key:   "zip",
-					Value: "zap",
+					Path:   "test-kv-list/prefix/zip",
+					Key:    "zip",
+					Value:  "zap",
+					Exists: true,
 				},
 			},
 		},
@@ -483,9 +489,10 @@ func TestKVListQuery_Fetch(t *testing.T) {
 			act.ModifyIndex = 0
 
 			exp := &dep.KeyPair{
-				Path:  "test-kv-list/prefix/foo",
-				Key:   "foo",
-				Value: "new-bar",
+				Path:   "test-kv-list/prefix/foo",
+				Key:    "foo",
+				Value:  "new-bar",
+				Exists: true,
 			}
 
 			assert.Equal(t, exp, act)
