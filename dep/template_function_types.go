@@ -70,9 +70,10 @@ type KVExists bool
 
 // KeyPair is a simple Key-Value pair
 type KeyPair struct {
-	Path  string
-	Key   string
-	Value string
+	Path   string
+	Key    string
+	Value  string
+	Exists bool
 
 	// Lesser-used, but still valuable keys from api.KV
 	CreateIndex uint64

@@ -15,12 +15,13 @@ var errFuncNotImplemented = fmt.Errorf("function is not implemented")
 // namespaces.
 func FuncMapConsulV1() template.FuncMap {
 	return template.FuncMap{
-		"service":   v1ServiceFunc,
-		"connect":   v1ConnectFunc,
-		"services":  v1ServicesFunc,
-		"keys":      v1KVListFunc,
-		"key":       v1KVGetFunc,
-		"keyExists": v1KVExistsFunc,
+		"service":      v1ServiceFunc,
+		"connect":      v1ConnectFunc,
+		"services":     v1ServicesFunc,
+		"keys":         v1KVListFunc,
+		"key":          v1KVGetFunc,
+		"keyExists":    v1KVExistsFunc,
+		"keyExistsGet": v1KVExistsGetFunc,
 
 		// Set of Consul functions that are not yet implemented for v1. These
 		// intentionally error instead of defaulting to the v0 implementations
@@ -161,7 +162,7 @@ func v1KVGetFunc(recall Recaller) interface{} {
 	}
 }
 
-// v1KVExistsFunc returns if a  key value exists
+// v1KVExistsFunc returns if a key value exists
 //
 // Endpoint: /v1/kv/:key
 // Template: {{ keyExists "key" <filter options> ... }}
@@ -180,6 +181,32 @@ func v1KVExistsFunc(recall Recaller) interface{} {
 
 		if value, ok := recall(d); ok {
 			return value.(dep.KVExists), nil
+		}
+
+		return result, nil
+	}
+}
+
+// v1KVExistsGetFunc checks if a key exists and
+// if the key exists, returns the key-value pair
+//
+// Endpoint: /v1/kv/:key
+// Template: {{ keyExistsGet "key" <filter options> ... }}
+func v1KVExistsGetFunc(recall Recaller) interface{} {
+	return func(key string, opts ...string) (*dep.KeyPair, error) {
+		var result *dep.KeyPair
+
+		if key == "" {
+			return result, nil
+		}
+
+		d, err := idep.NewKVExistsGetQueryV1(key, opts)
+		if err != nil {
+			return result, err
+		}
+
+		if value, ok := recall(d); ok {
+			return value.(*dep.KeyPair), nil
 		}
 
 		return result, nil

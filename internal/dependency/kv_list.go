@@ -120,6 +120,7 @@ func (d *KVListQuery) Fetch(clients dep.Clients) (interface{}, *dep.ResponseMeta
 			Path:        pair.Key,
 			Key:         key,
 			Value:       string(pair.Value),
+			Exists:      true,
 			CreateIndex: pair.CreateIndex,
 			ModifyIndex: pair.ModifyIndex,
 			LockIndex:   pair.LockIndex,
