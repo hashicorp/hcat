@@ -183,6 +183,12 @@ func (v *view) poll(viewCh chan<- *view, errCh chan<- error) {
 			retries = 0
 			goto WAIT
 		case err := <-fetchErrCh:
+			var skipRetry bool
+			if strings.Contains(err.Error(), "Unexpected response code: 400") {
+				// 400 is not useful to retry
+				skipRetry = true
+			}
+
 			if strings.Contains(err.Error(), "connection refused") {
 				// This indicates that Consul may have restarted. If Consul
 				// restarted, the current lastIndex will be stale and cause the
@@ -194,7 +200,7 @@ func (v *view) poll(viewCh chan<- *view, errCh chan<- error) {
 				v.dataLock.Unlock()
 			}
 
-			if v.retryFunc != nil {
+			if v.retryFunc != nil && !skipRetry {
 				retry, sleep := v.retryFunc(retries)
 				if retry {
 					//log.Printf("[WARN] (view) %s (retry attempt %d after %q)",
