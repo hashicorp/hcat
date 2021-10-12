@@ -2,6 +2,7 @@ package dependency
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/hashicorp/hcat/dep"
 	"github.com/pkg/errors"
@@ -40,11 +41,15 @@ func (d *KVExistsGetQuery) CanShare() bool {
 // String returns the human-friendly version of this dependency.
 func (d *KVExistsGetQuery) String() string {
 	key := d.key
+	var opts []string
 	if d.dc != "" {
-		key = key + "dc=" + d.dc
+		opts = append(opts, "dc="+d.dc)
 	}
 	if d.ns != "" {
-		key = key + "ns=" + d.ns
+		opts = append(opts, "ns="+d.ns)
+	}
+	if len(opts) > 0 {
+		key = fmt.Sprintf("%s?%s", key, strings.Join(opts, "&"))
 	}
 	return fmt.Sprintf("kv.exists.get(%s)", key)
 }
