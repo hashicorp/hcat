@@ -665,3 +665,87 @@ func TestHealthServiceQueryV1_String(t *testing.T) {
 		})
 	}
 }
+
+func TestHealthServiceQueryV1_Fetch(t *testing.T) {
+	t.Parallel()
+
+	criticalService := &dep.HealthService{
+		Node:           testConsul.Config.NodeName,
+		NodeAddress:    testConsul.Config.Bind,
+		NodeDatacenter: "dc1",
+		NodeTaggedAddresses: map[string]string{
+			"lan": "127.0.0.1",
+			"wan": "127.0.0.1",
+		},
+		NodeMeta: map[string]string{
+			"consul-network-segment": "",
+		},
+		ServiceMeta: map[string]string{},
+		Address:     testConsul.Config.Bind,
+		ID:          "critical-service",
+		Name:        "critical-service",
+		Tags:        []string{},
+		Status:      "critical",
+		Weights: api.AgentWeights{
+			Passing: 1,
+			Warning: 1,
+		},
+		Namespace: "",
+	}
+
+	cases := []struct {
+		name        string
+		serviceName string
+		opts        []string
+		exp         []*dep.HealthService
+	}{
+		{
+			"default to returning service instances that are overall passing",
+			"critical-service",
+			[]string{},
+			[]*dep.HealthService{},
+		},
+		{
+			"Checks.Status filter",
+			"critical-service",
+			[]string{"Checks.Status == critical"},
+			[]*dep.HealthService{criticalService},
+		},
+		{
+			// Demonstrates overall status v. check.status behavior
+			"Checks.Status filters services instances by any check with status==passing",
+			"critical-service",
+			[]string{"Checks.Status == passing"},
+			// critical-service has a passing node check and therefore satisfies
+			// this check.status filter even though it is overall critical
+			[]*dep.HealthService{criticalService},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(fmt.Sprintf(tc.name), func(t *testing.T) {
+			d, err := NewHealthServiceQueryV1(tc.serviceName, tc.opts)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			act, _, err := d.Fetch(testClients)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if act != nil {
+				for _, v := range act.([]*dep.HealthService) {
+					v.NodeID = ""
+					v.Checks = nil
+					// delete any version data from ServiceMeta
+					v.ServiceMeta = filterMeta(v.ServiceMeta)
+					v.NodeTaggedAddresses = filterAddresses(
+						v.NodeTaggedAddresses)
+				}
+			}
+
+			assert.Equal(t, tc.exp, act)
+		})
+	}
+}
