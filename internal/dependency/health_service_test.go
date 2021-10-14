@@ -48,6 +48,7 @@ func TestNewHealthServiceQuery(t *testing.T) {
 			&HealthServiceQuery{
 				deprecatedStatusFilters: []string{"passing"},
 				name:                    "name",
+				passingOnly:             true,
 			},
 			false,
 		},
@@ -58,6 +59,7 @@ func TestNewHealthServiceQuery(t *testing.T) {
 				dc:                      "dc1",
 				deprecatedStatusFilters: []string{"passing"},
 				name:                    "name",
+				passingOnly:             true,
 			},
 			false,
 		},
@@ -69,6 +71,7 @@ func TestNewHealthServiceQuery(t *testing.T) {
 				deprecatedStatusFilters: []string{"passing"},
 				name:                    "name",
 				near:                    "near",
+				passingOnly:             true,
 			},
 			false,
 		},
@@ -79,6 +82,7 @@ func TestNewHealthServiceQuery(t *testing.T) {
 				deprecatedStatusFilters: []string{"passing"},
 				name:                    "name",
 				near:                    "near",
+				passingOnly:             true,
 			},
 			false,
 		},
@@ -89,6 +93,7 @@ func TestNewHealthServiceQuery(t *testing.T) {
 				deprecatedStatusFilters: []string{"passing"},
 				name:                    "name",
 				deprecatedTag:           "tag",
+				passingOnly:             true,
 			},
 			false,
 		},
@@ -100,6 +105,7 @@ func TestNewHealthServiceQuery(t *testing.T) {
 				deprecatedStatusFilters: []string{"passing"},
 				name:                    "name",
 				deprecatedTag:           "tag",
+				passingOnly:             true,
 			},
 			false,
 		},
@@ -111,6 +117,7 @@ func TestNewHealthServiceQuery(t *testing.T) {
 				name:                    "name",
 				near:                    "near",
 				deprecatedTag:           "tag",
+				passingOnly:             true,
 			},
 			false,
 		},
@@ -123,6 +130,27 @@ func TestNewHealthServiceQuery(t *testing.T) {
 				name:                    "name",
 				near:                    "near",
 				deprecatedTag:           "tag",
+				passingOnly:             true,
+			},
+			false,
+		},
+		{
+			"name_status",
+			"name|any",
+			&HealthServiceQuery{
+				deprecatedStatusFilters: []string{"any"},
+				name:                    "name",
+				passingOnly:             false,
+			},
+			false,
+		},
+		{
+			"name_multi_status",
+			"name|critical,passing",
+			&HealthServiceQuery{
+				deprecatedStatusFilters: []string{"critical", "passing"},
+				name:                    "name",
+				passingOnly:             false,
 			},
 			false,
 		},
@@ -156,6 +184,7 @@ func TestNewHealthServiceQuery(t *testing.T) {
 			deprecatedStatusFilters: []string{"passing"},
 			name:                    "name",
 			connect:                 true,
+			passingOnly:             true,
 		}
 
 		assert.Equal(t, exp, act)
@@ -496,46 +525,46 @@ func TestNewHealthServiceQueryV1(t *testing.T) {
 			"no opts",
 			[]string{},
 			&HealthServiceQuery{
-				name:   "name",
-				filter: `Checks.Status == "passing"`,
+				name:        "name",
+				passingOnly: true,
 			},
 			false,
 		}, {
 			"dc",
 			[]string{"dc=dc"},
 			&HealthServiceQuery{
-				name:   "name",
-				dc:     "dc",
-				filter: `Checks.Status == "passing"`,
+				name:        "name",
+				dc:          "dc",
+				passingOnly: true,
 			},
 			false,
 		}, {
 			"near",
 			[]string{"near=near"},
 			&HealthServiceQuery{
-				name:   "name",
-				near:   "near",
-				filter: `Checks.Status == "passing"`,
+				name:        "name",
+				near:        "near",
+				passingOnly: true,
 			},
 			false,
 		}, {
 			"namespace",
 			[]string{"ns=ns"},
 			&HealthServiceQuery{
-				name:   "name",
-				ns:     "ns",
-				filter: `Checks.Status == "passing"`,
+				name:        "name",
+				ns:          "ns",
+				passingOnly: true,
 			},
 			false,
 		}, {
 			"multiple queries",
 			[]string{"ns=ns", "dc=dc", "near=near"},
 			&HealthServiceQuery{
-				name:   "name",
-				dc:     "dc",
-				near:   "near",
-				ns:     "ns",
-				filter: `Checks.Status == "passing"`,
+				name:        "name",
+				dc:          "dc",
+				near:        "near",
+				ns:          "ns",
+				passingOnly: true,
 			},
 			false,
 		}, {
@@ -566,9 +595,10 @@ func TestNewHealthServiceQueryV1(t *testing.T) {
 			"query and filter",
 			[]string{"dc=dc", "\"my-tag\" in Service.Tags", "\"another-tag\" in Service.Tags"},
 			&HealthServiceQuery{
-				name:   "name",
-				dc:     "dc",
-				filter: "\"my-tag\" in Service.Tags and \"another-tag\" in Service.Tags and Checks.Status == \"passing\"",
+				name:        "name",
+				dc:          "dc",
+				filter:      "\"my-tag\" in Service.Tags and \"another-tag\" in Service.Tags",
+				passingOnly: true,
 			},
 			false,
 		}, {
@@ -614,9 +644,9 @@ func TestNewHealthServiceQueryV1(t *testing.T) {
 			act.stopCh = nil
 		}
 		exp := &HealthServiceQuery{
-			filter:  "Checks.Status == \"passing\"",
-			name:    "name",
-			connect: true,
+			name:        "name",
+			connect:     true,
+			passingOnly: true,
 		}
 
 		assert.NoError(t, err)
@@ -635,19 +665,19 @@ func TestHealthServiceQueryV1_String(t *testing.T) {
 		{
 			"name",
 			[]string{},
-			`health.service(name?filter=Checks.Status == "passing")`,
+			`health.service(name)`,
 		}, {
 			"dc",
 			[]string{"dc=dc"},
-			`health.service(name@dc?filter=Checks.Status == "passing")`,
+			`health.service(name@dc)`,
 		}, {
 			"near",
 			[]string{"near=agent"},
-			`health.service(name~agent?filter=Checks.Status == "passing")`,
+			`health.service(name~agent)`,
 		}, {
 			"ns",
 			[]string{"ns=ns"},
-			`health.service(name?ns=ns&filter=Checks.Status == "passing")`,
+			`health.service(name?ns=ns)`,
 		}, {
 			"multifilter",
 			[]string{"Checks.Status != passing", "mytag in Service.Tags"},

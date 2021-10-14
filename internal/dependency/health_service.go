@@ -61,6 +61,10 @@ type HealthServiceQuery struct {
 	// {{ service "tag.service" }} used for the deprecated tag query parameter.
 	// Use the filter parameter with the "Service.Tags" selector instead.
 	deprecatedTag string
+
+	// passingOnly filters for services that have an overall aggregated status
+	// of passing. When true, sdk adds ?passing=1 to api request
+	passingOnly bool
 }
 
 // NewHealthServiceQueryV1 processes the strings to build a service dependency.
@@ -136,14 +140,11 @@ func healthServiceQueryV1(service string, connect bool, opts []string) (*HealthS
 		filters = append(filters, opt)
 	}
 
-	if passingOnly {
-		// Default to return passing only
-		filters = append(filters, `Checks.Status == "passing"`)
-	}
-
 	if len(filters) > 0 {
 		healthServiceQuery.filter = strings.Join(filters, " and ")
 	}
+
+	healthServiceQuery.passingOnly = passingOnly
 
 	return &healthServiceQuery, nil
 }
@@ -186,6 +187,7 @@ func healthServiceQuery(s string, connect bool) (*HealthServiceQuery, error) {
 		connect:                 connect,
 		deprecatedStatusFilters: filters,
 		deprecatedTag:           m["tag"],
+		passingOnly:             len(filters) == 1 && filters[0] == HealthPassing,
 	}, nil
 }
 
@@ -210,16 +212,11 @@ func (d *HealthServiceQuery) Fetch(clients dep.Clients) (interface{}, *dep.Respo
 	//	RawQuery: opts.String(),
 	//})
 
-	// Check if a user-supplied filter was given. If so, we may be querying for
-	// more than healthy services, so we need to implement client-side
-	// filtering.
-	passingOnly := len(d.deprecatedStatusFilters) == 1 && d.deprecatedStatusFilters[0] == HealthPassing
-
 	nodes := clients.Consul().Health().Service
 	if d.connect {
 		nodes = clients.Consul().Health().Connect
 	}
-	entries, qm, err := nodes(d.name, d.deprecatedTag, passingOnly, opts.ToConsulOpts())
+	entries, qm, err := nodes(d.name, d.deprecatedTag, d.passingOnly, opts.ToConsulOpts())
 	if err != nil {
 		return nil, nil, errors.Wrap(err, d.String())
 	}
