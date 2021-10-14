@@ -225,12 +225,11 @@ func (d *HealthServiceQuery) Fetch(clients dep.Clients) (interface{}, *dep.Respo
 
 	list := make([]*dep.HealthService, 0, len(entries))
 	for _, entry := range entries {
-		// Get the status of this service from its checks.
+		// Determine the overall status of this service from its checks.
 		status := entry.Checks.AggregatedStatus()
 
-		// If we are not checking only healthy services, client-side filter out
-		// services that do not match the given filter.
-		if len(d.deprecatedStatusFilters) > 0 && !acceptStatus(d.deprecatedStatusFilters, status) {
+		// Do status filtering on client-side if there are non-passing status filters.
+		if !acceptStatus(d.deprecatedStatusFilters, status) {
 			continue
 		}
 
@@ -321,10 +320,14 @@ func (d *HealthServiceQuery) SetOptions(opts QueryOptions) {
 	d.opts = opts
 }
 
-// acceptStatus allows us to check if a slice of health checks pass this filter.
-func acceptStatus(list []string, s string) bool {
-	for _, status := range list {
-		if status == s || status == HealthAny {
+// acceptStatus returns if a check status matches the list of statuses to filter on
+func acceptStatus(filters []string, status string) bool {
+	if len(filters) == 0 {
+		// nothing to filter on, status is acceptable
+		return true
+	}
+	for _, filter := range filters {
+		if filter == status || filter == HealthAny {
 			return true
 		}
 	}

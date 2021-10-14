@@ -779,3 +779,74 @@ func TestHealthServiceQueryV1_Fetch(t *testing.T) {
 		})
 	}
 }
+
+func Test_acceptStatus(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name     string
+		filters  []string
+		statuses map[string]bool
+	}{
+		{
+			"no filters",
+			[]string{},
+			map[string]bool{
+				HealthPassing:  true,
+				HealthWarning:  true,
+				HealthCritical: true,
+				HealthMaint:    true,
+			},
+		},
+		{
+			"any filter",
+			[]string{HealthAny},
+			map[string]bool{
+				HealthPassing:  true,
+				HealthWarning:  true,
+				HealthCritical: true,
+				HealthMaint:    true,
+			},
+		},
+		{
+			"passing filter",
+			[]string{HealthPassing},
+			map[string]bool{
+				HealthPassing:  true,
+				HealthWarning:  false,
+				HealthCritical: false,
+				HealthMaint:    false,
+			},
+		},
+		{
+			"critical filter",
+			[]string{HealthCritical},
+			map[string]bool{
+				HealthPassing:  false,
+				HealthWarning:  false,
+				HealthCritical: true,
+				HealthMaint:    false,
+			},
+		},
+		{
+			"multi filter",
+			[]string{HealthWarning, HealthMaint},
+			map[string]bool{
+				HealthPassing:  false,
+				HealthWarning:  true,
+				HealthCritical: false,
+				HealthMaint:    true,
+			},
+		},
+	}
+
+	for _, tc := range cases {
+		for status, expected := range tc.statuses {
+			name := fmt.Sprintf("%s_status=%s", tc.name, status)
+			t.Run(name, func(t *testing.T) {
+				actual := acceptStatus(tc.filters, status)
+				assert.Equal(t, expected, actual)
+			})
+		}
+	}
+}
