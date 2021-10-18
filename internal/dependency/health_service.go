@@ -61,6 +61,10 @@ type HealthServiceQuery struct {
 	// {{ service "tag.service" }} used for the deprecated tag query parameter.
 	// Use the filter parameter with the "Service.Tags" selector instead.
 	deprecatedTag string
+
+	// passingOnly filters for services that have an overall aggregated status
+	// of passing. When true, sdk adds ?passing=1 to api request
+	passingOnly bool
 }
 
 // NewHealthServiceQueryV1 processes the strings to build a service dependency.
@@ -90,12 +94,11 @@ func healthServiceQueryV1(service string, connect bool, opts []string) (*HealthS
 	}
 
 	healthServiceQuery := HealthServiceQuery{
-		stopCh:  make(chan struct{}, 1),
-		connect: connect,
-		name:    service,
+		stopCh:      make(chan struct{}, 1),
+		connect:     connect,
+		name:        service,
+		passingOnly: true,
 	}
-
-	passingOnly := true
 
 	// Split query parameters and filters
 	var filters []string
@@ -123,7 +126,7 @@ func healthServiceQueryV1(service string, connect bool, opts []string) (*HealthS
 
 		if strings.Contains(opt, "Checks.Status") {
 			// Disable if any filter option includes "Checks.Status"
-			passingOnly = false
+			healthServiceQuery.passingOnly = false
 		}
 
 		// Evaluate the grammer of the filter before attempting to query Consul.
@@ -134,11 +137,6 @@ func healthServiceQueryV1(service string, connect bool, opts []string) (*HealthS
 				"health.service: invalid filter: %q for %q: %s", opt, service, err)
 		}
 		filters = append(filters, opt)
-	}
-
-	if passingOnly {
-		// Default to return passing only
-		filters = append(filters, `Checks.Status == "passing"`)
 	}
 
 	if len(filters) > 0 {
@@ -186,6 +184,7 @@ func healthServiceQuery(s string, connect bool) (*HealthServiceQuery, error) {
 		connect:                 connect,
 		deprecatedStatusFilters: filters,
 		deprecatedTag:           m["tag"],
+		passingOnly:             len(filters) == 1 && filters[0] == HealthPassing,
 	}, nil
 }
 
@@ -210,16 +209,11 @@ func (d *HealthServiceQuery) Fetch(clients dep.Clients) (interface{}, *dep.Respo
 	//	RawQuery: opts.String(),
 	//})
 
-	// Check if a user-supplied filter was given. If so, we may be querying for
-	// more than healthy services, so we need to implement client-side
-	// filtering.
-	passingOnly := len(d.deprecatedStatusFilters) == 1 && d.deprecatedStatusFilters[0] == HealthPassing
-
 	nodes := clients.Consul().Health().Service
 	if d.connect {
 		nodes = clients.Consul().Health().Connect
 	}
-	entries, qm, err := nodes(d.name, d.deprecatedTag, passingOnly, opts.ToConsulOpts())
+	entries, qm, err := nodes(d.name, d.deprecatedTag, d.passingOnly, opts.ToConsulOpts())
 	if err != nil {
 		return nil, nil, errors.Wrap(err, d.String())
 	}
@@ -228,12 +222,11 @@ func (d *HealthServiceQuery) Fetch(clients dep.Clients) (interface{}, *dep.Respo
 
 	list := make([]*dep.HealthService, 0, len(entries))
 	for _, entry := range entries {
-		// Get the status of this service from its checks.
+		// Determine the overall status of this service from its checks.
 		status := entry.Checks.AggregatedStatus()
 
-		// If we are not checking only healthy services, client-side filter out
-		// services that do not match the given filter.
-		if len(d.deprecatedStatusFilters) > 0 && !acceptStatus(d.deprecatedStatusFilters, status) {
+		// Do status filtering on client-side if there are non-passing status filters.
+		if !acceptStatus(d.deprecatedStatusFilters, status) {
 			continue
 		}
 
@@ -324,10 +317,14 @@ func (d *HealthServiceQuery) SetOptions(opts QueryOptions) {
 	d.opts = opts
 }
 
-// acceptStatus allows us to check if a slice of health checks pass this filter.
-func acceptStatus(list []string, s string) bool {
-	for _, status := range list {
-		if status == s || status == HealthAny {
+// acceptStatus returns if a check status matches the list of statuses to filter on
+func acceptStatus(filters []string, status string) bool {
+	if len(filters) == 0 {
+		// nothing to filter on, status is acceptable
+		return true
+	}
+	for _, filter := range filters {
+		if filter == status || filter == HealthAny {
 			return true
 		}
 	}
