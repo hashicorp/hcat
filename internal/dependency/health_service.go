@@ -94,12 +94,11 @@ func healthServiceQueryV1(service string, connect bool, opts []string) (*HealthS
 	}
 
 	healthServiceQuery := HealthServiceQuery{
-		stopCh:  make(chan struct{}, 1),
-		connect: connect,
-		name:    service,
+		stopCh:      make(chan struct{}, 1),
+		connect:     connect,
+		name:        service,
+		passingOnly: true,
 	}
-
-	passingOnly := true
 
 	// Split query parameters and filters
 	var filters []string
@@ -127,7 +126,7 @@ func healthServiceQueryV1(service string, connect bool, opts []string) (*HealthS
 
 		if strings.Contains(opt, "Checks.Status") {
 			// Disable if any filter option includes "Checks.Status"
-			passingOnly = false
+			healthServiceQuery.passingOnly = false
 		}
 
 		// Evaluate the grammer of the filter before attempting to query Consul.
@@ -143,8 +142,6 @@ func healthServiceQueryV1(service string, connect bool, opts []string) (*HealthS
 	if len(filters) > 0 {
 		healthServiceQuery.filter = strings.Join(filters, " and ")
 	}
-
-	healthServiceQuery.passingOnly = passingOnly
 
 	return &healthServiceQuery, nil
 }
