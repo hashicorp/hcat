@@ -13,6 +13,12 @@ import (
 	idep "github.com/hashicorp/hcat/internal/dependency"
 )
 
+// Temporarily raise these types to the top level via aliasing.
+// This is to address a bug in the short term and this should be refactored
+// when thinking of how to modularlize the dependencies.
+type QueryOptionsSetter = idep.QueryOptionsSetter
+type QueryOptions = idep.QueryOptions
+
 // view is a representation of a Dependency and the most recent data it has
 // received from Consul.
 type view struct {
@@ -257,8 +263,8 @@ func (v *view) fetch(doneCh, successCh chan<- struct{}, errCh chan<- error) {
 
 		start := time.Now() // for rateLimiter below
 
-		if d, ok := v.dependency.(idep.QueryOptionsSetter); ok {
-			opts := idep.QueryOptions{
+		if d, ok := v.dependency.(QueryOptionsSetter); ok {
+			opts := QueryOptions{
 				AllowStale:   allowStale,
 				WaitTime:     v.blockWaitTime,
 				WaitIndex:    v.lastIndex,
