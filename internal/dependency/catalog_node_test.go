@@ -104,27 +104,21 @@ func TestCatalogNodeQuery_Fetch(t *testing.T) {
 					},
 				},
 				Services: []*dep.CatalogNodeService{
-					{
+					&dep.CatalogNodeService{
 						ID:      "consul",
 						Service: "consul",
 						Port:    testConsul.Config.Ports.Server,
 						Tags:    dep.ServiceTags([]string{}),
 						Meta:    map[string]string{},
 					},
-					{
-						ID:      "critical-service",
-						Service: "critical-service",
-						Tags:    dep.ServiceTags([]string{}),
-						Meta:    map[string]string{},
-					},
-					{
+					&dep.CatalogNodeService{
 						ID:      "foo",
 						Service: "foo-sidecar-proxy",
 						Tags:    dep.ServiceTags([]string{}),
 						Meta:    map[string]string{},
 						Port:    21999,
 					},
-					{
+					&dep.CatalogNodeService{
 						ID:      "service-meta",
 						Service: "service-meta",
 						Tags:    dep.ServiceTags([]string{"tag1"}),
