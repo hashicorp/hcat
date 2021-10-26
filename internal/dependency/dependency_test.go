@@ -81,20 +81,6 @@ func TestMain(m *testing.M) {
 		Fatalf("%v", err)
 	}
 
-	// service with a critical check
-	criticalService := &api.AgentServiceRegistration{
-		ID:   "critical-service",
-		Name: "critical-service",
-		Check: &api.AgentServiceCheck{
-			HTTP:     "non-existent-url",
-			Status:   HealthCritical,
-			Interval: "10000m", // large interval to unnecessary recheck
-		},
-	}
-	if err := consul_agent.ServiceRegister(criticalService); err != nil {
-		Fatalf("%v", err)
-	}
-
 	exitCh := make(chan int, 1)
 	func() {
 		defer func() {

@@ -148,19 +148,15 @@ func TestCatalogServicesQuery_Fetch(t *testing.T) {
 			"all",
 			"",
 			[]*dep.CatalogSnippet{
-				{
+				&dep.CatalogSnippet{
 					Name: "consul",
 					Tags: dep.ServiceTags([]string{}),
 				},
-				{
-					Name: "critical-service",
-					Tags: dep.ServiceTags([]string{}),
-				},
-				{
+				&dep.CatalogSnippet{
 					Name: "foo-sidecar-proxy",
 					Tags: dep.ServiceTags([]string{}),
 				},
-				{
+				&dep.CatalogSnippet{
 					Name: "service-meta",
 					Tags: dep.ServiceTags([]string{"tag1"}),
 				},
