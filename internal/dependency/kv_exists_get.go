@@ -16,6 +16,7 @@ var (
 // KVExistsGetQuery uses a non-blocking query to lookup a single key in the KV store.
 // The query returns whether the key exists and the value of the key if it exists.
 type KVExistsGetQuery struct {
+	BlockingQuery
 	KVExistsQuery
 }
 
@@ -60,8 +61,6 @@ func (d *KVExistsGetQuery) Stop() {
 }
 
 func (d *KVExistsGetQuery) SetOptions(opts QueryOptions) {
-	opts.WaitIndex = 0
-	opts.WaitTime = 0
 	d.opts = opts
 }
 
