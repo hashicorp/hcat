@@ -180,8 +180,8 @@ func TestNewKVExistsGetQueryV1WithParameters(t *testing.T) {
 func TestKVExistsGetQuery_Fetch(t *testing.T) {
 	t.Parallel()
 
-	testConsul.SetKVString(t, "test-kv-get/key", "value")
-	testConsul.SetKVString(t, "test-kv-get/key_empty", "")
+	testConsul.SetKVString(t, "test-kv-exists-get/key", "value")
+	testConsul.SetKVString(t, "test-kv-exists-get/key_empty", "")
 
 	cases := []struct {
 		name string
@@ -190,30 +190,30 @@ func TestKVExistsGetQuery_Fetch(t *testing.T) {
 	}{
 		{
 			"exists",
-			"test-kv-get/key",
+			"test-kv-exists-get/key",
 			&dep.KeyPair{
-				Path:   "test-kv-get/key",
-				Key:    "test-kv-get/key",
+				Path:   "test-kv-exists-get/key",
+				Key:    "test-kv-exists-get/key",
 				Exists: true,
 				Value:  "value",
 			},
 		},
 		{
 			"exists_empty_string",
-			"test-kv-get/key_empty",
+			"test-kv-exists-get/key_empty",
 			&dep.KeyPair{
-				Path:   "test-kv-get/key_empty",
-				Key:    "test-kv-get/key_empty",
+				Path:   "test-kv-exists-get/key_empty",
+				Key:    "test-kv-exists-get/key_empty",
 				Exists: true,
 				Value:  "",
 			},
 		},
 		{
 			"does_not_exist",
-			"test-kv-get/not/a/real/key",
+			"test-kv-exists-get/not/a/real/key",
 			&dep.KeyPair{
-				Path:   "test-kv-get/not/a/real/key",
-				Key:    "test-kv-get/not/a/real/key",
+				Path:   "test-kv-exists-get/not/a/real/key",
+				Key:    "test-kv-exists-get/not/a/real/key",
 				Exists: false,
 				Value:  "",
 			},
