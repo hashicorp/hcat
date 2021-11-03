@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/hcat/dep"
+	"github.com/hashicorp/hcat/events"
 	idep "github.com/hashicorp/hcat/internal/dependency"
 )
 
@@ -28,6 +29,9 @@ type view struct {
 	// clients is the list of clients to communicate upstream. This is passed
 	// directly to the dependency.
 	clients Looker
+
+	// event holds the callback for event processing
+	event events.EventHandler
 
 	// data is the most-recently-received data from Consul for this view. It is
 	// accompanied by a series of locks and booleans to ensure consistency.
@@ -73,6 +77,9 @@ type newViewInput struct {
 	// directly to the dependency.
 	Clients Looker
 
+	// EventHandler takes the callback for event processing
+	EventHandler events.EventHandler
+
 	// BlockWaitTime is amount of time in seconds to do a blocking query for
 	BlockWaitTime time.Duration
 
@@ -88,9 +95,14 @@ type newViewInput struct {
 // NewView constructs a new view with the given inputs.
 func newView(i *newViewInput) *view {
 	ctx, cancel := context.WithCancel(context.Background())
+	eventHandler := i.EventHandler
+	if eventHandler == nil {
+		eventHandler = func(events.Event) {}
+	}
 	return &view{
 		dependency:    i.Dependency,
 		clients:       i.Clients,
+		event:         eventHandler,
 		blockWaitTime: i.BlockWaitTime,
 		maxStale:      i.MaxStale,
 		retryFunc:     i.RetryFunc,

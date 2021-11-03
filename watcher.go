@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/hcat/dep"
+	"github.com/hashicorp/hcat/events"
 	idep "github.com/hashicorp/hcat/internal/dependency"
 	"github.com/pkg/errors"
 )
@@ -36,6 +37,8 @@ type Watcher struct {
 	clients Looker
 	// cache stores the data fetched from remote sources
 	cache Cacher
+	// event holds the callback for event processing
+	event events.EventHandler
 
 	// dataCh is the chan where Views will be published.
 	dataCh chan *view
@@ -76,6 +79,9 @@ type WatcherInput struct {
 	// Cache is the Cacher for caching watched values
 	Cache Cacher
 
+	// EventHandler takes the callback for event processing
+	EventHandler events.EventHandler
+
 	// Optional Vault specific parameters
 	// Default non-renewable secret duration
 	VaultDefaultLease time.Duration
@@ -113,11 +119,16 @@ func NewWatcher(i WatcherInput) *Watcher {
 	if clients == nil {
 		clients = NewClientSet()
 	}
+	eventHandler := i.EventHandler
+	if eventHandler == nil {
+		eventHandler = func(events.Event) {}
+	}
 
 	bufferTriggerCh := make(chan string, dataBufferSize/2)
 	w := &Watcher{
 		clients:         clients,
 		cache:           cache,
+		event:           eventHandler,
 		dataCh:          make(chan *view, dataBufferSize),
 		errCh:           make(chan error),
 		waitingCh:       make(chan struct{}, 1),
@@ -296,6 +307,7 @@ func (w *Watcher) track(n Notifier, d dep.Dependency) *view {
 	v := newView(&newViewInput{
 		Dependency:    d,
 		Clients:       w.clients,
+		EventHandler:  w.event,
 		MaxStale:      w.maxStale,
 		BlockWaitTime: w.blockWaitTime,
 		RetryFunc:     retryFunc,
@@ -362,6 +374,11 @@ func (w *Watcher) SetBufferPeriod(min, max time.Duration, tmplIDs ...string) {
 	for _, id := range tmplIDs {
 		w.bufferTemplates.Add(min, max, id)
 	}
+}
+
+// ID here is to meet the IDer interface and be used with events/logging
+func (w *Watcher) ID() string {
+	return fmt.Sprintf("watcher (%p)", w)
 }
 
 // Stop halts this watcher and any currently polling views immediately. If a
