@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/hcat/events"
 	dep "github.com/hashicorp/hcat/internal/dependency"
 )
 
@@ -201,6 +202,7 @@ func TestFetch_returnsErrCh(t *testing.T) {
 
 func TestFetch_ctxCancel(t *testing.T) {
 	ctx, ctxCancel := context.WithCancel(context.Background())
+	defer ctxCancel()
 	view := newView(&newViewInput{
 		Dependency: &dep.FakeDepBlockingQuery{
 			Name:          "ctxCancel",
@@ -314,5 +316,76 @@ func TestRateLimiter(t *testing.T) {
 	dur = rateLimiter(start)         // should be 0
 	if dur != 0 {
 		t.Errorf("rate limiting duration should be 0, found: %v", dur)
+	}
+}
+
+func TestFetchEvents(t *testing.T) {
+	data := "event test data"
+	fdep := &dep.FakeDep{Name: data}
+	vw := newView(&newViewInput{
+		Dependency: fdep,
+		EventHandler: func(e events.Event) {
+			switch v := e.(type) {
+			case events.Trace:
+				if v.ID != fdep.String() {
+					t.Errorf("bad ID, wanted: '%v', got '%v'", fdep.String(), v.ID)
+				}
+			case events.NewData:
+				if v.Data != data {
+					t.Errorf("bad data, wanted: '%v', got '%v'", v.Data, data)
+				}
+			default:
+				t.Errorf("bad event: %#v", e)
+			}
+		},
+	})
+
+	doneCh := make(chan struct{})
+	successCh := make(chan struct{})
+	errCh := make(chan error)
+
+	go vw.fetch(doneCh, successCh, errCh)
+
+	select {
+	case <-doneCh:
+	case err := <-errCh:
+		t.Errorf("error while fetching: %s", err)
+	}
+}
+
+func TestPollingEvents(t *testing.T) {
+	data := "event test data"
+	fdep := &dep.FakeDep{Name: data}
+	vw := newView(&newViewInput{
+		Dependency: fdep,
+		EventHandler: func(e events.Event) {
+			switch v := e.(type) {
+			case events.Trace, events.ServerContacted, events.TrackStart:
+			case events.TrackStop: // only get this sometimes, race to exit test
+			case events.NewData:
+				if v.ID != fdep.String() {
+					t.Errorf("bad ID, wanted: '%v', got '%v'", fdep.String(), v.ID)
+				}
+				if v.Data != data {
+					t.Errorf("bad data, wanted: '%v', got '%v'", v.Data, data)
+				}
+			default:
+				t.Errorf("bad event: %#v", e)
+			}
+		},
+	})
+
+	viewCh := make(chan *view)
+	errCh := make(chan error)
+
+	go vw.poll(viewCh, errCh)
+	defer vw.stop()
+
+	select {
+	case <-viewCh:
+	case err := <-errCh:
+		t.Error(err)
+	case <-vw.stopCh:
+		t.Errorf("got unexpected stop")
 	}
 }

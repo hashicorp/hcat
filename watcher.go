@@ -312,6 +312,7 @@ func (w *Watcher) track(n Notifier, d dep.Dependency) *view {
 		BlockWaitTime: w.blockWaitTime,
 		RetryFunc:     retryFunc,
 	})
+	w.event(events.TrackStart{ID: v.ID()})
 	w.tracker.add(v, n)
 	return v
 }
@@ -327,7 +328,6 @@ func (w *Watcher) Poll(deps ...dep.Dependency) {
 	}
 	for _, d := range deps {
 		if v := w.tracker.view(d.String()); v != nil {
-			//log.Printf("[TRACE] (watcher) %s starting", d)
 			go v.poll(w.dataCh, w.errCh)
 		}
 	}
@@ -363,7 +363,7 @@ func (w *Watcher) Mark(notifier IDer) {
 	w.tracker.mark(notifier)
 }
 
-// Stop and dereference all views for dependencies still marked as *not* in use.
+// Sweeps (stop and dereference) all views for dependencies marked as *not* in use.
 func (w *Watcher) Sweep(notifier IDer) {
 	w.tracker.sweep(notifier, w.cache)
 }
@@ -384,9 +384,9 @@ func (w *Watcher) ID() string {
 // Stop halts this watcher and any currently polling views immediately. If a
 // view was in the middle of a poll, no data will be returned.
 func (w *Watcher) Stop() {
+	w.event(events.Trace{ID: w.ID(), Message: "stopping watcher"})
 	w.bufferTemplates.Stop()
 
-	//log.Printf("[DEBUG] (watcher) stopping all views")
 	w.tracker.stopViews()
 
 	w.stopCh.drain() // So calling Stop twice doesn't block
