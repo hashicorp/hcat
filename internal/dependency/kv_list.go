@@ -99,17 +99,10 @@ func (d *KVListQuery) Fetch(clients dep.Clients) (interface{}, *dep.ResponseMeta
 		Namespace:  d.ns,
 	})
 
-	//log.Printf("[TRACE] %s: GET %s", d, &url.URL{
-	//	Path:     "/v1/kv/" + d.prefix,
-	//	RawQuery: opts.String(),
-	//})
-
 	list, qm, err := clients.Consul().KV().List(d.prefix, opts.ToConsulOpts())
 	if err != nil {
 		return nil, nil, errors.Wrap(err, d.String())
 	}
-
-	//log.Printf("[TRACE] %s: returned %d pairs", d, len(list))
 
 	pairs := make([]*dep.KeyPair, 0, len(list))
 	for _, pair := range list {

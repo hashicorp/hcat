@@ -324,7 +324,6 @@ func newTransport(i *CreateClientInput) (*http.Transport, error) {
 			tlsConfig.InsecureSkipVerify = false
 		}
 		if !i.SSLVerify {
-			//log.Printf("[WARN] (clients) disabling SSL verification")
 			tlsConfig.InsecureSkipVerify = true
 		}
 

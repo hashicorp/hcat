@@ -44,18 +44,14 @@ func NewFileQuery(s string) (*FileQuery, error) {
 // Fetch retrieves this dependency and returns the result or any errors that
 // occur in the process.
 func (d *FileQuery) Fetch(clients dep.Clients) (interface{}, *dep.ResponseMetadata, error) {
-	//log.Printf("[TRACE] %s: READ %s", d, d.path)
 
 	select {
 	case <-d.stopCh:
-		//log.Printf("[TRACE] %s: stopped", d)
 		return "", nil, ErrStopped
 	case r := <-d.watch(d.stat):
 		if r.err != nil {
 			return "", nil, errors.Wrap(r.err, d.String())
 		}
-
-		//log.Printf("[TRACE] %s: reported change", d)
 
 		data, err := ioutil.ReadFile(d.path)
 		if err != nil {

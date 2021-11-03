@@ -108,17 +108,10 @@ func (d *CatalogServicesQuery) Fetch(clients dep.Clients) (interface{}, *dep.Res
 	// it does not support the preferred filter option.
 	opts.NodeMeta = d.nodeMeta
 
-	//log.Printf("[TRACE] %s: GET %s", d, &url.URL{
-	//	Path:     "/v1/catalog/services",
-	//	RawQuery: opts.String(),
-	//})
-
 	entries, qm, err := clients.Consul().Catalog().Services(opts)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, d.String())
 	}
-
-	//log.Printf("[TRACE] %s: returned %d results", d, len(entries))
 
 	var catalogServices []*dep.CatalogSnippet
 	for name, tags := range entries {
