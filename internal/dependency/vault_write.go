@@ -84,14 +84,12 @@ func (d *VaultWriteQuery) Fetch(clients dep.Clients) (interface{}, *dep.Response
 		return respWithMetadata(d.secret)
 	}
 
-	printVaultWarnings(d, vaultSecret.Warnings)
 	d.vaultSecret = vaultSecret
 	// cloned secret which will be exposed to the template
 	d.secret = transformSecret(vaultSecret, opts.DefaultLease)
 
 	if !vaultSecretRenewable(d.secret) {
 		dur := leaseCheckWait(d.secret)
-		//log.Printf("[TRACE] %s: non-renewable secret, set sleep for %s", d, dur)
 		d.sleepCh <- dur
 	}
 
@@ -140,18 +138,7 @@ func sha1Map(m map[string]interface{}) string {
 	return fmt.Sprintf("%.4x", h.Sum(nil))
 }
 
-func (d *VaultWriteQuery) printWarnings(warnings []string) {
-	//	for _, w := range warnings {
-	//		//log.Printf("[WARN] %s: %s", d, w)
-	//	}
-}
-
 func (d *VaultWriteQuery) writeSecret(clients dep.Clients, opts *QueryOptions) (*api.Secret, error) {
-	//log.Printf("[TRACE] %s: PUT %s", d, &url.URL{
-	//	Path:     "/v1/" + d.path,
-	//	RawQuery: opts.String(),
-	//})
-
 	data := d.data
 
 	_, isv2, _ := isKVv2(clients.Vault(), d.path)

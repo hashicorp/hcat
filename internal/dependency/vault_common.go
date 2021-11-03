@@ -26,8 +26,6 @@ type renewer interface {
 }
 
 func renewSecret(clients dep.Clients, d renewer) error {
-	//log.Printf("[TRACE] %s: starting renewer", d)
-
 	secret, vaultSecret := d.secrets()
 	renewer, err := clients.Vault().NewRenewer(&api.RenewerInput{
 		Secret: vaultSecret,
@@ -40,15 +38,9 @@ func renewSecret(clients dep.Clients, d renewer) error {
 
 	for {
 		select {
-		case err := <-renewer.DoneCh():
-			if err != nil {
-				//log.Printf("[WARN] %s: failed to renew: %s", d, err)
-			}
-			//log.Printf("[WARN] %s: renewer done (maybe the lease expired)", d)
+		case <-renewer.DoneCh():
 			return nil
 		case renewal := <-renewer.RenewCh():
-			//log.Printf("[TRACE] %s: successfully renewed", d)
-			printVaultWarnings(d, renewal.Secret.Warnings)
 			updateSecret(secret, renewal.Secret)
 		case <-d.stopChan():
 			return ErrStopped
@@ -72,7 +64,6 @@ func leaseCheckWait(s *dep.Secret) time.Duration {
 		if expInterface, ok := s.Data["expiration"]; ok {
 			if expData, err := expInterface.(json.Number).Int64(); err == nil {
 				base = int(expData - time.Now().Unix())
-				//log.Printf("[DEBUG] Found certificate and set lease duration to %d seconds", base)
 			}
 		}
 	}
@@ -85,7 +76,6 @@ func leaseCheckWait(s *dep.Secret) time.Duration {
 		if ttlInterface, ok := s.Data["ttl"]; ok {
 			ttlData, err := ttlInterface.(json.Number).Int64()
 			if err == nil && ttlData > 0 {
-				//log.Printf("[DEBUG] Found rotation_period and set lease duration to %d seconds", ttlData)
 				// Add a second for cushion
 				base = int(ttlData) + 1
 				rotatingSecret = true
@@ -113,13 +103,6 @@ func leaseCheckWait(s *dep.Secret) time.Duration {
 	}
 
 	return time.Duration(sleep)
-}
-
-// printVaultWarnings prints warnings for a given dependency.
-func printVaultWarnings(d dep.Dependency, warnings []string) {
-	//for _, w := range warnings {
-	//log.Printf("[WARN] %s: %s", d, w)
-	//}
 }
 
 // vaultSecretRenewable determines if the given secret is renewable.

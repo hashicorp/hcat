@@ -65,7 +65,6 @@ func (d *CatalogNodeQuery) Fetch(clients dep.Clients) (interface{}, *dep.Respons
 	name := d.name
 
 	if name == "" {
-		//log.Printf("[TRACE] %s: getting local agent name", d)
 		var err error
 		name, err = clients.Consul().Agent().NodeName()
 		if err != nil {
@@ -73,16 +72,10 @@ func (d *CatalogNodeQuery) Fetch(clients dep.Clients) (interface{}, *dep.Respons
 		}
 	}
 
-	//log.Printf("[TRACE] %s: GET %s", d, &url.URL{
-	//	Path:     "/v1/catalog/node/" + name,
-	//	RawQuery: opts.String(),
-	//})
 	node, qm, err := clients.Consul().Catalog().Node(name, opts.ToConsulOpts())
 	if err != nil {
 		return nil, nil, errors.Wrap(err, d.String())
 	}
-
-	//log.Printf("[TRACE] %s: returned response", d)
 
 	rm := &dep.ResponseMetadata{
 		LastIndex:   qm.LastIndex,
@@ -90,7 +83,6 @@ func (d *CatalogNodeQuery) Fetch(clients dep.Clients) (interface{}, *dep.Respons
 	}
 
 	if node == nil {
-		//log.Printf("[WARN] %s: no node exists with the name %q", d, name)
 		var node dep.CatalogNode
 		return &node, rm, nil
 	}

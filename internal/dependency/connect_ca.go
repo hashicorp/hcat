@@ -34,19 +34,11 @@ func (d *ConnectCAQuery) Fetch(clients dep.Clients) (
 	}
 
 	opts := d.opts.Merge(nil)
-	//log.Printf("[TRACE] %s: GET %s", d, &url.URL{
-	//	Path:     "/v1/agent/connect/ca/roots",
-	//	RawQuery: opts.String(),
-	//})
-
 	certs, md, err := clients.Consul().Agent().ConnectCARoots(
 		opts.ToConsulOpts())
 	if err != nil {
 		return nil, nil, errors.Wrap(err, d.String())
 	}
-
-	//log.Printf("[TRACE] %s: returned %d results", d, len(certs.Roots))
-	//log.Printf("[TRACE] %s: %#v ", d, md)
 
 	rm := &dep.ResponseMetadata{
 		LastIndex:   md.LastIndex,

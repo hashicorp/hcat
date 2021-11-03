@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/hcat/dep"
+	"github.com/hashicorp/hcat/events"
 	idep "github.com/hashicorp/hcat/internal/dependency"
 )
 
@@ -28,6 +29,9 @@ type view struct {
 	// clients is the list of clients to communicate upstream. This is passed
 	// directly to the dependency.
 	clients Looker
+
+	// event holds the callback for event processing
+	event events.EventHandler
 
 	// data is the most-recently-received data from Consul for this view. It is
 	// accompanied by a series of locks and booleans to ensure consistency.
@@ -73,6 +77,9 @@ type newViewInput struct {
 	// directly to the dependency.
 	Clients Looker
 
+	// EventHandler takes the callback for event processing
+	EventHandler events.EventHandler
+
 	// BlockWaitTime is amount of time in seconds to do a blocking query for
 	BlockWaitTime time.Duration
 
@@ -88,9 +95,14 @@ type newViewInput struct {
 // NewView constructs a new view with the given inputs.
 func newView(i *newViewInput) *view {
 	ctx, cancel := context.WithCancel(context.Background())
+	eventHandler := i.EventHandler
+	if eventHandler == nil {
+		eventHandler = func(events.Event) {}
+	}
 	return &view{
 		dependency:    i.Dependency,
 		clients:       i.Clients,
+		event:         eventHandler,
 		blockWaitTime: i.BlockWaitTime,
 		maxStale:      i.MaxStale,
 		retryFunc:     i.RetryFunc,
@@ -151,12 +163,16 @@ func (v *view) pollingFlag() (alreadyPolling bool, unflag func()) {
 // function is in the middle of a blocking query.
 func (v *view) poll(viewCh chan<- *view, errCh chan<- error) {
 	var retries int
+	v.event(events.TrackStart{ID: v.ID()})
 
-	if alreadyPolling, unflag := v.pollingFlag(); alreadyPolling {
+	alreadyPolling, stoppedPolling := v.pollingFlag()
+	if alreadyPolling {
 		return
-	} else {
-		defer unflag()
 	}
+	defer func() {
+		stoppedPolling()
+		v.event(events.TrackStop{ID: v.ID()})
+	}()
 
 	for {
 		doneCh := make(chan struct{}, 1)
@@ -171,7 +187,6 @@ func (v *view) poll(viewCh chan<- *view, errCh chan<- error) {
 			// have some successful requests
 			retries = 0
 
-			//log.Printf("[TRACE] (view) %s received data", v.dependency)
 			select {
 			case <-v.stopCh:
 				return
@@ -179,16 +194,17 @@ func (v *view) poll(viewCh chan<- *view, errCh chan<- error) {
 			}
 
 		case <-successCh:
-			// We successfully received a non-error response from the server. This
-			// does not mean we have data (that's dataCh's job), but rather this
-			// just resets the counter indicating we communicated successfully. For
-			// example, Consul make have an outage, but when it returns, the view
-			// is unchanged. We have to reset the counter retries, but not update the
-			// actual template.
-			//log.Printf("[TRACE] (view) %s successful contact, resetting retries", v.dependency
+			// We successfully received a non-error response from the server.
+			// This does not mean we have data (that's dataCh's job), but
+			// rather this just resets the counter indicating we communicated
+			// successfully. For example, Consul make have an outage, but when
+			// it returns, the view is unchanged. We have to reset the counter
+			// retries, but not update the actual template.
+			v.event(events.ServerContacted{ID: v.ID()})
 			retries = 0
 			goto WAIT
 		case err := <-fetchErrCh:
+			v.event(events.ServerError{ID: v.ID(), Error: err})
 			var skipRetry bool
 			if strings.Contains(err.Error(), "Unexpected response code: 400") {
 				// 400 is not useful to retry
@@ -209,8 +225,12 @@ func (v *view) poll(viewCh chan<- *view, errCh chan<- error) {
 			if v.retryFunc != nil && !skipRetry {
 				retry, sleep := v.retryFunc(retries)
 				if retry {
-					//log.Printf("[WARN] (view) %s (retry attempt %d after %q)",
-					//err, retries+1, sleep)
+					v.event(events.RetryAttempt{
+						ID:      v.ID(),
+						Attempt: retries + 1,
+						Sleep:   sleep,
+						Error:   err,
+					})
 					select {
 					case <-time.After(sleep):
 						retries++
@@ -219,9 +239,8 @@ func (v *view) poll(viewCh chan<- *view, errCh chan<- error) {
 						return
 					}
 				}
+				v.event(events.MaxRetries{ID: v.ID(), Count: retries})
 			}
-
-			//log.Printf("[ERR] (view) %s (exceeded maximum retries)", err)
 
 			// Push the error back up to the watcher
 			select {
@@ -231,7 +250,6 @@ func (v *view) poll(viewCh chan<- *view, errCh chan<- error) {
 				return
 			}
 		case <-v.stopCh:
-			//log.Printf("[TRACE] (view) %s stopping poll (received on view stopCh)", v.dependency)
 			return
 		}
 	}
@@ -243,7 +261,7 @@ func (v *view) poll(viewCh chan<- *view, errCh chan<- error) {
 // result of doneCh and errCh. It is assumed that only one instance of fetch
 // is running per view and therefore no locking or mutexes are used.
 func (v *view) fetch(doneCh, successCh chan<- struct{}, errCh chan<- error) {
-	//log.Printf("[TRACE] (view) %s starting fetch", v.dependency)
+	v.event(events.Trace{ID: v.ID(), Message: "starting fetch"})
 
 	var allowStale bool
 	if v.maxStale != 0 {
@@ -273,14 +291,15 @@ func (v *view) fetch(doneCh, successCh chan<- struct{}, errCh chan<- error) {
 			opts = opts.SetContext(v.ctx)
 			d.SetOptions(opts)
 		}
+		v.event(events.Trace{ID: v.ID(), Message: "fetching value"})
 		data, rm, err := v.dependency.Fetch(v.clients)
 		if err != nil {
 			switch {
 			case err == dep.ErrStopped:
-				//log.Printf("[TRACE] (view) %s reported stop", v.dependency)
+				v.event(events.Trace{ID: v.ID(), Message: err.Error()})
 			case strings.Contains(err.Error(), context.Canceled.Error()):
 				// This is a wrapped error so relying on string matching
-				// log.Printf("[TRACE] (view) %s request context stopped", v.dependency)
+				v.event(events.Trace{ID: v.ID(), Message: err.Error()})
 			default:
 				errCh <- err
 			}
@@ -296,7 +315,7 @@ func (v *view) fetch(doneCh, successCh chan<- struct{}, errCh chan<- error) {
 		// If we got this far, we received data successfully. That data might not
 		// trigger a data update (because we could continue below), but we need to
 		// inform the poller to reset the retry count.
-		//log.Printf("[TRACE] (view) %s marking successful data response", v.dependency)
+		v.event(events.Trace{ID: v.ID(), Message: "successful data response"})
 		select {
 		case successCh <- struct{}{}:
 		default:
@@ -304,7 +323,7 @@ func (v *view) fetch(doneCh, successCh chan<- struct{}, errCh chan<- error) {
 
 		if allowStale && rm.LastContact > v.maxStale {
 			allowStale = false
-			//log.Printf("[TRACE] (view) %s stale data (last contact exceeded max_stale)", v.dependency)
+			v.event(events.StaleData{ID: v.ID(), LastContant: rm.LastContact})
 			continue
 		}
 
@@ -317,13 +336,14 @@ func (v *view) fetch(doneCh, successCh chan<- struct{}, errCh chan<- error) {
 		}
 
 		if rm.LastIndex == v.lastIndex {
-			//log.Printf("[TRACE] (view) %s no new data (index was the same)", v.dependency)
+			v.event(events.Trace{ID: v.ID(), Message: "same index, no new data"})
 			continue
 		}
 
 		v.dataLock.Lock()
 		if rm.LastIndex < v.lastIndex {
-			//log.Printf("[TRACE] (view) %s had a lower index, resetting", v.dependency)
+			v.event(events.Trace{ID: v.ID(),
+				Message: "wrong index order, resetting"})
 			v.lastIndex = 0
 			v.dataLock.Unlock()
 			continue
@@ -331,18 +351,19 @@ func (v *view) fetch(doneCh, successCh chan<- struct{}, errCh chan<- error) {
 		v.lastIndex = rm.LastIndex
 
 		if v.receivedData && reflect.DeepEqual(data, v.data) {
-			//log.Printf("[TRACE] (view) %s no new data (contents were the same)", v.dependency)
+			v.event(events.NoNewData{ID: v.ID()})
 			v.dataLock.Unlock()
 			continue
 		}
 
 		if _, ok := v.dependency.(idep.BlockingQuery); ok && data == nil {
-			//log.Printf("[TRACE] (view) %s asked for blocking query", v.dependency)
+			v.event(events.BlockingWait{ID: v.ID()})
 			v.dataLock.Unlock()
 			continue
 		}
 		v.dataLock.Unlock()
 
+		v.event(events.NewData{ID: v.ID(), Data: data})
 		v.store(data)
 
 		close(doneCh)

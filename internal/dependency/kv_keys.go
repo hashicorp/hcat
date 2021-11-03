@@ -53,11 +53,6 @@ func (d *KVKeysQuery) Fetch(clients dep.Clients) (interface{}, *dep.ResponseMeta
 		Datacenter: d.dc,
 	})
 
-	//log.Printf("[TRACE] %s: GET %s", d, &url.URL{
-	//	Path:     "/v1/kv/" + d.prefix,
-	//	RawQuery: opts.String(),
-	//})
-
 	list, qm, err := clients.Consul().KV().Keys(d.prefix, "", opts.ToConsulOpts())
 	if err != nil {
 		return nil, nil, errors.Wrap(err, d.String())
@@ -69,8 +64,6 @@ func (d *KVKeysQuery) Fetch(clients dep.Clients) (interface{}, *dep.ResponseMeta
 		v = strings.TrimLeft(v, "/")
 		keys[i] = v
 	}
-
-	//log.Printf("[TRACE] %s: returned %d results", d, len(list))
 
 	rm := &dep.ResponseMetadata{
 		LastIndex:   qm.LastIndex,

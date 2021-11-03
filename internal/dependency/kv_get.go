@@ -63,11 +63,6 @@ func (d *KVGetQuery) Fetch(clients dep.Clients) (interface{}, *dep.ResponseMetad
 		Namespace:  d.ns,
 	})
 
-	//log.Printf("[TRACE] %s: GET %s", d, &url.URL{
-	//	Path:     "/v1/kv/" + d.key,
-	//	RawQuery: opts.String(),
-	//})
-
 	pair, qm, err := clients.Consul().KV().Get(d.key, opts.ToConsulOpts())
 	if err != nil {
 		return nil, nil, errors.Wrap(err, d.String())
@@ -79,12 +74,10 @@ func (d *KVGetQuery) Fetch(clients dep.Clients) (interface{}, *dep.ResponseMetad
 	}
 
 	if pair == nil {
-		//log.Printf("[TRACE] %s: returned nil", d)
 		return nil, rm, nil
 	}
 
 	value := dep.KvValue(pair.Value)
-	//log.Printf("[TRACE] %s: returned %q", d, value)
 	return value, rm, nil
 }
 

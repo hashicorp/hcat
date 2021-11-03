@@ -204,11 +204,6 @@ func (d *HealthServiceQuery) Fetch(clients dep.Clients) (interface{}, *dep.Respo
 		Near:       d.near,
 	})
 
-	//log.Printf("[TRACE] %s: GET %s", d, &url.URL{
-	//	Path:     "/v1/health/service/%d"+d.name,
-	//	RawQuery: opts.String(),
-	//})
-
 	nodes := clients.Consul().Health().Service
 	if d.connect {
 		nodes = clients.Consul().Health().Connect
@@ -217,8 +212,6 @@ func (d *HealthServiceQuery) Fetch(clients dep.Clients) (interface{}, *dep.Respo
 	if err != nil {
 		return nil, nil, errors.Wrap(err, d.String())
 	}
-
-	//log.Printf("[TRACE] %s: returned %d results", d, len(entries))
 
 	list := make([]*dep.HealthService, 0, len(entries))
 	for _, entry := range entries {
@@ -258,8 +251,6 @@ func (d *HealthServiceQuery) Fetch(clients dep.Clients) (interface{}, *dep.Respo
 			Namespace: entry.Service.Namespace,
 		})
 	}
-
-	//log.Printf("[TRACE] %s: returned %d results after filtering", d, len(list))
 
 	// Sort unless the user explicitly asked for nearness
 	if d.near == "" {

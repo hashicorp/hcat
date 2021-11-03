@@ -61,16 +61,10 @@ func (d *CatalogNodesQuery) Fetch(clients dep.Clients) (interface{}, *dep.Respon
 		Near:       d.near,
 	})
 
-	//log.Printf("[TRACE] %s: GET %s", d, &url.URL{
-	//	Path:     "/v1/catalog/nodes",
-	//	RawQuery: opts.String(),
-	//})
 	n, qm, err := clients.Consul().Catalog().Nodes(opts.ToConsulOpts())
 	if err != nil {
 		return nil, nil, errors.Wrap(err, d.String())
 	}
-
-	//log.Printf("[TRACE] %s: returned %d results", d, len(n))
 
 	nodes := make([]*dep.Node, 0, len(n))
 	for _, node := range n {

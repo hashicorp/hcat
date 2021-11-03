@@ -51,8 +51,6 @@ func (d *VaultListQuery) Fetch(clients dep.Clients) (interface{}, *dep.ResponseM
 	// If this is not the first query, poll to simulate blocking-queries.
 	if opts.WaitIndex != 0 {
 		dur := VaultDefaultLeaseDuration
-		//log.Printf("[TRACE] %s: long polling for %s", d, dur)
-
 		select {
 		case <-d.stopCh:
 			return nil, nil, ErrStopped
@@ -62,10 +60,6 @@ func (d *VaultListQuery) Fetch(clients dep.Clients) (interface{}, *dep.ResponseM
 
 	// If we got this far, we either didn't have a secret to renew, the secret was
 	// not renewable, or the renewal failed, so attempt a fresh list.
-	//log.Printf("[TRACE] %s: LIST %s", d, &url.URL{
-	//	Path:     "/v1/" + d.path,
-	//	RawQuery: opts.String(),
-	//})
 	secret, err := clients.Vault().Logical().List(d.path)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, d.String())
@@ -75,20 +69,17 @@ func (d *VaultListQuery) Fetch(clients dep.Clients) (interface{}, *dep.ResponseM
 
 	// The secret could be nil if it does not exist.
 	if secret == nil || secret.Data == nil {
-		//log.Printf("[TRACE] %s: no data", d)
 		return respWithMetadata(result)
 	}
 
 	// This is a weird thing that happened once...
 	keys, ok := secret.Data["keys"]
 	if !ok {
-		//log.Printf("[TRACE] %s: no keys", d)
 		return respWithMetadata(result)
 	}
 
 	list, ok := keys.([]interface{})
 	if !ok {
-		//log.Printf("[TRACE] %s: not list", d)
 		return nil, nil, fmt.Errorf("%s: unexpected response", d)
 	}
 
@@ -100,8 +91,6 @@ func (d *VaultListQuery) Fetch(clients dep.Clients) (interface{}, *dep.ResponseM
 		result = append(result, typed)
 	}
 	sort.Strings(result)
-
-	//log.Printf("[TRACE] %s: returned %d results", d, len(result))
 
 	return respWithMetadata(result)
 }

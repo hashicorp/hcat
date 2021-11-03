@@ -39,11 +39,6 @@ func NewCatalogDatacentersQuery(ignoreFailing bool) (*CatalogDatacentersQuery, e
 func (d *CatalogDatacentersQuery) Fetch(clients dep.Clients) (interface{}, *dep.ResponseMetadata, error) {
 	opts := d.opts.Merge(&QueryOptions{})
 
-	//log.Printf("[TRACE] %s: GET %s", d, &url.URL{
-	//	Path:     "/v1/catalog/datacenters",
-	//	RawQuery: opts.String(),
-	//})
-
 	// This is pretty ghetto, but the datacenters endpoint does not support
 	// blocking queries, so we are going to "fake it until we make it". When we
 	// first query, the LastIndex will be "0", meaning we should immediately
@@ -54,8 +49,6 @@ func (d *CatalogDatacentersQuery) Fetch(clients dep.Clients) (interface{}, *dep.
 	// This is probably okay given the frequency in which datacenters actually
 	// change, but is technically not edge-triggering.
 	if opts.WaitIndex != 0 {
-		//log.Printf("[TRACE] %s: long polling for %s", d, CatalogDatacentersQuerySleepTime)
-
 		select {
 		case <-d.stopCh:
 			return nil, nil, ErrStopped
@@ -83,8 +76,6 @@ func (d *CatalogDatacentersQuery) Fetch(clients dep.Clients) (interface{}, *dep.
 		}
 		result = dcs
 	}
-
-	//log.Printf("[TRACE] %s: returned %d results", d, len(result))
 
 	sort.Strings(result)
 
