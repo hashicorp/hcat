@@ -526,7 +526,7 @@ func TestKVListQuery_String(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			assert.Equal(t, tc.exp, d.String())
+			assert.Equal(t, tc.exp, d.ID())
 		})
 	}
 }

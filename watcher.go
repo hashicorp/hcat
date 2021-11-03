@@ -327,7 +327,7 @@ func (w *Watcher) Poll(deps ...dep.Dependency) {
 		}
 	}
 	for _, d := range deps {
-		if v := w.tracker.view(d.String()); v != nil {
+		if v := w.tracker.view(d.ID()); v != nil {
 			go v.poll(w.dataCh, w.errCh)
 		}
 	}
@@ -338,7 +338,7 @@ func (w *Watcher) Poll(deps ...dep.Dependency) {
 func (w *Watcher) Recaller(n Notifier) Recaller {
 	return func(dep dep.Dependency) (interface{}, bool) {
 		w.track(n, dep)
-		data, ok := w.cache.Recall(dep.String())
+		data, ok := w.cache.Recall(dep.ID())
 		switch {
 		case ok:
 			w.tracker.cacheAccessed(n, dep)
@@ -487,7 +487,7 @@ type tracker struct {
 
 // cacheAccessed records that the fetched data was used at least once
 func (t *tracker) cacheAccessed(notifier IDer, d dep.Dependency) {
-	notifierID, depID := notifier.ID(), d.String()
+	notifierID, depID := notifier.ID(), d.ID()
 	t.Lock()
 	defer t.Unlock()
 	for i, tp := range t.tracked {
@@ -539,7 +539,7 @@ func (t *tracker) notifierTracked(n Notifier) bool {
 // returns the view as it is the 1 thing that you don't have yet
 // note that a view's and dependency's IDs are interchangeable (identical)
 func (t *tracker) lookup(notifier IDer, d dep.Dependency) (*view, bool) {
-	notifierID, depID := notifier.ID(), d.String()
+	notifierID, depID := notifier.ID(), d.ID()
 	t.Lock()
 	defer t.Unlock()
 	for _, tp := range t.tracked {
@@ -574,7 +574,7 @@ func (t *tracker) add(v *view, n Notifier) {
 
 // Marks all trackedPairs w/ a view as having been used
 func (t *tracker) inUse(notifier IDer, d dep.Dependency) {
-	notifierID, depID := notifier.ID(), d.String()
+	notifierID, depID := notifier.ID(), d.ID()
 	t.Lock()
 	defer t.Unlock()
 	for i, tp := range t.tracked {

@@ -55,7 +55,7 @@ func (d *KVKeysQuery) Fetch(clients dep.Clients) (interface{}, *dep.ResponseMeta
 
 	list, qm, err := clients.Consul().KV().Keys(d.prefix, "", opts.ToConsulOpts())
 	if err != nil {
-		return nil, nil, errors.Wrap(err, d.String())
+		return nil, nil, errors.Wrap(err, d.ID())
 	}
 
 	keys := make([]string, len(list))
@@ -78,13 +78,18 @@ func (d *KVKeysQuery) CanShare() bool {
 	return true
 }
 
-// String returns the human-friendly version of this dependency.
-func (d *KVKeysQuery) String() string {
+// ID returns the human-friendly version of this dependency.
+func (d *KVKeysQuery) ID() string {
 	prefix := d.prefix
 	if d.dc != "" {
 		prefix = prefix + "@" + d.dc
 	}
 	return fmt.Sprintf("kv.keys(%s)", prefix)
+}
+
+// Stringer interface reuses ID
+func (d *KVKeysQuery) String() string {
+	return d.ID()
 }
 
 // Stop halts the dependency's fetch function.

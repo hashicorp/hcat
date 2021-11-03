@@ -68,13 +68,13 @@ func (d *CatalogNodeQuery) Fetch(clients dep.Clients) (interface{}, *dep.Respons
 		var err error
 		name, err = clients.Consul().Agent().NodeName()
 		if err != nil {
-			return nil, nil, errors.Wrapf(err, d.String())
+			return nil, nil, errors.Wrapf(err, d.ID())
 		}
 	}
 
 	node, qm, err := clients.Consul().Catalog().Node(name, opts.ToConsulOpts())
 	if err != nil {
-		return nil, nil, errors.Wrap(err, d.String())
+		return nil, nil, errors.Wrap(err, d.ID())
 	}
 
 	rm := &dep.ResponseMetadata{
@@ -121,8 +121,8 @@ func (d *CatalogNodeQuery) CanShare() bool {
 	return false
 }
 
-// String returns the human-friendly version of this dependency.
-func (d *CatalogNodeQuery) String() string {
+// ID returns the human-friendly version of this dependency.
+func (d *CatalogNodeQuery) ID() string {
 	name := d.name
 	if d.dc != "" {
 		name = name + "@" + d.dc
@@ -132,6 +132,11 @@ func (d *CatalogNodeQuery) String() string {
 		return "catalog.node"
 	}
 	return fmt.Sprintf("catalog.node(%s)", name)
+}
+
+// Stringer interface reuses ID
+func (d *CatalogNodeQuery) String() string {
+	return d.ID()
 }
 
 // Stop halts the dependency's fetch function.

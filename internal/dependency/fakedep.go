@@ -27,8 +27,11 @@ func (d *FakeDep) CanShare() bool {
 	return true
 }
 
-func (d *FakeDep) String() string {
+func (d *FakeDep) ID() string {
 	return fmt.Sprintf("test_dep(%s)", d.Name)
+}
+func (d *FakeDep) String() string {
+	return d.ID()
 }
 
 func (d *FakeDep) Stop()                        {}
@@ -53,8 +56,11 @@ func (d *FakeListDep) CanShare() bool {
 	return true
 }
 
-func (d *FakeListDep) String() string {
+func (d *FakeListDep) ID() string {
 	return fmt.Sprintf("test_list_dep(%s)", d.Name)
+}
+func (d *FakeListDep) String() string {
+	return d.ID()
 }
 
 func (d *FakeListDep) Stop()                        {}
@@ -88,8 +94,11 @@ func (d *FakeDepStale) CanShare() bool {
 	return true
 }
 
-func (d *FakeDepStale) String() string {
+func (d *FakeDepStale) ID() string {
 	return fmt.Sprintf("test_dep_stale(%s)", d.Name)
+}
+func (d *FakeDepStale) String() string {
+	return d.ID()
 }
 
 func (d *FakeDepStale) Stop()                        {}
@@ -110,8 +119,11 @@ func (d *FakeDepFetchError) CanShare() bool {
 	return true
 }
 
-func (d *FakeDepFetchError) String() string {
+func (d *FakeDepFetchError) ID() string {
 	return fmt.Sprintf("test_dep_fetch_error(%s)", d.Name)
+}
+func (d *FakeDepFetchError) String() string {
+	return d.ID()
 }
 
 func (d *FakeDepFetchError) Stop()                        {}
@@ -131,8 +143,11 @@ func (d *FakeDepSameIndex) CanShare() bool {
 	return true
 }
 
-func (d *FakeDepSameIndex) String() string {
+func (d *FakeDepSameIndex) ID() string {
 	return "test_dep_same_index"
+}
+func (d *FakeDepSameIndex) String() string {
+	return d.ID()
 }
 
 func (d *FakeDepSameIndex) Stop()                        {}
@@ -167,8 +182,11 @@ func (d *FakeDepRetry) CanShare() bool {
 	return true
 }
 
-func (d *FakeDepRetry) String() string {
+func (d *FakeDepRetry) ID() string {
 	return fmt.Sprintf("test_dep_retry(%s)", d.Name)
+}
+func (d *FakeDepRetry) String() string {
+	return d.ID()
 }
 
 func (d *FakeDepRetry) Stop()                        {}
@@ -203,8 +221,11 @@ func (d *FakeDepBlockingQuery) CanShare() bool {
 	return true
 }
 
-func (d *FakeDepBlockingQuery) String() string {
+func (d *FakeDepBlockingQuery) ID() string {
 	return fmt.Sprintf("test_dep_blocking_query(%s)", d.Name)
+}
+func (d *FakeDepBlockingQuery) String() string {
+	return d.ID()
 }
 
 func (d *FakeDepBlockingQuery) Stop() {

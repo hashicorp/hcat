@@ -29,7 +29,7 @@ func TestTemplateExecute_consul_v1(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				st.Save(d.String(), []*dep.HealthService{
+				st.Save(d.ID(), []*dep.HealthService{
 					{
 						Node:      "node1",
 						Address:   "1.2.3.4",
@@ -56,7 +56,7 @@ func TestTemplateExecute_consul_v1(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				st.Save(d.String(), []*dep.HealthService{
+				st.Save(d.ID(), []*dep.HealthService{
 					{
 						Node:      "node1",
 						Address:   "1.2.3.4",
@@ -99,7 +99,7 @@ func TestTemplateExecute_consul_v1(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				st.Save(d.String(), []*dep.CatalogSnippet{
+				st.Save(d.ID(), []*dep.CatalogSnippet{
 					{
 						Name: "web",
 						Tags: dep.ServiceTags([]string{"tag1", "tag2"}),
@@ -124,7 +124,7 @@ func TestTemplateExecute_consul_v1(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				st.Save(d.String(), []string{"dc1", "dc2"})
+				st.Save(d.ID(), []string{"dc1", "dc2"})
 				return st
 			}(),
 			"[dc1 dc2]",
@@ -141,7 +141,7 @@ func TestTemplateExecute_consul_v1(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				st.Save(d.String(), []*dep.KeyPair{
+				st.Save(d.ID(), []*dep.KeyPair{
 					{
 						Key:   "key",
 						Value: "value-1",
@@ -167,7 +167,7 @@ func TestTemplateExecute_consul_v1(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				st.Save(d.String(), dep.KvValue("test"))
+				st.Save(d.ID(), dep.KvValue("test"))
 				return st
 			}(),
 			"test",
@@ -184,7 +184,7 @@ func TestTemplateExecute_consul_v1(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				st.Save(d.String(), dep.KVExists(true))
+				st.Save(d.ID(), dep.KVExists(true))
 				return st
 			}(),
 			"true",
@@ -201,7 +201,7 @@ func TestTemplateExecute_consul_v1(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				st.Save(d.String(), &dep.KeyPair{
+				st.Save(d.ID(), &dep.KeyPair{
 					Key:    "key",
 					Value:  "value-1",
 					Exists: true,

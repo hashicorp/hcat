@@ -136,7 +136,7 @@ func (v *view) DataAndLastIndex() (interface{}, uint64) {
 // ID outputs a unique string identifier for the view
 // It is identical to it's contained Dependency ID.
 func (v *view) ID() string {
-	return v.dependency.String()
+	return v.dependency.ID()
 }
 
 // pollingFlag handles setting and clearing the flag to indicate active polling

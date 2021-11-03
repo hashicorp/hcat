@@ -110,7 +110,7 @@ func (d *CatalogServicesQuery) Fetch(clients dep.Clients) (interface{}, *dep.Res
 
 	entries, qm, err := clients.Consul().Catalog().Services(opts)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, d.String())
+		return nil, nil, errors.Wrap(err, d.ID())
 	}
 
 	var catalogServices []*dep.CatalogSnippet
@@ -136,8 +136,8 @@ func (d *CatalogServicesQuery) CanShare() bool {
 	return true
 }
 
-// String returns the human-friendly version of this dependency.
-func (d *CatalogServicesQuery) String() string {
+// ID returns the human-friendly version of this dependency.
+func (d *CatalogServicesQuery) ID() string {
 	var opts []string
 	if d.dc != "" {
 		opts = append(opts, fmt.Sprintf("@%s", d.dc))
@@ -153,6 +153,11 @@ func (d *CatalogServicesQuery) String() string {
 		return fmt.Sprintf("catalog.services(%s)", strings.Join(opts, "&"))
 	}
 	return "catalog.services"
+}
+
+// Stringer interface reuses ID
+func (d *CatalogServicesQuery) String() string {
+	return d.ID()
 }
 
 // Stop halts the dependency's fetch function.

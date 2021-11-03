@@ -63,7 +63,7 @@ func (d *CatalogNodesQuery) Fetch(clients dep.Clients) (interface{}, *dep.Respon
 
 	n, qm, err := clients.Consul().Catalog().Nodes(opts.ToConsulOpts())
 	if err != nil {
-		return nil, nil, errors.Wrap(err, d.String())
+		return nil, nil, errors.Wrap(err, d.ID())
 	}
 
 	nodes := make([]*dep.Node, 0, len(n))
@@ -96,8 +96,8 @@ func (d *CatalogNodesQuery) CanShare() bool {
 	return true
 }
 
-// String returns the human-friendly version of this dependency.
-func (d *CatalogNodesQuery) String() string {
+// ID returns the human-friendly version of this dependency.
+func (d *CatalogNodesQuery) ID() string {
 	name := ""
 	if d.dc != "" {
 		name = name + "@" + d.dc
@@ -110,6 +110,11 @@ func (d *CatalogNodesQuery) String() string {
 		return "catalog.nodes"
 	}
 	return fmt.Sprintf("catalog.nodes(%s)", name)
+}
+
+// Stringer interface reuses ID
+func (d *CatalogNodesQuery) String() string {
+	return d.ID()
 }
 
 // Stop halts the dependency's fetch function.

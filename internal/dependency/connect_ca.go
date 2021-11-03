@@ -37,7 +37,7 @@ func (d *ConnectCAQuery) Fetch(clients dep.Clients) (
 	certs, md, err := clients.Consul().Agent().ConnectCARoots(
 		opts.ToConsulOpts())
 	if err != nil {
-		return nil, nil, errors.Wrap(err, d.String())
+		return nil, nil, errors.Wrap(err, d.ID())
 	}
 
 	rm := &dep.ResponseMetadata{
@@ -56,8 +56,14 @@ func (d *ConnectCAQuery) CanShare() bool {
 	return false
 }
 
-func (d *ConnectCAQuery) String() string {
+// ID returns the human-friendly version of this dependency.
+func (d *ConnectCAQuery) ID() string {
 	return "connect.caroots"
+}
+
+// Stringer interface reuses ID
+func (d *ConnectCAQuery) String() string {
+	return d.ID()
 }
 
 func (d *ConnectCAQuery) SetOptions(opts QueryOptions) {

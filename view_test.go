@@ -327,8 +327,8 @@ func TestFetchEvents(t *testing.T) {
 		EventHandler: func(e events.Event) {
 			switch v := e.(type) {
 			case events.Trace:
-				if v.ID != fdep.String() {
-					t.Errorf("bad ID, wanted: '%v', got '%v'", fdep.String(), v.ID)
+				if v.ID != fdep.ID() {
+					t.Errorf("bad ID, wanted: '%v', got '%v'", fdep.ID(), v.ID)
 				}
 			case events.NewData:
 				if v.Data != data {
@@ -363,8 +363,8 @@ func TestPollingEvents(t *testing.T) {
 			case events.Trace, events.ServerContacted, events.TrackStart:
 			case events.TrackStop: // only get this sometimes, race to exit test
 			case events.NewData:
-				if v.ID != fdep.String() {
-					t.Errorf("bad ID, wanted: '%v', got '%v'", fdep.String(), v.ID)
+				if v.ID != fdep.ID() {
+					t.Errorf("bad ID, wanted: '%v', got '%v'", fdep.ID(), v.ID)
 				}
 				if v.Data != data {
 					t.Errorf("bad data, wanted: '%v', got '%v'", v.Data, data)

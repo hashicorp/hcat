@@ -58,7 +58,7 @@ func (d *CatalogDatacentersQuery) Fetch(clients dep.Clients) (interface{}, *dep.
 
 	result, err := clients.Consul().Catalog().Datacenters()
 	if err != nil {
-		return nil, nil, errors.Wrapf(err, d.String())
+		return nil, nil, errors.Wrapf(err, d.ID())
 	}
 
 	// If the user opted in for skipping "down" datacenters, figure out which
@@ -87,9 +87,14 @@ func (d *CatalogDatacentersQuery) CanShare() bool {
 	return true
 }
 
-// String returns the human-friendly version of this dependency.
-func (d *CatalogDatacentersQuery) String() string {
+// ID returns the human-friendly version of this dependency.
+func (d *CatalogDatacentersQuery) ID() string {
 	return "catalog.datacenters"
+}
+
+// Stringer interface reuses ID
+func (d *CatalogDatacentersQuery) String() string {
+	return d.ID()
 }
 
 // Stop terminates this dependency's fetch.

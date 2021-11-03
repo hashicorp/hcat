@@ -46,7 +46,7 @@ func (d *VaultTokenQuery) Fetch(clients dep.Clients) (interface{}, *dep.Response
 	if vaultSecretRenewable(d.secret) {
 		err := renewSecret(clients, d)
 		if err != nil {
-			return nil, nil, errors.Wrap(err, d.String())
+			return nil, nil, errors.Wrap(err, d.ID())
 		}
 	}
 
@@ -71,9 +71,14 @@ func (d *VaultTokenQuery) Stop() {
 	close(d.stopCh)
 }
 
-// String returns the human-friendly version of this dependency.
-func (d *VaultTokenQuery) String() string {
+// ID returns the human-friendly version of this dependency.
+func (d *VaultTokenQuery) ID() string {
 	return "vault.token"
+}
+
+// Stringer interface reuses ID
+func (d *VaultTokenQuery) String() string {
+	return d.ID()
 }
 
 func (d *VaultTokenQuery) SetOptions(opts QueryOptions) {}

@@ -42,7 +42,7 @@ func (d *ConnectLeafQuery) Fetch(clients dep.Clients) (
 	cert, md, err := clients.Consul().Agent().ConnectCALeaf(d.service,
 		opts.ToConsulOpts())
 	if err != nil {
-		return nil, nil, errors.Wrap(err, d.String())
+		return nil, nil, errors.Wrap(err, d.ID())
 	}
 
 	rm := &dep.ResponseMetadata{
@@ -61,11 +61,17 @@ func (d *ConnectLeafQuery) CanShare() bool {
 	return false
 }
 
-func (d *ConnectLeafQuery) String() string {
+// ID returns the human-friendly version of this dependency.
+func (d *ConnectLeafQuery) ID() string {
 	if d.service != "" {
 		return fmt.Sprintf("connect.caleaf(%s)", d.service)
 	}
 	return "connect.caleaf"
+}
+
+// Stringer interface reuses ID
+func (d *ConnectLeafQuery) String() string {
+	return d.ID()
 }
 
 func (d *ConnectLeafQuery) SetOptions(opts QueryOptions) {

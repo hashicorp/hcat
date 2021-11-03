@@ -1,6 +1,7 @@
 package dep
 
 import (
+	"fmt"
 	"time"
 
 	consulapi "github.com/hashicorp/consul/api"
@@ -10,8 +11,9 @@ import (
 // Dependency is an interface for an external dependency to be monitored.
 type Dependency interface {
 	Fetch(Clients) (interface{}, *ResponseMetadata, error)
-	String() string
+	ID() string
 	Stop()
+	fmt.Stringer
 }
 
 // Clients interface for the API clients used for external dependency calls.

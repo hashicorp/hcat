@@ -69,14 +69,14 @@ func (d *VaultWriteQuery) Fetch(clients dep.Clients) (interface{}, *dep.Response
 	if !firstRun && vaultSecretRenewable(d.secret) {
 		err := renewSecret(clients, d)
 		if err != nil {
-			return nil, nil, errors.Wrap(err, d.String())
+			return nil, nil, errors.Wrap(err, d.ID())
 		}
 	}
 
 	opts := d.opts.Merge(&QueryOptions{})
 	vaultSecret, err := d.writeSecret(clients, opts)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, d.String())
+		return nil, nil, errors.Wrap(err, d.ID())
 	}
 
 	// vaultSecret == nil when writing to KVv1 engines
@@ -115,9 +115,14 @@ func (d *VaultWriteQuery) Stop() {
 	close(d.stopCh)
 }
 
-// String returns the human-friendly version of this dependency.
-func (d *VaultWriteQuery) String() string {
+// ID returns the human-friendly version of this dependency.
+func (d *VaultWriteQuery) ID() string {
 	return fmt.Sprintf("vault.write(%s -> %s)", d.path, d.dataHash)
+}
+
+// Stringer interface reuses ID
+func (d *VaultWriteQuery) String() string {
+	return d.ID()
 }
 
 // sha1Map returns the sha1 hash of the data in the map. The reason this data is
@@ -148,7 +153,7 @@ func (d *VaultWriteQuery) writeSecret(clients dep.Clients, opts *QueryOptions) (
 
 	vaultSecret, err := clients.Vault().Logical().Write(d.path, data)
 	if err != nil {
-		return nil, errors.Wrap(err, d.String())
+		return nil, errors.Wrap(err, d.ID())
 	}
 	// vaultSecret is always nil when KVv1 engine (isv2==false)
 	if isv2 && vaultSecret == nil {

@@ -33,7 +33,7 @@ func TestRecall(t *testing.T) {
 		},
 	}
 
-	id := d.String()
+	id := d.ID()
 	st.Save(id, nodes)
 
 	data, ok := st.Recall(id)
@@ -63,9 +63,9 @@ func TestForceSet(t *testing.T) {
 		},
 	}
 
-	st.forceSet(d.String(), nodes)
+	st.forceSet(d.ID(), nodes)
 
-	data, ok := st.Recall(d.String())
+	data, ok := st.Recall(d.ID())
 	if !ok {
 		t.Fatal("expected data from Store")
 	}
@@ -92,7 +92,7 @@ func TestForget(t *testing.T) {
 		},
 	}
 
-	id := d.String()
+	id := d.ID()
 	st.Save(id, nodes)
 	st.Delete(id)
 
@@ -117,7 +117,7 @@ func TestReset(t *testing.T) {
 		},
 	}
 
-	id := d.String()
+	id := d.ID()
 	st.Save(id, nodes)
 	st.Reset()
 

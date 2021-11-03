@@ -34,12 +34,18 @@ func (d *KVExistsQuery) SetOptions(opts QueryOptions) {
 	d.opts = opts
 }
 
-func (d *KVExistsQuery) String() string {
+// ID returns the human-friendly version of this dependency.
+func (d *KVExistsQuery) ID() string {
 	key := d.key
 	if d.dc != "" {
 		key = key + "@" + d.dc
 	}
 	return fmt.Sprintf("kv.exists(%s)", key)
+}
+
+// Stringer interface reuses ID
+func (d *KVExistsQuery) String() string {
+	return d.ID()
 }
 
 // NewKVExistsQueryV1 processes options in the format of "key key=value"
@@ -106,7 +112,7 @@ func (d *KVExistsQuery) Fetch(clients dep.Clients) (interface{}, *dep.ResponseMe
 
 	pair, qm, err := clients.Consul().KV().Get(d.key, opts.ToConsulOpts())
 	if err != nil {
-		return nil, nil, errors.Wrap(err, d.String())
+		return nil, nil, errors.Wrap(err, d.ID())
 	}
 
 	rm := &dep.ResponseMetadata{

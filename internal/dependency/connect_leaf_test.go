@@ -96,7 +96,7 @@ func TestConnectLeafQuery_String(t *testing.T) {
 	for i, tc := range cases {
 		t.Run(fmt.Sprintf("%d_%s", i, tc.name), func(t *testing.T) {
 			d := NewConnectLeafQuery(tc.service)
-			assert.Equal(t, tc.exp, d.String())
+			assert.Equal(t, tc.exp, d.ID())
 		})
 	}
 }

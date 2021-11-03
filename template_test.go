@@ -189,7 +189,7 @@ func TestTemplate_Execute(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				st.Save(d.String(), []string{"dc1", "dc2"})
+				st.Save(d.ID(), []string{"dc1", "dc2"})
 				return st
 			}(),
 			"[dc1 dc2]",
@@ -206,7 +206,7 @@ func TestTemplate_Execute(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				st.Save(d.String(), []string{"dc1", "dc2"})
+				st.Save(d.ID(), []string{"dc1", "dc2"})
 				return st
 			}(),
 			"[dc1 dc2]",
@@ -223,7 +223,7 @@ func TestTemplate_Execute(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				st.Save(d.String(), "5")
+				st.Save(d.ID(), "5")
 				return st
 			}(),
 			"5",
@@ -240,7 +240,7 @@ func TestTemplate_Execute(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				st.Save(d.String(), true)
+				st.Save(d.ID(), true)
 				return st
 			}(),
 			"true false",
@@ -257,7 +257,7 @@ func TestTemplate_Execute(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				st.Save(d.String(), "150")
+				st.Save(d.ID(), "150")
 				return st
 			}(),
 			"150 200",
@@ -274,7 +274,7 @@ func TestTemplate_Execute(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				st.Save(d.String(), []*dep.KeyPair{
+				st.Save(d.ID(), []*dep.KeyPair{
 					{Key: "", Value: ""},
 					{Key: "foo", Value: "bar"},
 					{Key: "foo/zip", Value: "zap"},
@@ -295,7 +295,7 @@ func TestTemplate_Execute(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				st.Save(d.String(), &dep.CatalogNode{
+				st.Save(d.ID(), &dep.CatalogNode{
 					Node: &dep.Node{Node: "node1"},
 					Services: []*dep.CatalogNodeService{
 						{
@@ -319,7 +319,7 @@ func TestTemplate_Execute(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				st.Save(d.String(), []*dep.Node{
+				st.Save(d.ID(), []*dep.Node{
 					{Node: "node1"},
 					{Node: "node2"},
 				})
@@ -339,7 +339,7 @@ func TestTemplate_Execute(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				st.Save(d.String(), &dep.Secret{
+				st.Save(d.ID(), &dep.Secret{
 					LeaseID:       "abcd1234",
 					LeaseDuration: 120,
 					Renewable:     true,
@@ -363,7 +363,7 @@ func TestTemplate_Execute(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				st.Save(d.String(), &dep.Secret{
+				st.Save(d.ID(), &dep.Secret{
 					LeaseID:       "abcd1234",
 					LeaseDuration: 120,
 					Renewable:     true,
@@ -385,7 +385,7 @@ func TestTemplate_Execute(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				st.Save(d.String(), &dep.Secret{
+				st.Save(d.ID(), &dep.Secret{
 					LeaseID:       "abcd1234",
 					LeaseDuration: 120,
 					Renewable:     true,
@@ -407,14 +407,14 @@ func TestTemplate_Execute(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				st.Save(d.String(), &dep.Secret{
+				st.Save(d.ID(), &dep.Secret{
 					Data: map[string]interface{}{"zip": "zap"},
 				})
 				d1, err := idep.NewVaultReadQuery("secret/foo?version=1")
 				if err != nil {
 					t.Fatal(err)
 				}
-				st.Save(d1.String(), &dep.Secret{
+				st.Save(d1.ID(), &dep.Secret{
 					Data: map[string]interface{}{"zip": "zed"},
 				})
 				return st
@@ -457,7 +457,7 @@ func TestTemplate_Execute(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				st.Save(d.String(), &dep.Secret{
+				st.Save(d.ID(), &dep.Secret{
 					LeaseID:       "abcd1234",
 					LeaseDuration: 120,
 					Renewable:     true,
@@ -512,7 +512,7 @@ func TestTemplate_Execute(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				st.Save(d.String(), []string{"bar", "foo"})
+				st.Save(d.ID(), []string{"bar", "foo"})
 				return st
 			}(),
 			"[bar foo]",
@@ -562,7 +562,7 @@ func TestTemplate_Execute(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				st.Save(d.String(), []*dep.HealthService{
+				st.Save(d.ID(), []*dep.HealthService{
 					{
 						Node:    "node1",
 						Address: "1.2.3.4",
@@ -588,7 +588,7 @@ func TestTemplate_Execute(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				st.Save(d.String(), []*dep.HealthService{
+				st.Save(d.ID(), []*dep.HealthService{
 					{
 						Node:    "node1",
 						Address: "1.2.3.4",
@@ -614,7 +614,7 @@ func TestTemplate_Execute(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				st.Save(d.String(), []*dep.CatalogSnippet{
+				st.Save(d.ID(), []*dep.CatalogSnippet{
 					{
 						Name: "service1",
 					},
@@ -638,7 +638,7 @@ func TestTemplate_Execute(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				st.Save(d.String(), []*dep.KeyPair{
+				st.Save(d.ID(), []*dep.KeyPair{
 					{Key: "", Value: ""},
 					{Key: "admin/port", Value: "1134"},
 					{Key: "maxconns", Value: "5"},
@@ -658,7 +658,7 @@ func TestTemplate_Execute(t *testing.T) {
 			func() *Store {
 				d := idep.NewConnectLeafQuery("foo")
 				st := NewStore()
-				st.Save(d.String(), &api.LeafCert{
+				st.Save(d.ID(), &api.LeafCert{
 					Service:       "foo",
 					CertPEM:       "PEM",
 					PrivateKeyPEM: "KEY",
@@ -676,7 +676,7 @@ func TestTemplate_Execute(t *testing.T) {
 			func() *Store {
 				d := idep.NewConnectCAQuery()
 				st := NewStore()
-				st.Save(d.String(), []*api.CARoot{
+				st.Save(d.ID(), []*api.CARoot{
 					{
 						Name:        "Consul CA Root Cert",
 						RootCertPEM: "PEM",
@@ -699,7 +699,7 @@ func TestTemplate_Execute(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				st.Save(d.String(), []*dep.HealthService{
+				st.Save(d.ID(), []*dep.HealthService{
 					{
 						Node:    "node1",
 						Address: "1.2.3.4",
@@ -751,7 +751,7 @@ func TestCachedTemplate(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			st.Save(d.String(), "value")
+			st.Save(d.ID(), "value")
 			return st
 		}()
 		tpl := NewTemplate(ti)
@@ -784,6 +784,6 @@ func (f fakeWatcher) Mark(Notifier)          {}
 func (f fakeWatcher) Sweep(Notifier)         {}
 func (f fakeWatcher) Recaller(Notifier) Recaller {
 	return func(d dep.Dependency) (value interface{}, found bool) {
-		return f.Store.Recall(d.String())
+		return f.Store.Recall(d.ID())
 	}
 }

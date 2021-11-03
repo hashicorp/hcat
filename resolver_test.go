@@ -42,7 +42,7 @@ func TestResolverRun(t *testing.T) {
 		// otherwise it will trigger first run
 		w.Track(tt, d)
 		// set receivedData to true to make it think it has it already
-		v := w.tracker.view(d.String())
+		v := w.tracker.view(d.ID())
 		v.receivedData = true
 
 		r, err := rv.Run(tt, w)

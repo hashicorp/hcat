@@ -24,7 +24,7 @@ func TestWatcherAdd(t *testing.T) {
 			t.Fatal("Register returned nil")
 		}
 
-		if !w.Watching(d.String()) {
+		if !w.Watching(d.ID()) {
 			t.Errorf("expected add to append to map")
 		}
 	})
@@ -114,7 +114,7 @@ func TestWatcherWatching(t *testing.T) {
 		defer w.Stop()
 
 		d := &idep.FakeDep{}
-		if w.Watching(d.String()) == true {
+		if w.Watching(d.ID()) == true {
 			t.Errorf("expected to not be Watching")
 		}
 	})
@@ -127,7 +127,7 @@ func TestWatcherWatching(t *testing.T) {
 		n := fakeNotifier("foo")
 		w.Track(n, d)
 
-		if w.Watching(d.String()) == false {
+		if w.Watching(d.ID()) == false {
 			t.Errorf("expected to be Watching")
 		}
 	})
@@ -140,7 +140,7 @@ func TestWatcherWatching(t *testing.T) {
 		n := fakeNotifier("foo")
 		w.Track(n, d)
 
-		if w.Watching(d.String()) == false {
+		if w.Watching(d.ID()) == false {
 			t.Errorf("expected to be Watching")
 		}
 		if w.Size() != 1 {
@@ -155,16 +155,16 @@ func TestWatcherWatching(t *testing.T) {
 		n0 := fakeNotifier("foo")
 		n1 := fakeNotifier("bar")
 		w.Track(n0, d)
-		v0 := w.tracker.view(d.String())
+		v0 := w.tracker.view(d.ID())
 		w.Track(n1, d)
-		v1 := w.tracker.view(d.String())
+		v1 := w.tracker.view(d.ID())
 
 		// be sure view created for dependency is reused
 		if v0 != v1 {
 			t.Errorf("previous view overwritten, should reuse first one")
 		}
 
-		if w.Watching(d.String()) == false {
+		if w.Watching(d.ID()) == false {
 			t.Errorf("expected to be Watching")
 		}
 		if len(w.tracker.tracked) != 2 {
@@ -179,7 +179,7 @@ func TestWatcherWatching(t *testing.T) {
 		}
 
 		if notifiers := w.tracker.notifiersFor(v0); len(notifiers) != 2 {
-			t.Errorf("unexpected number of notifiers for view: %s %v", d.String(), notifiers)
+			t.Errorf("unexpected number of notifiers for view: %s %v", d.ID(), notifiers)
 		}
 	})
 	t.Run("same-notifier-multiple-deps", func(t *testing.T) {
@@ -192,10 +192,10 @@ func TestWatcherWatching(t *testing.T) {
 		w.Track(n, d0)
 		w.Track(n, d1)
 
-		if w.Watching(d0.String()) == false {
+		if w.Watching(d0.ID()) == false {
 			t.Errorf("expected to be Watching")
 		}
-		if w.Watching(d1.String()) == false {
+		if w.Watching(d1.ID()) == false {
 			t.Errorf("expected to be Watching")
 		}
 		if len(w.tracker.tracked) != 2 {
@@ -220,11 +220,11 @@ func TestWatcherWatching(t *testing.T) {
 			t.Errorf("unexpected number of views, expected 2: %d", w.tracker.viewCount())
 		}
 
-		if w.Watching(d0.String()) == false {
-			t.Errorf("expected to be Watching: %s", d0.String())
+		if w.Watching(d0.ID()) == false {
+			t.Errorf("expected to be Watching: %s", d0.ID())
 		}
-		if w.Watching(d1.String()) == false {
-			t.Errorf("expected to be Watching: %s", d1.String())
+		if w.Watching(d1.ID()) == false {
+			t.Errorf("expected to be Watching: %s", d1.ID())
 		}
 
 		// 2 tracked pairs for foo (taco and burrito), 1 tracked pair for bar (burrito)
@@ -239,20 +239,20 @@ func TestWatcherWatching(t *testing.T) {
 			t.Fatalf("dep has not received data, should not be completed: %s", nBar.ID())
 		}
 
-		v0 := w.tracker.view(d0.String())
-		if v0 == nil || w.Watching(d0.String()) == false {
-			t.Errorf("expected to be Watching after Complete: %s", d0.String())
+		v0 := w.tracker.view(d0.ID())
+		if v0 == nil || w.Watching(d0.ID()) == false {
+			t.Errorf("expected to be Watching after Complete: %s", d0.ID())
 		}
 		if notifiers := w.tracker.notifiersFor(v0); len(notifiers) != 2 {
-			t.Errorf("unexpected number of notifiers for view: %s %v", d0.String(), notifiers)
+			t.Errorf("unexpected number of notifiers for view: %s %v", d0.ID(), notifiers)
 		}
 
-		v1 := w.tracker.view(d1.String())
-		if v1 == nil || w.Watching(d1.String()) == false {
-			t.Errorf("expected to be Watching after Complete: %s", d1.String())
+		v1 := w.tracker.view(d1.ID())
+		if v1 == nil || w.Watching(d1.ID()) == false {
+			t.Errorf("expected to be Watching after Complete: %s", d1.ID())
 		}
 		if notifiers := w.tracker.notifiersFor(v1); len(notifiers) != 1 {
-			t.Errorf("unexpected number of notifiers for view: %s %v", d1.String(), notifiers)
+			t.Errorf("unexpected number of notifiers for view: %s %v", d1.ID(), notifiers)
 		}
 	})
 
@@ -289,7 +289,7 @@ func TestWatcherWatching(t *testing.T) {
 		// Polling now returns data, stores it on the view and marks the
 		// view as having received the data (view.receivedData = true)
 		fakePollReturn := func(v *view, d dep.Dependency) {
-			v.store(d.String())
+			v.store(d.ID())
 		}
 		fakePollReturn(v0, d0)
 		fakePollReturn(v1, d1)
@@ -321,7 +321,7 @@ func TestWatcherVaultToken(t *testing.T) {
 		if err != nil {
 			t.Fatal("Didn't expect and error:", err)
 		}
-		test_id := (&idep.VaultTokenQuery{}).String()
+		test_id := (&idep.VaultTokenQuery{}).ID()
 
 		if !w.Watching(test_id) {
 			t.Fatal("token dep not added to watcher")
@@ -334,7 +334,7 @@ func TestWatcherVaultToken(t *testing.T) {
 		if err != nil {
 			t.Fatal("Didn't expect and error:", err)
 		}
-		test_id := (&idep.VaultTokenQuery{}).String()
+		test_id := (&idep.VaultTokenQuery{}).ID()
 		if !w.Watching(test_id) {
 			t.Fatal("token dep not added to watcher")
 		}
@@ -462,7 +462,7 @@ func TestWatcherWait(t *testing.T) {
 		w.dataCh <- w.track(n, foodep)
 		w.Wait(context.Background())
 		store := w.cache.(*Store)
-		if _, ok := store.data[foodep.String()]; !ok {
+		if _, ok := store.data[foodep.ID()]; !ok {
 			t.Fatal("failed update")
 		}
 	})
@@ -482,7 +482,7 @@ func TestWatcherWait(t *testing.T) {
 		if len(store.data) != 5 {
 			t.Fatal("failed update")
 		}
-		if _, ok := store.data[deps[3].String()]; !ok {
+		if _, ok := store.data[deps[3].ID()]; !ok {
 			t.Fatal("failed update")
 		}
 	})
@@ -501,7 +501,7 @@ func TestWatcherWait(t *testing.T) {
 			t.Fatal("failed to track updated dependency")
 		}
 
-		if _, found := w.cache.Recall(foodep.String()); !found {
+		if _, found := w.cache.Recall(foodep.ID()); !found {
 			fmt.Printf("%#v\n", w.cache)
 			t.Fatal("failed to update cache")
 		}
@@ -550,7 +550,7 @@ func TestWatcherWait(t *testing.T) {
 			t.Fatal("wait error:", err)
 		}
 		store := w.cache.(*Store)
-		if _, ok := store.data[foodep.String()]; !ok {
+		if _, ok := store.data[foodep.ID()]; !ok {
 			t.Fatal("failed update")
 		}
 	})
@@ -747,21 +747,21 @@ func TestWatcherMarkSweep(t *testing.T) {
 		w.Register(n)
 		w.track(n, fdep).store(fdep.Name)
 		w.track(n, bdep).store(bdep.Name)
-		w.cache.Save(fdep.String(), fdep.Name)
-		w.cache.Save(bdep.String(), bdep.Name)
+		w.cache.Save(fdep.ID(), fdep.Name)
+		w.cache.Save(bdep.ID(), bdep.Name)
 
 		// checks that dependencies are watched and have active views
 		checkDeps := func(deps ...*idep.FakeDep) {
 			t.Helper() // fixes line numbers
 			for _, d := range deps {
-				if !w.Watching(d.String()) {
+				if !w.Watching(d.ID()) {
 					t.Errorf("expected dependency to be present (%s)", d)
 				}
-				if v := w.view(d.String()); v == nil {
+				if v := w.view(d.ID()); v == nil {
 					t.Errorf("expected dependency '%v' to be present", d)
 				}
-				if _, found := w.cache.Recall(d.String()); !found {
-					t.Errorf("expected to find cache for '%v'", d.String())
+				if _, found := w.cache.Recall(d.ID()); !found {
+					t.Errorf("expected to find cache for '%v'", d.ID())
 				}
 			}
 		}
@@ -783,14 +783,14 @@ func TestWatcherMarkSweep(t *testing.T) {
 		// fdep was registered, should still be present
 		checkDeps(fdep)
 		// bdep was un-registered, should be gone
-		if w.Watching(bdep.String()) {
+		if w.Watching(bdep.ID()) {
 			t.Error("expected dependency bar to no longer be watched")
 		}
-		if v := w.view(bdep.String()); v != nil {
+		if v := w.view(bdep.ID()); v != nil {
 			t.Error("expected dependency bar to be removed")
 		}
-		if _, found := w.cache.Recall(bdep.String()); found {
-			t.Errorf("expected *no* cache for '%v'", bdep.String())
+		if _, found := w.cache.Recall(bdep.ID()); found {
+			t.Errorf("expected *no* cache for '%v'", bdep.ID())
 		}
 	})
 }

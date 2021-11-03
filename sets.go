@@ -77,9 +77,9 @@ func NewDepSet() *DepSet {
 func (s *DepSet) Add(d dep.Dependency) bool {
 	s.Lock()
 	defer s.Unlock()
-	if _, ok := s.stringSet.set[d.String()]; !ok {
+	if _, ok := s.stringSet.set[d.ID()]; !ok {
 		s.list = append(s.list, d)
-		s.stringSet.add(d.String())
+		s.stringSet.add(d.ID())
 		return true
 	}
 	return false

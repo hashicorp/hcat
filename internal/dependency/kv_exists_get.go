@@ -39,8 +39,8 @@ func (d *KVExistsGetQuery) CanShare() bool {
 	return true
 }
 
-// String returns the human-friendly version of this dependency.
-func (d *KVExistsGetQuery) String() string {
+// ID returns the human-friendly version of this dependency.
+func (d *KVExistsGetQuery) ID() string {
 	key := d.key
 	var opts []string
 	if d.dc != "" {
@@ -53,6 +53,11 @@ func (d *KVExistsGetQuery) String() string {
 		key = fmt.Sprintf("%s?%s", key, strings.Join(opts, "&"))
 	}
 	return fmt.Sprintf("kv.exists.get(%s)", key)
+}
+
+// Stringer interface reuses ID
+func (d *KVExistsGetQuery) String() string {
+	return d.ID()
 }
 
 // Stop halts the dependency's fetch function.
@@ -79,7 +84,7 @@ func (d *KVExistsGetQuery) Fetch(clients dep.Clients) (interface{}, *dep.Respons
 
 	pair, qm, err := clients.Consul().KV().Get(d.key, opts.ToConsulOpts())
 	if err != nil {
-		return nil, nil, errors.Wrap(err, d.String())
+		return nil, nil, errors.Wrap(err, d.ID())
 	}
 
 	rm := &dep.ResponseMetadata{

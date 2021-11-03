@@ -210,7 +210,7 @@ func (d *HealthServiceQuery) Fetch(clients dep.Clients) (interface{}, *dep.Respo
 	}
 	entries, qm, err := nodes(d.name, d.deprecatedTag, d.passingOnly, opts.ToConsulOpts())
 	if err != nil {
-		return nil, nil, errors.Wrap(err, d.String())
+		return nil, nil, errors.Wrap(err, d.ID())
 	}
 
 	list := make([]*dep.HealthService, 0, len(entries))
@@ -275,8 +275,8 @@ func (d *HealthServiceQuery) Stop() {
 	close(d.stopCh)
 }
 
-// String returns the human-friendly version of this dependency.
-func (d *HealthServiceQuery) String() string {
+// ID returns the human-friendly version of this dependency.
+func (d *HealthServiceQuery) ID() string {
 	name := d.name
 	if d.deprecatedTag != "" {
 		name = d.deprecatedTag + "." + name
@@ -302,6 +302,11 @@ func (d *HealthServiceQuery) String() string {
 		name = fmt.Sprintf("%s?%s", name, strings.Join(opts, "&"))
 	}
 	return fmt.Sprintf("health.service(%s)", name)
+}
+
+// Stringer interface reuses ID
+func (d *HealthServiceQuery) String() string {
+	return d.ID()
 }
 
 func (d *HealthServiceQuery) SetOptions(opts QueryOptions) {

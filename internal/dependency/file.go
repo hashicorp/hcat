@@ -50,12 +50,12 @@ func (d *FileQuery) Fetch(clients dep.Clients) (interface{}, *dep.ResponseMetada
 		return "", nil, ErrStopped
 	case r := <-d.watch(d.stat):
 		if r.err != nil {
-			return "", nil, errors.Wrap(r.err, d.String())
+			return "", nil, errors.Wrap(r.err, d.ID())
 		}
 
 		data, err := ioutil.ReadFile(d.path)
 		if err != nil {
-			return "", nil, errors.Wrap(err, d.String())
+			return "", nil, errors.Wrap(err, d.ID())
 		}
 
 		d.stat = r.stat
@@ -73,9 +73,14 @@ func (d *FileQuery) Stop() {
 	close(d.stopCh)
 }
 
-// String returns the human-friendly version of this dependency.
-func (d *FileQuery) String() string {
+// ID returns the human-friendly version of this dependency.
+func (d *FileQuery) ID() string {
 	return fmt.Sprintf("file(%s)", d.path)
+}
+
+// Stringer interface reuses ID
+func (d *FileQuery) String() string {
+	return d.ID()
 }
 
 func (d *FileQuery) SetOptions(opts QueryOptions) {}

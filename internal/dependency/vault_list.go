@@ -62,7 +62,7 @@ func (d *VaultListQuery) Fetch(clients dep.Clients) (interface{}, *dep.ResponseM
 	// not renewable, or the renewal failed, so attempt a fresh list.
 	secret, err := clients.Vault().Logical().List(d.path)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, d.String())
+		return nil, nil, errors.Wrap(err, d.ID())
 	}
 
 	var result []string
@@ -105,9 +105,14 @@ func (d *VaultListQuery) Stop() {
 	close(d.stopCh)
 }
 
-// String returns the human-friendly version of this dependency.
-func (d *VaultListQuery) String() string {
+// ID returns the human-friendly version of this dependency.
+func (d *VaultListQuery) ID() string {
 	return fmt.Sprintf("vault.list(%s)", d.path)
+}
+
+// Stringer interface reuses ID
+func (d *VaultListQuery) String() string {
+	return d.ID()
 }
 
 func (d *VaultListQuery) SetOptions(opts QueryOptions) {

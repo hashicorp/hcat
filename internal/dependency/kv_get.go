@@ -65,7 +65,7 @@ func (d *KVGetQuery) Fetch(clients dep.Clients) (interface{}, *dep.ResponseMetad
 
 	pair, qm, err := clients.Consul().KV().Get(d.key, opts.ToConsulOpts())
 	if err != nil {
-		return nil, nil, errors.Wrap(err, d.String())
+		return nil, nil, errors.Wrap(err, d.ID())
 	}
 
 	rm := &dep.ResponseMetadata{
@@ -86,14 +86,19 @@ func (d *KVGetQuery) CanShare() bool {
 	return true
 }
 
-// String returns the human-friendly version of this dependency.
-func (d *KVGetQuery) String() string {
+// ID returns the human-friendly version of this dependency.
+func (d *KVGetQuery) ID() string {
 	key := d.key
 	if d.dc != "" {
 		key = key + "@" + d.dc
 	}
 
 	return fmt.Sprintf("kv.get(%s)", key)
+}
+
+// Stringer interface reuses ID
+func (d *KVGetQuery) String() string {
+	return d.ID()
 }
 
 // Stop halts the dependency's fetch function.

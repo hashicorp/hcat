@@ -72,13 +72,13 @@ func (d *VaultReadQuery) Fetch(clients dep.Clients) (interface{}, *dep.ResponseM
 	if !firstRun && vaultSecretRenewable(d.secret) {
 		err := renewSecret(clients, d)
 		if err != nil {
-			return nil, nil, errors.Wrap(err, d.String())
+			return nil, nil, errors.Wrap(err, d.ID())
 		}
 	}
 
 	err := d.fetchSecret(clients)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, d.String())
+		return nil, nil, errors.Wrap(err, d.ID())
 	}
 
 	if !vaultSecretRenewable(d.secret) {
@@ -118,12 +118,17 @@ func (d *VaultReadQuery) Stop() {
 	close(d.stopCh)
 }
 
-// String returns the human-friendly version of this dependency.
-func (d *VaultReadQuery) String() string {
+// ID returns the human-friendly version of this dependency.
+func (d *VaultReadQuery) ID() string {
 	if v := d.queryValues["version"]; len(v) > 0 {
 		return fmt.Sprintf("vault.read(%s.v%s)", d.rawPath, v[0])
 	}
 	return fmt.Sprintf("vault.read(%s)", d.rawPath)
+}
+
+// Stringer interface reuses ID
+func (d *VaultReadQuery) String() string {
+	return d.ID()
 }
 
 func (d *VaultReadQuery) readSecret(clients dep.Clients, opts *QueryOptions) (*api.Secret, error) {
@@ -147,7 +152,7 @@ func (d *VaultReadQuery) readSecret(clients dep.Clients, opts *QueryOptions) (*a
 		d.queryValues)
 
 	if err != nil {
-		return nil, errors.Wrap(err, d.String())
+		return nil, errors.Wrap(err, d.ID())
 	}
 	if vaultSecret == nil || deletedKVv2(vaultSecret) {
 		return nil, fmt.Errorf("no secret exists at %s", d.secretPath)

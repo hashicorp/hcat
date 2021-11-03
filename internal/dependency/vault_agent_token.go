@@ -47,12 +47,12 @@ func (d *VaultAgentTokenQuery) Fetch(clients dep.Clients) (interface{}, *dep.Res
 		return "", nil, ErrStopped
 	case r := <-d.watch(d.stat):
 		if r.err != nil {
-			return "", nil, errors.Wrap(r.err, d.String())
+			return "", nil, errors.Wrap(r.err, d.ID())
 		}
 
 		token, err := ioutil.ReadFile(d.path)
 		if err != nil {
-			return "", nil, errors.Wrap(err, d.String())
+			return "", nil, errors.Wrap(err, d.ID())
 		}
 
 		d.stat = r.stat
@@ -72,9 +72,14 @@ func (d *VaultAgentTokenQuery) Stop() {
 	close(d.stopCh)
 }
 
-// String returns the human-friendly version of this dependency.
-func (d *VaultAgentTokenQuery) String() string {
+// ID returns the human-friendly version of this dependency.
+func (d *VaultAgentTokenQuery) ID() string {
 	return "vault-agent.token"
+}
+
+// Stringer interface reuses ID
+func (d *VaultAgentTokenQuery) String() string {
+	return d.ID()
 }
 
 func (d *VaultAgentTokenQuery) SetOptions(opts QueryOptions) {}

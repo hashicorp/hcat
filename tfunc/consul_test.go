@@ -204,6 +204,6 @@ func (fakeWatcher) Buffer(hcat.Notifier) bool     { return false }
 func (f fakeWatcher) Complete(hcat.Notifier) bool { return true }
 func (f fakeWatcher) Recaller(hcat.Notifier) hcat.Recaller {
 	return func(d dep.Dependency) (value interface{}, found bool) {
-		return f.Store.Recall(d.String())
+		return f.Store.Recall(d.ID())
 	}
 }
