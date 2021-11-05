@@ -164,6 +164,10 @@ func TestCatalogServicesQuery_Fetch(t *testing.T) {
 					Name: "service-meta",
 					Tags: dep.ServiceTags([]string{"tag1"}),
 				},
+				{
+					Name: "service-taggedAddresses",
+					Tags: dep.ServiceTags([]string{}),
+				},
 			},
 		},
 	}
