@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/hcat"
+	"github.com/hashicorp/hcat/dep"
 )
 
 func TestTransformExecute(t *testing.T) {
@@ -79,6 +80,42 @@ func TestTransformExecute(t *testing.T) {
 			},
 			fakeWatcher{hcat.NewStore()},
 			"[\"a\",\"b\",\"c\"]",
+			false,
+		},
+		{
+			"helper_toJSONPretty",
+			hcat.TemplateInput{
+				Contents: `{{ "a,b,c" | split "," | toJSONPretty }}`,
+			},
+			fakeWatcher{hcat.NewStore()},
+			"[\n  \"a\",\n  \"b\",\n  \"c\"\n]",
+			false,
+		},
+		{
+			"helper_toUnescapedJSON",
+			hcat.TemplateInput{
+				Contents: `{{ "a?b&c,x?y&z" | split "," | toUnescapedJSON }}`,
+			},
+			fakeWatcher{hcat.NewStore()},
+			"[\"a?b&c\",\"x?y&z\"]",
+			false,
+		},
+		{
+			"helper_toUnescapedJSONPretty",
+			hcat.TemplateInput{
+				Contents: `{{ tree "list" | explode | toUnescapedJSONPretty }}`,
+			},
+			func() hcat.Watcherer {
+				st := hcat.NewStore()
+				id := testKVListQueryID("list")
+				st.Save(id, []*dep.KeyPair{
+					{Key: "a", Value: "b&c"},
+					{Key: "x", Value: "y&z"},
+					{Key: "k", Value: "<>&&"},
+				})
+				return fakeWatcher{st}
+			}(),
+			"{\n  \"a\": \"b&c\",\n  \"k\": \"<>&&\",\n  \"x\": \"y&z\"\n}",
 			false,
 		},
 		{

@@ -85,6 +85,31 @@ func toJSONPretty(i interface{}) (string, error) {
 	return string(bytes.TrimSpace(result)), err
 }
 
+// toUnescapedJSON converts the given structure into a deeply nested JSON
+// string without HTML escaping.
+func toUnescapedJSON(i interface{}) (string, error) {
+	buf := &bytes.Buffer{}
+	encoder := json.NewEncoder(buf)
+	encoder.SetEscapeHTML(false)
+	if err := encoder.Encode(i); err != nil {
+		return "", errors.Wrap(err, "toUnescapedJSON")
+	}
+	return strings.TrimRight(buf.String(), "\r\n"), nil
+}
+
+// toUnescapedJSONPretty converts the given structure into a deeply nested
+// pretty JSON string without HTML escaping.
+func toUnescapedJSONPretty(i interface{}) (string, error) {
+	buf := &bytes.Buffer{}
+	encoder := json.NewEncoder(buf)
+	encoder.SetEscapeHTML(false)
+	encoder.SetIndent("", "  ")
+	if err := encoder.Encode(i); err != nil {
+		return "", errors.Wrap(err, "toUnescapedJSONPretty")
+	}
+	return strings.TrimRight(buf.String(), "\r\n"), nil
+}
+
 // toYAML converts the given structure into a deeply nested YAML string.
 func toYAML(m map[string]interface{}) (string, error) {
 	result, err := yaml.Marshal(m)
