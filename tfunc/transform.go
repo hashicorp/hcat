@@ -77,8 +77,8 @@ func toUpper(s string) (string, error) {
 
 // toJSONPretty converts the given structure into a deeply nested pretty JSON
 // string.
-func toJSONPretty(m map[string]interface{}) (string, error) {
-	result, err := json.MarshalIndent(m, "", "  ")
+func toJSONPretty(i interface{}) (string, error) {
+	result, err := json.MarshalIndent(i, "", "  ")
 	if err != nil {
 		return "", errors.Wrap(err, "toJSONPretty")
 	}
