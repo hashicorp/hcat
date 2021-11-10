@@ -56,13 +56,9 @@ func toLower(s string) (string, error) {
 	return strings.ToLower(s), nil
 }
 
-// toJSON converts the given structure into a deeply nested JSON string.
-func toJSON(i interface{}) (string, error) {
-	result, err := json.Marshal(i)
-	if err != nil {
-		return "", errors.Wrap(err, "toJSON")
-	}
-	return string(bytes.TrimSpace(result)), err
+// toUpper converts the given string (usually by a pipe) to uppercase.
+func toUpper(s string) (string, error) {
+	return strings.ToUpper(s), nil
 }
 
 // toTitle converts the given string (usually by a pipe) to titlecase.
@@ -70,9 +66,13 @@ func toTitle(s string) (string, error) {
 	return strings.Title(s), nil
 }
 
-// toUpper converts the given string (usually by a pipe) to uppercase.
-func toUpper(s string) (string, error) {
-	return strings.ToUpper(s), nil
+// toJSON converts the given structure into a deeply nested JSON string.
+func toJSON(i interface{}) (string, error) {
+	result, err := json.Marshal(i)
+	if err != nil {
+		return "", errors.Wrap(err, "toJSON")
+	}
+	return string(bytes.TrimSpace(result)), err
 }
 
 // toJSONPretty converts the given structure into a deeply nested pretty JSON
