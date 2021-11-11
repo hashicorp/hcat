@@ -14,6 +14,7 @@ import (
 type FakeDep struct {
 	isConsul
 	Name string
+	Opts QueryOptions
 }
 
 func (d *FakeDep) Fetch(dep.Clients) (interface{}, *dep.ResponseMetadata, error) {
@@ -23,10 +24,6 @@ func (d *FakeDep) Fetch(dep.Clients) (interface{}, *dep.ResponseMetadata, error)
 	return data, rm, nil
 }
 
-func (d *FakeDep) CanShare() bool {
-	return true
-}
-
 func (d *FakeDep) ID() string {
 	return fmt.Sprintf("test_dep(%s)", d.Name)
 }
@@ -34,13 +31,22 @@ func (d *FakeDep) String() string {
 	return d.ID()
 }
 
-func (d *FakeDep) Stop()                        {}
-func (d *FakeDep) SetOptions(opts QueryOptions) {}
+func (d *FakeDep) CanShare() bool {
+	return true
+}
+func (d *FakeDep) Stop() {}
+func (d *FakeDep) SetOptions(opts QueryOptions) {
+	d.Opts = opts
+}
+func (d *FakeDep) GetOptions() QueryOptions {
+	return d.Opts
+}
 
 ////////////
 // FakeListDep is a fake dependency that does not actually speaks to a server.
 // Returns a list, to allow for multi-pass template tests
 type FakeListDep struct {
+	FakeDep
 	Name string
 	Data []string
 }
@@ -52,10 +58,6 @@ func (d *FakeListDep) Fetch(dep.Clients) (interface{}, *dep.ResponseMetadata, er
 	return data, rm, nil
 }
 
-func (d *FakeListDep) CanShare() bool {
-	return true
-}
-
 func (d *FakeListDep) ID() string {
 	return fmt.Sprintf("test_list_dep(%s)", d.Name)
 }
@@ -63,13 +65,11 @@ func (d *FakeListDep) String() string {
 	return d.ID()
 }
 
-func (d *FakeListDep) Stop()                        {}
-func (d *FakeListDep) SetOptions(opts QueryOptions) {}
-
 ////////////
 // FakeDepStale is a fake dependency that can be used to test what happens
 // when stale data is permitted.
 type FakeDepStale struct {
+	FakeDep
 	Name string
 }
 
@@ -81,17 +81,14 @@ func (d *FakeDepStale) Fetch(clients dep.Clients) (interface{}, *dep.ResponseMet
 
 	if opts.AllowStale {
 		data := "this is some stale data"
-		rm := &dep.ResponseMetadata{LastIndex: 1, LastContact: 50 * time.Millisecond}
+		rm := &dep.ResponseMetadata{
+			LastIndex: 1, LastContact: 50 * time.Millisecond}
 		return data, rm, nil
 	}
 
 	data := "this is some fresh data"
 	rm := &dep.ResponseMetadata{LastIndex: 1}
 	return data, rm, nil
-}
-
-func (d *FakeDepStale) CanShare() bool {
-	return true
 }
 
 func (d *FakeDepStale) ID() string {
@@ -101,22 +98,16 @@ func (d *FakeDepStale) String() string {
 	return d.ID()
 }
 
-func (d *FakeDepStale) Stop()                        {}
-func (d *FakeDepStale) SetOptions(opts QueryOptions) {}
-
 ////////////
 // FakeDepFetchError is a fake dependency that returns an error while fetching.
 type FakeDepFetchError struct {
+	FakeDep
 	Name string
 }
 
 func (d *FakeDepFetchError) Fetch(dep.Clients) (interface{}, *dep.ResponseMetadata, error) {
 	time.Sleep(time.Microsecond)
 	return nil, nil, fmt.Errorf("failed to contact server: connection refused")
-}
-
-func (d *FakeDepFetchError) CanShare() bool {
-	return true
 }
 
 func (d *FakeDepFetchError) ID() string {
@@ -126,21 +117,16 @@ func (d *FakeDepFetchError) String() string {
 	return d.ID()
 }
 
-func (d *FakeDepFetchError) Stop()                        {}
-func (d *FakeDepFetchError) SetOptions(opts QueryOptions) {}
-
 ////////////
 var _ isDependency = (*FakeDepSameIndex)(nil)
 
-type FakeDepSameIndex struct{}
+type FakeDepSameIndex struct {
+	FakeDep
+}
 
 func (d *FakeDepSameIndex) Fetch(dep.Clients) (interface{}, *dep.ResponseMetadata, error) {
 	meta := &dep.ResponseMetadata{LastIndex: 100}
 	return nil, meta, nil
-}
-
-func (d *FakeDepSameIndex) CanShare() bool {
-	return true
 }
 
 func (d *FakeDepSameIndex) ID() string {
@@ -150,13 +136,11 @@ func (d *FakeDepSameIndex) String() string {
 	return d.ID()
 }
 
-func (d *FakeDepSameIndex) Stop()                        {}
-func (d *FakeDepSameIndex) SetOptions(opts QueryOptions) {}
-
 ////////////
 // FakeDepRetry is a fake dependency that errors on the first fetch and
 // succeeds on subsequent fetches.
 type FakeDepRetry struct {
+	FakeDep
 	sync.Mutex
 	Name    string
 	retried bool
@@ -178,10 +162,6 @@ func (d *FakeDepRetry) Fetch(dep.Clients) (interface{}, *dep.ResponseMetadata, e
 	return nil, nil, fmt.Errorf("failed to contact server (try again)")
 }
 
-func (d *FakeDepRetry) CanShare() bool {
-	return true
-}
-
 func (d *FakeDepRetry) ID() string {
 	return fmt.Sprintf("test_dep_retry(%s)", d.Name)
 }
@@ -189,12 +169,10 @@ func (d *FakeDepRetry) String() string {
 	return d.ID()
 }
 
-func (d *FakeDepRetry) Stop()                        {}
-func (d *FakeDepRetry) SetOptions(opts QueryOptions) {}
-
 // FakeDepBlockingQuery is a fake dependency that blocks on Fetch for a
 // duration to resemble Consul blocking queries.
 type FakeDepBlockingQuery struct {
+	FakeDep
 	Name          string
 	Data          interface{}
 	BlockDuration time.Duration
@@ -217,10 +195,6 @@ func (d *FakeDepBlockingQuery) Fetch(dep.Clients) (interface{}, *dep.ResponseMet
 	}
 }
 
-func (d *FakeDepBlockingQuery) CanShare() bool {
-	return true
-}
-
 func (d *FakeDepBlockingQuery) ID() string {
 	return fmt.Sprintf("test_dep_blocking_query(%s)", d.Name)
 }
@@ -233,5 +207,3 @@ func (d *FakeDepBlockingQuery) Stop() {
 		close(d.stop)
 	}
 }
-
-func (d *FakeDepBlockingQuery) SetOptions(opts QueryOptions) {}
