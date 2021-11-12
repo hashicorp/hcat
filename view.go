@@ -90,6 +90,9 @@ type newViewInput struct {
 	// RetryFunc is a function which dictates how this view should retry on
 	// upstream errors.
 	RetryFunc RetryFunc
+
+	// Default non-renewable secret duration
+	VaultDefaultLease time.Duration
 }
 
 // NewView constructs a new view with the given inputs.
@@ -109,6 +112,7 @@ func newView(i *newViewInput) *view {
 		stopCh:        make(chan struct{}, 1),
 		ctx:           ctx,
 		ctxCancel:     cancel,
+		defaultLease:  i.VaultDefaultLease,
 	}
 }
 

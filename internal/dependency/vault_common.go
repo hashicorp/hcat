@@ -13,11 +13,6 @@ import (
 	"github.com/hashicorp/vault/api"
 )
 
-var (
-	// VaultDefaultLeaseDuration is the default lease duration in seconds.
-	VaultDefaultLeaseDuration = 5 * time.Minute
-)
-
 //
 type renewer interface {
 	dep.Dependency
@@ -117,10 +112,6 @@ func vaultSecretRenewable(s *dep.Secret) bool {
 // copy underlying deep data structures, so it's not safe to modify the vault
 // secret as that may modify the data in the transformed secret.
 func transformSecret(theirs *api.Secret, defaultLease time.Duration) *dep.Secret {
-	if defaultLease <= 0 {
-		// just in case 0 gets passed by mistake
-		defaultLease = VaultDefaultLeaseDuration
-	}
 	ours := &dep.Secret{LeaseDuration: int(defaultLease.Seconds())}
 	updateSecret(ours, theirs)
 	return ours

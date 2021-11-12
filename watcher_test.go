@@ -108,6 +108,23 @@ func TestWatcherRegisty(t *testing.T) {
 	})
 }
 
+// test propagation of vault's DefaultLease through to view
+func TestWatcherViewLease(t *testing.T) {
+	testLease := time.Second * 9
+	w := newWatcher()
+	w.defaultLease = testLease
+	defer w.Stop()
+
+	d := &idep.FakeDep{}
+	n := fakeNotifier("foo")
+	w.Track(n, d)
+	v := w.view(d.ID())
+	if v.defaultLease != testLease {
+		t.Errorf("default lease not propagated to view; want: %v, got: %v",
+			testLease, v.defaultLease)
+	}
+}
+
 func TestWatcherWatching(t *testing.T) {
 	t.Run("not-exists", func(t *testing.T) {
 		w := newWatcher()

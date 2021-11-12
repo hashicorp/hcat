@@ -133,6 +133,34 @@ func TestFetch_resetRetries(t *testing.T) {
 	}
 }
 
+func TestFetch_defaultLease(t *testing.T) {
+	d := &dep.FakeDepSameIndex{}
+	testLease := time.Second * 9
+	view := newView(&newViewInput{
+		Dependency:        d,
+		VaultDefaultLease: testLease,
+	})
+
+	doneCh := make(chan struct{})
+	successCh := make(chan struct{}, 1)
+	errCh := make(chan error, 1)
+
+	go view.fetch(doneCh, successCh, errCh)
+
+	select {
+	case <-successCh:
+	case <-doneCh:
+		t.Error("should not be done")
+	case err := <-errCh:
+		t.Errorf("error while fetching: %s", err)
+	}
+	opts := d.GetOptions()
+	if opts.DefaultLease != testLease {
+		t.Errorf("lease not set in QueryOptions; want: %v, got: %v",
+			testLease, opts.DefaultLease)
+	}
+}
+
 func TestFetch_maxStale(t *testing.T) {
 	view := newView(&newViewInput{
 		Dependency: &dep.FakeDepStale{},

@@ -305,12 +305,13 @@ func (w *Watcher) track(n Notifier, d dep.Dependency) *view {
 	}
 
 	v := newView(&newViewInput{
-		Dependency:    d,
-		Clients:       w.clients,
-		EventHandler:  w.event,
-		MaxStale:      w.maxStale,
-		BlockWaitTime: w.blockWaitTime,
-		RetryFunc:     retryFunc,
+		Dependency:        d,
+		Clients:           w.clients,
+		EventHandler:      w.event,
+		MaxStale:          w.maxStale,
+		BlockWaitTime:     w.blockWaitTime,
+		RetryFunc:         retryFunc,
+		VaultDefaultLease: w.defaultLease,
 	})
 	w.event(events.TrackStart{ID: v.ID()})
 	w.tracker.add(v, n)

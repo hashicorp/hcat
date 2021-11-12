@@ -9,10 +9,6 @@ import (
 	"github.com/hashicorp/hcat/dep"
 )
 
-func init() {
-	VaultDefaultLeaseDuration = 0
-}
-
 func TestVaultRenewDuration(t *testing.T) {
 	renewable := dep.Secret{LeaseDuration: 100, Renewable: true}
 	renewableDur := leaseCheckWait(&renewable).Seconds()

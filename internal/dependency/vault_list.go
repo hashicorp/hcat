@@ -50,7 +50,7 @@ func (d *VaultListQuery) Fetch(clients dep.Clients) (interface{}, *dep.ResponseM
 
 	// If this is not the first query, poll to simulate blocking-queries.
 	if opts.WaitIndex != 0 {
-		dur := VaultDefaultLeaseDuration
+		dur := opts.DefaultLease
 		select {
 		case <-d.stopCh:
 			return nil, nil, ErrStopped
