@@ -2,6 +2,7 @@ package dependency
 
 import (
 	"fmt"
+	"log"
 	"math/rand"
 	"path"
 	"strings"
@@ -59,6 +60,17 @@ func leaseCheckWait(s *dep.Secret) time.Duration {
 		if expInterface, ok := s.Data["expiration"]; ok {
 			if expData, err := expInterface.(json.Number).Int64(); err == nil {
 				base = int(expData - time.Now().Unix())
+			}
+		}
+	}
+
+	// Handle if this is an AppRole secret_id with no lease
+	if _, ok := s.Data["secret_id"]; ok && s.LeaseID == "" {
+		if ttlInterface, ok := s.Data["secret_id_ttl"]; ok {
+			ttlData, err := ttlInterface.(json.Number).Int64()
+			if err == nil && ttlData > 0 {
+				base = int(ttlData) + 1
+				log.Printf("[DEBUG] Found approle secret_id and non-zero secret_id_ttl, setting lease duration to %d seconds", base)
 			}
 		}
 	}
