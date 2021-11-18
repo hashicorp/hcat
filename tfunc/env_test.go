@@ -13,10 +13,13 @@ func TestEnvExecute(t *testing.T) {
 	t.Parallel()
 
 	// set an environment variable for the tests
-	if err := os.Setenv("CT_TEST", "1"); err != nil {
-		t.Fatal(err)
+	envVars := map[string]string{"HCAT_TEST": "foo", "EMPTY_VAR": ""}
+	for k, v := range envVars {
+		if err := os.Setenv(k, v); err != nil {
+			t.Fatal(err)
+		}
+		defer func(e string) { os.Unsetenv(e) }(k)
 	}
-	defer func() { os.Unsetenv("CT_TEST") }()
 
 	cases := []struct {
 		name string
@@ -28,11 +31,20 @@ func TestEnvExecute(t *testing.T) {
 		{
 			"helper_env",
 			hcat.TemplateInput{
-				// CT_TEST set above
-				Contents: `{{ env "CT_TEST" }}`,
+				// HCAT_TEST set above
+				Contents: `{{ env "HCAT_TEST" }}`,
 			},
 			fakeWatcher{hcat.NewStore()},
-			"1",
+			"foo",
+			false,
+		},
+		{
+			"func_envOrDefault",
+			hcat.TemplateInput{
+				Contents: `{{ envOrDefault "HCAT_TEST" "100" }} {{ envOrDefault "EMPTY_VAR" "200" }} {{ envOrDefault "UNSET_VAR" "300" }}`,
+			},
+			fakeWatcher{hcat.NewStore()},
+			"foo  300",
 			false,
 		},
 	}

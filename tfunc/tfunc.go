@@ -19,7 +19,8 @@ func All() template.FuncMap {
 
 func Env() template.FuncMap {
 	return template.FuncMap{
-		"env": envFunc(os.Environ()),
+		"env":          envFunc(os.Environ()),
+		"envOrDefault": envOrDefaultFunc(os.Environ()),
 	}
 }
 
