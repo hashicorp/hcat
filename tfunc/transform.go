@@ -2,10 +2,12 @@ package tfunc
 
 import (
 	"bytes"
+	"crypto/md5"
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"strings"
 
@@ -49,6 +51,11 @@ func sha256Hex(item string) (string, error) {
 	h.Write([]byte(item))
 	output := hex.EncodeToString(h.Sum(nil))
 	return output, nil
+}
+
+// md5sum returns the md5 hash of a string
+func md5sum(item string) string {
+	return fmt.Sprintf("%x", md5.Sum([]byte(item)))
 }
 
 // toLower converts the given string (usually by a pipe) to lowercase.

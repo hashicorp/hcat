@@ -81,6 +81,7 @@ func Helpers() template.FuncMap {
 		"base64URLDecode": base64URLDecode,
 		"base64URLEncode": base64URLEncode,
 		"sha256Hex":       sha256Hex,
+		"md5sum":          md5sum,
 		// String
 		"join":            join,
 		"split":           split,
