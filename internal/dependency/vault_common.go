@@ -275,20 +275,20 @@ func isKVv2(client *api.Client, path string) (string, bool, error) {
 	return mountPath, false, nil
 }
 
-func addPrefixToVKVPath(p, mountPath, apiPrefix string) string {
+// shimKVv2Path aligns the supported legacy path to KV v2 specs by inserting
+// /data/ into the path for reading secrets. Paths for metadata are not modified.
+func shimKVv2Path(rawPath, mountPath string) string {
 	switch {
-	case p == mountPath, p == strings.TrimSuffix(mountPath, "/"):
-		return path.Join(mountPath, apiPrefix)
+	case rawPath == mountPath, rawPath == strings.TrimSuffix(mountPath, "/"):
+		return path.Join(mountPath, "data")
 	default:
-		p = strings.TrimPrefix(p, mountPath)
-		// Don't add /data/ to the path if it's been added manually.
-		apiPathPrefix := apiPrefix
-		if !strings.HasSuffix(apiPrefix, "/") {
-			apiPathPrefix += "/"
+		p := strings.TrimPrefix(rawPath, mountPath)
+
+		// Only add /data/ prefix to the path if neither /data/ or /metadata/ are
+		// present.
+		if strings.HasPrefix(p, "data/") || strings.HasPrefix(p, "metadata/") {
+			return rawPath
 		}
-		if strings.HasPrefix(p, apiPathPrefix) {
-			return path.Join(mountPath, p)
-		}
-		return path.Join(mountPath, apiPrefix, p)
+		return path.Join(mountPath, "data", p)
 	}
 }
