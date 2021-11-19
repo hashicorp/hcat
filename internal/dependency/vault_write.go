@@ -144,20 +144,22 @@ func sha1Map(m map[string]interface{}) string {
 }
 
 func (d *VaultWriteQuery) writeSecret(clients dep.Clients, opts *QueryOptions) (*api.Secret, error) {
+	path := d.path
 	data := d.data
 
-	_, isv2, _ := isKVv2(clients.Vault(), d.path)
+	mountPath, isv2, _ := isKVv2(clients.Vault(), path)
 	if isv2 {
+		path = shimKVv2Path(path, mountPath)
 		data = map[string]interface{}{"data": d.data}
 	}
 
-	vaultSecret, err := clients.Vault().Logical().Write(d.path, data)
+	vaultSecret, err := clients.Vault().Logical().Write(path, data)
 	if err != nil {
 		return nil, errors.Wrap(err, d.ID())
 	}
 	// vaultSecret is always nil when KVv1 engine (isv2==false)
 	if isv2 && vaultSecret == nil {
-		return nil, fmt.Errorf("no secret exists at %s", d.path)
+		return nil, fmt.Errorf("no secret exists at %s", path)
 	}
 
 	return vaultSecret, nil
