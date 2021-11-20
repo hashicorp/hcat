@@ -91,9 +91,10 @@ func Helpers() template.FuncMap {
 		"regexReplaceAll": regexReplaceAll,
 		"regexMatch":      regexMatch,
 		// Other
-		"explode":    explode,
-		"explodeMap": explodeMap,
-		"timestamp":  timestamp,
-		"sockaddr":   sockaddr,
+		"explode":     explode,
+		"explodeMap":  explodeMap,
+		"timestamp":   timestamp,
+		"sockaddr":    sockaddr,
+		"writeToFile": writeToFile,
 	}
 }
