@@ -256,14 +256,18 @@ func (w *Watcher) Wait(ctx context.Context) error {
 
 // Buffer sets the template to activate buffer and accumulate changes for a
 // period. If the template has not been initalized or a buffer period is not
-// configured for the template, it will skip the buffering.
-// period.
+// configured for the template, it will skip buffering.
 func (w *Watcher) Buffer(n Notifier) bool {
 	// first pass skips buffering.
 	if !w.tracker.notifierTracked(n) {
 		return false
 	}
 	return w.bufferTemplates.Buffer(n.ID())
+}
+
+// BufferReset resets an active buffer period to inactive.
+func (w *Watcher) BufferReset(n Notifier) {
+	w.bufferTemplates.Reset(n.ID())
 }
 
 // Register's one or more Notifiers with the Watcher for future use.
