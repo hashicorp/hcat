@@ -1,6 +1,7 @@
 package hcat
 
 import (
+	"context"
 	"sync"
 	"time"
 )
@@ -24,8 +25,9 @@ type timer struct {
 	timer    *time.Timer
 	deadline time.Time
 
-	isActive bool
-	mux      sync.RWMutex
+	cancelTick context.CancelFunc
+	isActive   bool
+	mux        sync.RWMutex
 }
 
 func newTimers() *timers {
@@ -104,6 +106,17 @@ func (t *timers) Buffer(id string) bool {
 	return false
 }
 
+// Reset resets an active timer
+func (t *timers) Reset(id string) {
+	t.mux.Lock()
+	defer t.mux.Unlock()
+
+	if timer, ok := t.timers[id]; ok {
+		timer.reset()
+		delete(t.buffered, id)
+	}
+}
+
 // newTimer creates a new buffer timer for the given template.
 func newTimer(ch chan string, min, max time.Duration, id string) *timer {
 	return &timer{
@@ -148,19 +161,25 @@ func (t *timer) inactiveTick(now time.Time) {
 	} else {
 		t.timer.Reset(t.min)
 	}
+	ctx, cancel := context.WithCancel(context.Background())
 
 	t.mux.Lock()
 	t.isActive = true
 	t.deadline = now.Add(t.max) // reset the deadline ot the future
+	t.cancelTick = cancel
 	t.mux.Unlock()
 
-	go func() {
-		<-t.timer.C
-		t.mux.Lock()
-		t.ch <- t.id
-		t.isActive = false
-		t.mux.Unlock()
-	}()
+	go func(ctx context.Context) {
+		select {
+		case <-ctx.Done():
+			return
+		case <-t.timer.C:
+			t.mux.Lock()
+			t.ch <- t.id
+			t.isActive = false
+			t.mux.Unlock()
+		}
+	}(ctx)
 }
 
 // activeTick snoozes the timer for the min time, or snooze less if we are coming
@@ -180,4 +199,16 @@ func (t *timer) activeTick(now time.Time) {
 	} else if dur := t.deadline.Sub(now); dur > 0 {
 		t.timer.Reset(dur)
 	}
+}
+
+// reset resets the timer to inactive
+func (t *timer) reset() {
+	t.mux.Lock()
+	defer t.mux.Unlock()
+	if !t.isActive {
+		return
+	}
+
+	t.cancelTick()
+	t.isActive = false
 }

@@ -137,4 +137,27 @@ func TestBufferPeriod(t *testing.T) {
 		bufferPeriods.Add(time.Second, 2*time.Second, "unused")
 		bufferPeriods.Stop()
 	})
+
+	t.Run("reset", func(t *testing.T) {
+		t.Parallel()
+
+		triggerCh := make(chan string, 5)
+		bufferPeriods := newTimers()
+		go bufferPeriods.Run(triggerCh)
+		defer bufferPeriods.Stop()
+
+		id := "foo"
+		bufferPeriods.Add(time.Second, 4*time.Second, id)
+		bufferPeriods.Buffer(id) // activate buffer
+		assert.True(t, bufferPeriods.timers[id].active())
+
+		bufferPeriods.Reset(id)
+
+		select {
+		case <-triggerCh:
+			t.Fatalf("buffer was reset and should not have triggered")
+		case <-time.After(2 * time.Second):
+			assert.False(t, bufferPeriods.timers[id].active())
+		}
+	})
 }
