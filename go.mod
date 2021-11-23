@@ -10,7 +10,6 @@ require (
 	github.com/hashicorp/consul/api v1.4.0
 	github.com/hashicorp/consul/sdk v0.4.0
 	github.com/hashicorp/go-bexpr v0.1.4
-	github.com/hashicorp/go-gatedio v0.5.0
 	github.com/hashicorp/go-hclog v0.12.2 // indirect
 	github.com/hashicorp/go-immutable-radix v1.2.0 // indirect
 	github.com/hashicorp/go-msgpack v0.5.5 // indirect
@@ -20,6 +19,7 @@ require (
 	github.com/hashicorp/golang-lru v0.5.4 // indirect
 	github.com/hashicorp/serf v0.9.2 // indirect
 	github.com/hashicorp/vault/api v1.0.5-0.20190730042357-746c0b111519
+	github.com/imdario/mergo v0.3.12
 	github.com/mitchellh/mapstructure v1.3.0 // indirect
 	github.com/pierrec/lz4 v2.5.2+incompatible // indirect
 	github.com/pkg/errors v0.9.1
@@ -29,5 +29,5 @@ require (
 	golang.org/x/sys v0.0.0-20200501145240-bc7a7d42d5c3 // indirect
 	golang.org/x/time v0.0.0-20200416051211-89c76fbcd5d1 // indirect
 	gopkg.in/square/go-jose.v2 v2.5.1 // indirect
-	gopkg.in/yaml.v2 v2.2.8
+	gopkg.in/yaml.v2 v2.3.0
 )

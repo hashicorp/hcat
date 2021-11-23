@@ -9,7 +9,7 @@ import (
 	"github.com/hashicorp/hcat/dep"
 )
 
-func TestExplodeExecute(t *testing.T) {
+func TestMapExecute(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
@@ -53,6 +53,42 @@ func TestExplodeExecute(t *testing.T) {
 			},
 			fakeWatcher{hcat.NewStore()},
 			"map[foo:map[bar:a] qux:c zip:map[zap:d]]",
+			false,
+		},
+		{
+			"helper_mergeMap",
+			hcat.TemplateInput{
+				Contents: `{{ $base := "{\"voo\":{\"bar\":\"v\"}}" | parseJSON}}{{ $role := tree "list" | explode | mergeMap $base}}{{ range $k, $v := $role }}{{ $k }}{{ $v }}{{ end }}`,
+			},
+			func() hcat.Watcherer {
+				st := hcat.NewStore()
+				id := testKVListQueryID("list")
+				st.Save(id, []*dep.KeyPair{
+					{Key: "", Value: ""},
+					{Key: "foo/bar", Value: "a"},
+					{Key: "zip/zap", Value: "b"},
+				})
+				return fakeWatcher{st}
+			}(),
+			"foomap[bar:a]voomap[bar:v]zipmap[zap:b]",
+			false,
+		},
+		{
+			"helper_mergeMapWithOverride",
+			hcat.TemplateInput{
+				Contents: `{{ $base := "{\"zip\":{\"zap\":\"t\"},\"voo\":{\"bar\":\"v\"}}" | parseJSON}}{{ $role := tree "list" | explode | mergeMapWithOverride $base}}{{ range $k, $v := $role }}{{ $k }}{{ $v }}{{ end }}`,
+			},
+			func() hcat.Watcherer {
+				st := hcat.NewStore()
+				id := testKVListQueryID("list")
+				st.Save(id, []*dep.KeyPair{
+					{Key: "", Value: ""},
+					{Key: "foo/bar", Value: "a"},
+					{Key: "zip/zap", Value: "b"},
+				})
+				return fakeWatcher{st}
+			}(),
+			"foomap[bar:a]voomap[bar:v]zipmap[zap:b]",
 			false,
 		},
 	}
