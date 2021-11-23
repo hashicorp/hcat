@@ -1,6 +1,7 @@
 package dependency
 
 import (
+	"context"
 	"crypto/tls"
 	"fmt"
 	"net"
@@ -34,6 +35,13 @@ type vaultClient struct {
 	httpClient *http.Client
 }
 
+// TransportDialer is an interface that allows passing a custom dialer function
+// to an HTTP client's transport config
+// Intended to match https://pkg.go.dev/net#Dialer.DialContext
+type TransportDialer interface {
+	DialContext(ctx context.Context, network, address string) (net.Conn, error)
+}
+
 // CreateClientInput is used as input to the CreateClient functions.
 type CreateClientInput struct {
 	Address   string
@@ -54,8 +62,12 @@ type CreateClientInput struct {
 	SSLCAPath  string
 	ServerName string
 
-	TransportDialKeepAlive       time.Duration
-	TransportDialTimeout         time.Duration
+	TransportCustomDialer TransportDialer
+	// Deprecated: use TransportCustomDialer
+	TransportDialKeepAlive time.Duration
+	// Deprecated: use TransportCustomDialer
+	TransportDialTimeout time.Duration
+
 	TransportDisableKeepAlives   bool
 	TransportIdleConnTimeout     time.Duration
 	TransportMaxIdleConns        int
@@ -271,11 +283,8 @@ func httpClient(i *CreateClientInput) (client *http.Client, err error) {
 func newTransport(i *CreateClientInput) (*http.Transport, error) {
 	// This transport will attempt to keep connections open to the server.
 	transport := &http.Transport{
-		Proxy: http.ProxyFromEnvironment,
-		Dial: (&net.Dialer{
-			Timeout:   i.TransportDialTimeout,
-			KeepAlive: i.TransportDialKeepAlive,
-		}).Dial,
+		Proxy:               http.ProxyFromEnvironment,
+		DialContext:         newDialer(i).DialContext,
 		DisableKeepAlives:   i.TransportDisableKeepAlives,
 		ForceAttemptHTTP2:   true,
 		MaxIdleConns:        i.TransportMaxIdleConns,
@@ -331,4 +340,17 @@ func newTransport(i *CreateClientInput) (*http.Transport, error) {
 		transport.TLSClientConfig = &tlsConfig
 	}
 	return transport, nil
+}
+
+func newDialer(i *CreateClientInput) TransportDialer {
+	var dialer TransportDialer
+	if i.TransportCustomDialer != nil {
+		dialer = i.TransportCustomDialer
+	} else {
+		dialer = &net.Dialer{
+			Timeout:   i.TransportDialTimeout,
+			KeepAlive: i.TransportDialKeepAlive,
+		}
+	}
+	return dialer
 }
