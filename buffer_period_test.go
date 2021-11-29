@@ -8,7 +8,7 @@ import (
 )
 
 func TestBufferPeriod(t *testing.T) {
-	t.Parallel() // test takes a few seconds
+	t.Parallel()
 
 	testCases := []struct {
 		name           string
@@ -20,22 +20,22 @@ func TestBufferPeriod(t *testing.T) {
 	}{
 		{
 			name: "one period",
-			min:  time.Duration(2 * time.Second),
-			max:  time.Duration(10 * time.Second),
+			min:  time.Duration(2 * time.Millisecond),
+			max:  time.Duration(10 * time.Millisecond),
 		},
 		{
 			name:        "snooze once",
-			min:         time.Duration(4 * time.Second),
-			max:         time.Duration(12 * time.Second),
+			min:         time.Duration(4 * time.Millisecond),
+			max:         time.Duration(12 * time.Millisecond),
 			snoozeCount: 1,
-			snoozeAfter: time.Duration(1 * time.Second),
+			snoozeAfter: time.Duration(1 * time.Millisecond),
 		},
 		{
 			name:        "deadline",
-			min:         time.Duration(4 * time.Second),
-			max:         time.Duration(6 * time.Second),
+			min:         time.Duration(4 * time.Millisecond),
+			max:         time.Duration(6 * time.Millisecond),
 			snoozeCount: 3,
-			snoozeAfter: time.Duration(1 * time.Second),
+			snoozeAfter: time.Duration(1 * time.Millisecond),
 		},
 	}
 
@@ -66,7 +66,7 @@ func TestBufferPeriod(t *testing.T) {
 
 			// Test signal is received within expected duration
 			expectedWithin := tc.min + time.Duration(tc.snoozeCount)*tc.snoozeAfter
-			expectedWithin += time.Second // add a second of leniency
+			expectedWithin += 2 * time.Millisecond
 			select {
 			case id := <-triggerCh:
 				assert.Equal(t, tc.name, id, "unexpected id")
@@ -105,8 +105,8 @@ func TestBufferPeriod(t *testing.T) {
 		go bufferPeriods.Run(triggerCh)
 		defer bufferPeriods.Stop()
 
-		first := time.Duration(2 * time.Second)
-		second := time.Duration(4 * time.Second)
+		first := time.Duration(2 * time.Millisecond)
+		second := time.Duration(4 * time.Millisecond)
 		bufferPeriods.Add(first, first*2, "first")
 		bufferPeriods.Add(second, second*2, "second")
 
@@ -121,7 +121,7 @@ func TestBufferPeriod(t *testing.T) {
 		}()
 
 		select {
-		case <-time.After(5 * time.Second):
+		case <-time.After(5 * time.Millisecond):
 			assert.Fail(t, "expected both buffer periods to send a signal")
 		case <-completed:
 		}
@@ -134,7 +134,7 @@ func TestBufferPeriod(t *testing.T) {
 		bufferPeriods := newTimers()
 		go bufferPeriods.Run(triggerCh)
 
-		bufferPeriods.Add(time.Second, 2*time.Second, "unused")
+		bufferPeriods.Add(time.Millisecond, 2*time.Millisecond, "unused")
 		bufferPeriods.Stop()
 	})
 
@@ -147,7 +147,7 @@ func TestBufferPeriod(t *testing.T) {
 		defer bufferPeriods.Stop()
 
 		id := "foo"
-		bufferPeriods.Add(time.Second, 4*time.Second, id)
+		bufferPeriods.Add(time.Millisecond, 4*time.Millisecond, id)
 		bufferPeriods.Buffer(id) // activate buffer
 		assert.True(t, bufferPeriods.timers[id].active())
 
@@ -156,7 +156,7 @@ func TestBufferPeriod(t *testing.T) {
 		select {
 		case <-triggerCh:
 			t.Fatalf("buffer was reset and should not have triggered")
-		case <-time.After(2 * time.Second):
+		case <-time.After(2 * time.Millisecond):
 			assert.False(t, bufferPeriods.timers[id].active())
 		}
 	})
