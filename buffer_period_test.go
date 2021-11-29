@@ -8,7 +8,7 @@ import (
 )
 
 func TestBufferPeriod(t *testing.T) {
-	t.Parallel() // test takes a few seconds
+	t.Parallel()
 
 	testCases := []struct {
 		name           string
@@ -66,7 +66,7 @@ func TestBufferPeriod(t *testing.T) {
 
 			// Test signal is received within expected duration
 			expectedWithin := tc.min + time.Duration(tc.snoozeCount)*tc.snoozeAfter
-			expectedWithin += time.Millisecond * 10 // add a bit of leniency
+			expectedWithin += 2 * time.Millisecond // add a bit of leniency
 			select {
 			case id := <-triggerCh:
 				assert.Equal(t, tc.name, id, "unexpected id")
@@ -121,7 +121,7 @@ func TestBufferPeriod(t *testing.T) {
 		}()
 
 		select {
-		case <-time.After(10 * time.Millisecond):
+		case <-time.After(5 * time.Millisecond):
 			assert.Fail(t, "expected both buffer periods to send a signal")
 		case <-completed:
 		}
@@ -147,7 +147,7 @@ func TestBufferPeriod(t *testing.T) {
 		defer bufferPeriods.Stop()
 
 		id := "foo"
-		bufferPeriods.Add(time.Second, 4*time.Second, id)
+		bufferPeriods.Add(time.Millisecond, 4*time.Millisecond, id)
 		bufferPeriods.Buffer(id) // activate buffer
 		assert.True(t, bufferPeriods.timers[id].active())
 
@@ -156,7 +156,7 @@ func TestBufferPeriod(t *testing.T) {
 		select {
 		case <-triggerCh:
 			t.Fatalf("buffer was reset and should not have triggered")
-		case <-time.After(2 * time.Second):
+		case <-time.After(2 * time.Millisecond):
 			assert.False(t, bufferPeriods.timers[id].active())
 		}
 	})
