@@ -1,6 +1,8 @@
 package dependency
 
 import (
+	"time"
+
 	"github.com/hashicorp/hcat/dep"
 	"github.com/hashicorp/vault/api"
 	"github.com/pkg/errors"
@@ -28,10 +30,11 @@ func NewVaultTokenQuery(token string) (*VaultTokenQuery, error) {
 			LeaseDuration: 1,
 		},
 	}
+	const tokenLeaseDuration = 5 * time.Minute
 	return &VaultTokenQuery{
 		stopCh:      make(chan struct{}, 1),
 		vaultSecret: vaultSecret,
-		secret:      transformSecret(vaultSecret, 0),
+		secret:      transformSecret(vaultSecret, tokenLeaseDuration),
 	}, nil
 }
 

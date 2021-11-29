@@ -19,7 +19,8 @@ func All() template.FuncMap {
 
 func Env() template.FuncMap {
 	return template.FuncMap{
-		"env": envFunc(os.Environ()),
+		"env":          envFunc(os.Environ()),
+		"envOrDefault": envOrDefaultFunc(os.Environ()),
 	}
 }
 
@@ -65,19 +66,22 @@ func Helpers() template.FuncMap {
 		"parseUint":  parseUint,
 		"parseYAML":  parseYAML,
 		// ToSomething
-		"toLower":      toLower,
-		"toUpper":      toUpper,
-		"toTitle":      toTitle,
-		"toJSON":       toJSON,
-		"toJSONPretty": toJSONPretty,
-		"toTOML":       toTOML,
-		"toYAML":       toYAML,
+		"toLower":               toLower,
+		"toUpper":               toUpper,
+		"toTitle":               toTitle,
+		"toJSON":                toJSON,
+		"toJSONPretty":          toJSONPretty,
+		"toUnescapedJSON":       toUnescapedJSON,
+		"toUnescapedJSONPretty": toUnescapedJSONPretty,
+		"toTOML":                toTOML,
+		"toYAML":                toYAML,
 		// (D)Encoding
 		"base64Decode":    base64Decode,
 		"base64Encode":    base64Encode,
 		"base64URLDecode": base64URLDecode,
 		"base64URLEncode": base64URLEncode,
 		"sha256Hex":       sha256Hex,
+		"md5sum":          md5sum,
 		// String
 		"join":            join,
 		"split":           split,
@@ -86,10 +90,14 @@ func Helpers() template.FuncMap {
 		"replaceAll":      replaceAll,
 		"regexReplaceAll": regexReplaceAll,
 		"regexMatch":      regexMatch,
-		// Other
-		"explode":    explode,
-		"explodeMap": explodeMap,
-		"timestamp":  timestamp,
-		"sockaddr":   sockaddr,
+		// Data type (map, slice, etc) oriented
+		"explode":              explode,
+		"explodeMap":           explodeMap,
+		"mergeMap":             mergeMap,
+		"mergeMapWithOverride": mergeMapWithOverride,
+		// Misc/Other
+		"timestamp":   timestamp,
+		"sockaddr":    sockaddr,
+		"writeToFile": writeToFile,
 	}
 }

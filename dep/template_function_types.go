@@ -44,23 +44,24 @@ type CatalogSnippet struct {
 
 // HealthService is a service entry in Consul.
 type HealthService struct {
-	Node                string
-	NodeID              string
-	NodeAddress         string
-	NodeDatacenter      string
-	NodeTaggedAddresses map[string]string
-	NodeMeta            map[string]string
-	ServiceMeta         map[string]string
-	Address             string
-	ID                  string
-	Name                string
-	Kind                string
-	Tags                ServiceTags
-	Checks              api.HealthChecks
-	Status              string
-	Port                int
-	Weights             api.AgentWeights
-	Namespace           string
+	Node                   string
+	NodeID                 string
+	NodeAddress            string
+	NodeDatacenter         string
+	NodeTaggedAddresses    map[string]string
+	NodeMeta               map[string]string
+	ServiceMeta            map[string]string
+	Address                string
+	ServiceTaggedAddresses map[string]api.ServiceAddress
+	ID                     string
+	Name                   string
+	Kind                   string
+	Tags                   ServiceTags
+	Checks                 api.HealthChecks
+	Status                 string
+	Port                   int
+	Weights                api.AgentWeights
+	Namespace              string
 }
 
 // KvValue is here to type the KV return string

@@ -71,28 +71,47 @@ func TestVaultListQuery_Fetch(t *testing.T) {
 	clients, vault := testVaultServer(t, "listfetch", "1")
 	secretsPath := vault.secretsPath
 
-	err := vault.CreateSecret("foo/bar", map[string]interface{}{
-		"ttl": "100ms", // explicitly make this a short duration for testing
-		"zip": "zap",
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	clientsKv2, vaultKv2 := testVaultServer(t, "listfetchV2", "2")
+	secretsPathKv2 := vaultKv2.secretsPath
 
+	for _, v := range []*vaultServer{vault, vaultKv2} {
+		err := v.CreateSecret("foo/bar", map[string]interface{}{
+			"ttl": "100ms", // explicitly make this a short duration for testing
+			"zip": "zap",
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
 	cases := []struct {
-		name string
-		i    string
-		exp  []string
+		name    string
+		i       string
+		exp     []string
+		clients *ClientSet
 	}{
 		{
 			"exists",
 			secretsPath,
 			[]string{"foo/"},
+			clients,
 		},
 		{
 			"no_exist",
 			"not/a/real/path/like/ever",
 			nil,
+			clients,
+		},
+		{
+			"exists_v2",
+			secretsPathKv2,
+			[]string{"foo/"},
+			clientsKv2,
+		},
+		{
+			"no_exist_kvv2",
+			"not/a/real/path/like/ever",
+			nil,
+			clientsKv2,
 		},
 	}
 
@@ -103,7 +122,7 @@ func TestVaultListQuery_Fetch(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			act, _, err := d.Fetch(clients)
+			act, _, err := d.Fetch(tc.clients)
 			if err != nil {
 				t.Fatal(err)
 			}

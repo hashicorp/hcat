@@ -2,10 +2,12 @@ package tfunc
 
 import (
 	"bytes"
+	"crypto/md5"
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"strings"
 
@@ -51,6 +53,11 @@ func sha256Hex(item string) (string, error) {
 	return output, nil
 }
 
+// md5sum returns the md5 hash of a string
+func md5sum(item string) string {
+	return fmt.Sprintf("%x", md5.Sum([]byte(item)))
+}
+
 // toLower converts the given string (usually by a pipe) to lowercase.
 func toLower(s string) (string, error) {
 	return strings.ToLower(s), nil
@@ -83,6 +90,31 @@ func toJSONPretty(i interface{}) (string, error) {
 		return "", errors.Wrap(err, "toJSONPretty")
 	}
 	return string(bytes.TrimSpace(result)), err
+}
+
+// toUnescapedJSON converts the given structure into a deeply nested JSON
+// string without HTML escaping.
+func toUnescapedJSON(i interface{}) (string, error) {
+	buf := &bytes.Buffer{}
+	encoder := json.NewEncoder(buf)
+	encoder.SetEscapeHTML(false)
+	if err := encoder.Encode(i); err != nil {
+		return "", errors.Wrap(err, "toUnescapedJSON")
+	}
+	return strings.TrimRight(buf.String(), "\r\n"), nil
+}
+
+// toUnescapedJSONPretty converts the given structure into a deeply nested
+// pretty JSON string without HTML escaping.
+func toUnescapedJSONPretty(i interface{}) (string, error) {
+	buf := &bytes.Buffer{}
+	encoder := json.NewEncoder(buf)
+	encoder.SetEscapeHTML(false)
+	encoder.SetIndent("", "  ")
+	if err := encoder.Encode(i); err != nil {
+		return "", errors.Wrap(err, "toUnescapedJSONPretty")
+	}
+	return strings.TrimRight(buf.String(), "\r\n"), nil
 }
 
 // toYAML converts the given structure into a deeply nested YAML string.

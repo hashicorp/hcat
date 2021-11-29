@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/hcat/dep"
+	"github.com/imdario/mergo"
 	"github.com/pkg/errors"
 )
 
@@ -60,4 +61,19 @@ func explodeMap(mapIn map[string]interface{}) (map[string]interface{}, error) {
 		}
 	}
 	return mapOut, nil
+}
+
+type _map = map[string]interface{}
+
+// mergeMap is used to merge two maps
+func mergeMap(dstMap _map, srcMap _map, args ...func(*mergo.Config)) (_map, error) {
+	if err := mergo.Map(&dstMap, srcMap, args...); err != nil {
+		return nil, err
+	}
+	return dstMap, nil
+}
+
+// mergeMapWithOverride is used to merge two maps with dstMap overriding vaules in srcMap
+func mergeMapWithOverride(dstMap _map, srcMap _map) (_map, error) {
+	return mergeMap(dstMap, srcMap, mergo.WithOverride)
 }

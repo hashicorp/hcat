@@ -2,6 +2,7 @@ package dependency
 
 import (
 	"fmt"
+	"path"
 	"sort"
 	"strings"
 	"time"
@@ -50,7 +51,7 @@ func (d *VaultListQuery) Fetch(clients dep.Clients) (interface{}, *dep.ResponseM
 
 	// If this is not the first query, poll to simulate blocking-queries.
 	if opts.WaitIndex != 0 {
-		dur := VaultDefaultLeaseDuration
+		dur := opts.DefaultLease
 		select {
 		case <-d.stopCh:
 			return nil, nil, ErrStopped
@@ -58,9 +59,16 @@ func (d *VaultListQuery) Fetch(clients dep.Clients) (interface{}, *dep.ResponseM
 		}
 	}
 
+	path := d.path
+	// Checking secret engine version. If it's v2, we should shim /metadata/
+	// to secret path if necessary.
+	mountPath, isV2, _ := isKVv2(clients.Vault(), path)
+	if isV2 {
+		path = shimKv2ListPath(path, mountPath)
+	}
 	// If we got this far, we either didn't have a secret to renew, the secret was
 	// not renewable, or the renewal failed, so attempt a fresh list.
-	secret, err := clients.Vault().Logical().List(d.path)
+	secret, err := clients.Vault().Logical().List(path)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, d.ID())
 	}
@@ -117,4 +125,23 @@ func (d *VaultListQuery) String() string {
 
 func (d *VaultListQuery) SetOptions(opts QueryOptions) {
 	d.opts = opts
+}
+
+// shimKvV2ListPath aligns the supported legacy path to KV v2 specs by inserting
+// /metadata/ into the path for listing secrets. Paths with /metadata/ are not modified.
+func shimKv2ListPath(rawPath, mountPath string) string {
+	mountPath = strings.TrimSuffix(mountPath, "/")
+
+	if strings.HasPrefix(rawPath, path.Join(mountPath, "metadata")) {
+		// It doesn't need modifying.
+		return rawPath
+	}
+
+	switch {
+	case rawPath == mountPath:
+		return path.Join(mountPath, "metadata")
+	default:
+		rawPath = strings.TrimPrefix(rawPath, mountPath)
+		return path.Join(mountPath, "metadata", rawPath)
+	}
 }

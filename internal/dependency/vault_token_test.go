@@ -26,6 +26,7 @@ func TestNewVaultTokenQuery(t *testing.T) {
 						Renewable:     true,
 						LeaseDuration: 1,
 					},
+					LeaseDuration: 300,
 				},
 				vaultSecret: &api.Secret{
 					Auth: &api.SecretAuth{

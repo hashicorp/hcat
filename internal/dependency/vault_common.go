@@ -2,6 +2,7 @@ package dependency
 
 import (
 	"fmt"
+	"log"
 	"math/rand"
 	"path"
 	"strings"
@@ -11,11 +12,6 @@ import (
 
 	"github.com/hashicorp/hcat/dep"
 	"github.com/hashicorp/vault/api"
-)
-
-var (
-	// VaultDefaultLeaseDuration is the default lease duration in seconds.
-	VaultDefaultLeaseDuration = 5 * time.Minute
 )
 
 //
@@ -64,6 +60,17 @@ func leaseCheckWait(s *dep.Secret) time.Duration {
 		if expInterface, ok := s.Data["expiration"]; ok {
 			if expData, err := expInterface.(json.Number).Int64(); err == nil {
 				base = int(expData - time.Now().Unix())
+			}
+		}
+	}
+
+	// Handle if this is an AppRole secret_id with no lease
+	if _, ok := s.Data["secret_id"]; ok && s.LeaseID == "" {
+		if ttlInterface, ok := s.Data["secret_id_ttl"]; ok {
+			ttlData, err := ttlInterface.(json.Number).Int64()
+			if err == nil && ttlData > 0 {
+				base = int(ttlData) + 1
+				log.Printf("[DEBUG] Found approle secret_id and non-zero secret_id_ttl, setting lease duration to %d seconds", base)
 			}
 		}
 	}
@@ -117,10 +124,6 @@ func vaultSecretRenewable(s *dep.Secret) bool {
 // copy underlying deep data structures, so it's not safe to modify the vault
 // secret as that may modify the data in the transformed secret.
 func transformSecret(theirs *api.Secret, defaultLease time.Duration) *dep.Secret {
-	if defaultLease <= 0 {
-		// just in case 0 gets passed by mistake
-		defaultLease = VaultDefaultLeaseDuration
-	}
 	ours := &dep.Secret{LeaseDuration: int(defaultLease.Seconds())}
 	updateSecret(ours, theirs)
 	return ours
@@ -272,20 +275,20 @@ func isKVv2(client *api.Client, path string) (string, bool, error) {
 	return mountPath, false, nil
 }
 
-func addPrefixToVKVPath(p, mountPath, apiPrefix string) string {
+// shimKVv2Path aligns the supported legacy path to KV v2 specs by inserting
+// /data/ into the path for reading secrets. Paths for metadata are not modified.
+func shimKVv2Path(rawPath, mountPath string) string {
 	switch {
-	case p == mountPath, p == strings.TrimSuffix(mountPath, "/"):
-		return path.Join(mountPath, apiPrefix)
+	case rawPath == mountPath, rawPath == strings.TrimSuffix(mountPath, "/"):
+		return path.Join(mountPath, "data")
 	default:
-		p = strings.TrimPrefix(p, mountPath)
-		// Don't add /data/ to the path if it's been added manually.
-		apiPathPrefix := apiPrefix
-		if !strings.HasSuffix(apiPrefix, "/") {
-			apiPathPrefix += "/"
+		p := strings.TrimPrefix(rawPath, mountPath)
+
+		// Only add /data/ prefix to the path if neither /data/ or /metadata/ are
+		// present.
+		if strings.HasPrefix(p, "data/") || strings.HasPrefix(p, "metadata/") {
+			return rawPath
 		}
-		if strings.HasPrefix(p, apiPathPrefix) {
-			return path.Join(mountPath, p)
-		}
-		return path.Join(mountPath, apiPrefix, p)
+		return path.Join(mountPath, "data", p)
 	}
 }

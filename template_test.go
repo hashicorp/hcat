@@ -469,6 +469,25 @@ func TestTemplate_Execute(t *testing.T) {
 			false,
 		},
 		{
+			"func_secret_write_empty",
+			TemplateInput{
+				Contents: `{{ with secret "transit/encrypt/foo" "" }}{{ .Data.ciphertext }}{{ end }}`,
+			},
+			func() *Store {
+				st := NewStore()
+				d, err := idep.NewVaultWriteQuery("transit/encrypt/foo", nil)
+				if err != nil {
+					t.Fatal(err)
+				}
+				st.Save(d.ID(), &dep.Secret{
+					Data: map[string]interface{}{"ciphertext": "encrypted"},
+				})
+				return st
+			}(),
+			"encrypted",
+			false,
+		},
+		{
 			"func_secret_write_no_exist",
 			TemplateInput{
 				Contents: `{{ with secret "secret/nope" "a=b" }}{{ .Data.zip }}{{ end }}`,
