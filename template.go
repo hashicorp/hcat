@@ -219,27 +219,7 @@ type funcMapInput struct {
 
 // funcMap is the map of template functions to their respective functions.
 func funcMap(i *funcMapInput) template.FuncMap {
-
-	r := template.FuncMap{
-		"datacenters":  datacentersFunc(i.recaller),
-		"key":          keyFunc(i.recaller),
-		"keyExists":    keyExistsFunc(i.recaller),
-		"keyOrDefault": keyWithDefaultFunc(i.recaller),
-		"ls":           lsFunc(i.recaller, true),
-		"safeLs":       safeLsFunc(i.recaller),
-		"node":         nodeFunc(i.recaller),
-		"nodes":        nodesFunc(i.recaller),
-		"secret":       secretFunc(i.recaller),
-		"secrets":      secretsFunc(i.recaller),
-		"service":      serviceFunc(i.recaller),
-		"connect":      connectFunc(i.recaller),
-		"services":     servicesFunc(i.recaller),
-		"tree":         treeFunc(i.recaller, true),
-		"safeTree":     safeTreeFunc(i.recaller),
-		"caRoots":      connectCARootsFunc(i.recaller),
-		"caLeaf":       connectLeafFunc(i.recaller),
-	}
-
+	r := make(template.FuncMap, len(i.funcMapMerge))
 	for k, v := range i.funcMapMerge {
 		switch f := v.(type) {
 		case func(Recaller) interface{}:
@@ -248,6 +228,5 @@ func funcMap(i *funcMapInput) template.FuncMap {
 			r[k] = v
 		}
 	}
-
 	return r
 }

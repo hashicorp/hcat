@@ -17,10 +17,24 @@ func All() template.FuncMap {
 	return all
 }
 
-func Env() template.FuncMap {
+// Consul querying functions
+func ConsulV0() template.FuncMap {
 	return template.FuncMap{
-		"env":          envFunc(os.Environ()),
-		"envOrDefault": envOrDefaultFunc(os.Environ()),
+		"datacenters":  datacentersFunc,
+		"key":          keyFunc,
+		"keyExists":    keyExistsFunc,
+		"keyOrDefault": keyWithDefaultFunc,
+		"ls":           lsFunc(true),
+		"safeLs":       safeLsFunc,
+		"node":         nodeFunc,
+		"nodes":        nodesFunc,
+		"service":      serviceFunc,
+		"connect":      connectFunc,
+		"services":     servicesFunc,
+		"tree":         treeFunc(true),
+		"safeTree":     safeTreeFunc,
+		"caRoots":      connectCARootsFunc,
+		"caLeaf":       connectLeafFunc,
 	}
 }
 
@@ -32,6 +46,23 @@ func ConsulFilters() template.FuncMap {
 	}
 }
 
+// Vault querying functions
+func VaultV0() template.FuncMap {
+	return template.FuncMap{
+		"secret":  secretFunc,
+		"secrets": secretsFunc,
+	}
+}
+
+// Environment querying functions
+func Env() template.FuncMap {
+	return template.FuncMap{
+		"env":          envFunc(os.Environ()),
+		"envOrDefault": envOrDefaultFunc(os.Environ()),
+	}
+}
+
+// Flow control functions
 func Control() template.FuncMap {
 	return template.FuncMap{
 		"contains":       contains,
@@ -44,6 +75,7 @@ func Control() template.FuncMap {
 	}
 }
 
+// Mathimatical functions
 func Math() template.FuncMap {
 	return template.FuncMap{
 		"add":      add,
@@ -56,6 +88,7 @@ func Math() template.FuncMap {
 	}
 }
 
+// And the rest... (maybe organize these more?)
 func Helpers() template.FuncMap {
 	return template.FuncMap{
 		// Parsing
