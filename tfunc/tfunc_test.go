@@ -6,6 +6,7 @@ import (
 	"text/template"
 
 	"github.com/hashicorp/hcat"
+	"github.com/hashicorp/hcat/dep"
 )
 
 func testHealthServiceQueryID(service string) string {
@@ -41,4 +42,17 @@ func NewTemplate(ti hcat.TemplateInput) *hcat.Template {
 		}
 	}
 	return hcat.NewTemplate(ti)
+}
+
+// fake/stub Watcherer for tests
+type fakeWatcher struct {
+	*hcat.Store
+}
+
+func (fakeWatcher) Buffer(hcat.Notifier) bool     { return false }
+func (f fakeWatcher) Complete(hcat.Notifier) bool { return true }
+func (f fakeWatcher) Recaller(hcat.Notifier) hcat.Recaller {
+	return func(d dep.Dependency) (value interface{}, found bool) {
+		return f.Store.Recall(d.ID())
+	}
 }
