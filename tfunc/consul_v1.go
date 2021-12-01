@@ -1,9 +1,10 @@
-package hcat
+package tfunc
 
 import (
 	"fmt"
 	"text/template"
 
+	"github.com/hashicorp/hcat"
 	"github.com/hashicorp/hcat/dep"
 	idep "github.com/hashicorp/hcat/internal/dependency"
 )
@@ -33,7 +34,7 @@ func FuncMapConsulV1() template.FuncMap {
 
 // v1TODOFunc is a placeholder function to return an error instead of inheriting
 // the default template functions.
-func v1TODOFunc(recall Recaller) interface{} {
+func v1TODOFunc(recall hcat.Recaller) interface{} {
 	return func(s ...string) (interface{}, error) {
 		return nil, errFuncNotImplemented
 	}
@@ -43,7 +44,7 @@ func v1TODOFunc(recall Recaller) interface{} {
 //
 // Endpoint: /v1/catalog/services
 // Template: {{ services <filter options> ... }}
-func v1ServicesFunc(recall Recaller) interface{} {
+func v1ServicesFunc(recall hcat.Recaller) interface{} {
 	return func(opts ...string) ([]*dep.CatalogSnippet, error) {
 		result := []*dep.CatalogSnippet{}
 
@@ -64,7 +65,7 @@ func v1ServicesFunc(recall Recaller) interface{} {
 //
 // Endpoint: /v1/health/service/:service
 // Template: {{ service "serviceName" <filter options> ... }}
-func v1ServiceFunc(recall Recaller) interface{} {
+func v1ServiceFunc(recall hcat.Recaller) interface{} {
 	return func(service string, opts ...string) ([]*dep.HealthService, error) {
 		result := []*dep.HealthService{}
 
@@ -91,7 +92,7 @@ func v1ServiceFunc(recall Recaller) interface{} {
 //
 // Endpoint: /v1/health/connect/:service
 // Template: {{ connect "serviceName" <filter options> ... }}
-func v1ConnectFunc(recall Recaller) interface{} {
+func v1ConnectFunc(recall hcat.Recaller) interface{} {
 	return func(service string, opts ...string) ([]*dep.HealthService, error) {
 		result := []*dep.HealthService{}
 
@@ -116,7 +117,7 @@ func v1ConnectFunc(recall Recaller) interface{} {
 //
 // Endpoint: /v1/kv/:prefix?recurse
 // Template: {{ keys "prefix" <filter options> ... }}
-func v1KVListFunc(recall Recaller) interface{} {
+func v1KVListFunc(recall hcat.Recaller) interface{} {
 	return func(prefix string, opts ...string) ([]*dep.KeyPair, error) {
 		result := []*dep.KeyPair{}
 
@@ -141,7 +142,7 @@ func v1KVListFunc(recall Recaller) interface{} {
 //
 // Endpoint: /v1/kv/:key
 // Template: {{ key "key" <filter options> ... }}
-func v1KVGetFunc(recall Recaller) interface{} {
+func v1KVGetFunc(recall hcat.Recaller) interface{} {
 	return func(key string, opts ...string) (dep.KvValue, error) {
 		var result dep.KvValue
 
@@ -166,7 +167,7 @@ func v1KVGetFunc(recall Recaller) interface{} {
 //
 // Endpoint: /v1/kv/:key
 // Template: {{ keyExists "key" <filter options> ... }}
-func v1KVExistsFunc(recall Recaller) interface{} {
+func v1KVExistsFunc(recall hcat.Recaller) interface{} {
 	return func(key string, opts ...string) (dep.KVExists, error) {
 		var result dep.KVExists
 
@@ -192,7 +193,7 @@ func v1KVExistsFunc(recall Recaller) interface{} {
 //
 // Endpoint: /v1/kv/:key
 // Template: {{ keyExistsGet "key" <filter options> ... }}
-func v1KVExistsGetFunc(recall Recaller) interface{} {
+func v1KVExistsGetFunc(recall hcat.Recaller) interface{} {
 	return func(key string, opts ...string) (*dep.KeyPair, error) {
 		var result *dep.KeyPair
 

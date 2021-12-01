@@ -5,7 +5,8 @@ import (
 	"text/template"
 )
 
-func All() template.FuncMap {
+// All available template functions
+func AllUnversioned() template.FuncMap {
 	all := make(template.FuncMap)
 	allfuncs := []func() template.FuncMap{
 		ConsulFilters, Env, Control, Helpers, Math}
@@ -38,6 +39,28 @@ func ConsulV0() template.FuncMap {
 	}
 }
 
+// ConsulV1 is a set of template functions for querying Consul endpoints.
+// The functions support Consul v1 API filter expressions and Consul enterprise
+// namespaces.
+func ConsulV1() template.FuncMap {
+	return template.FuncMap{
+		"service":      v1ServiceFunc,
+		"connect":      v1ConnectFunc,
+		"services":     v1ServicesFunc,
+		"keys":         v1KVListFunc,
+		"key":          v1KVGetFunc,
+		"keyExists":    v1KVExistsFunc,
+		"keyExistsGet": v1KVExistsGetFunc,
+
+		// Set of Consul functions that are not yet implemented for v1. These
+		// intentionally error instead of defaulting to the v0 implementations
+		// to avoid introducing breaking changes when they are supported.
+		"node":  v1TODOFunc,
+		"nodes": v1TODOFunc,
+	}
+}
+
+// Functions to filter consul results
 func ConsulFilters() template.FuncMap {
 	return template.FuncMap{
 		"byKey":  byKey,

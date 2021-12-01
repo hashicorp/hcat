@@ -33,14 +33,24 @@ func TestAllForDups(t *testing.T) {
 
 // Wrap the new template to use our template library
 func NewTemplate(ti hcat.TemplateInput) *hcat.Template {
+	funcMap := AllUnversioned()
+	// use vault v0 api as that is all that is currently supported
+	for k, v := range VaultV0() {
+		funcMap[k] = v
+	}
+	// use consul v0 api as default for now as most tests use it
+	for k, v := range ConsulV0() {
+		funcMap[k] = v
+	}
 	switch ti.FuncMapMerge {
 	case nil:
-		ti.FuncMapMerge = All()
 	default:
-		for k, v := range All() {
-			ti.FuncMapMerge[k] = v
+		// allow passed in option to override defaults
+		for k, v := range ti.FuncMapMerge {
+			funcMap[k] = v
 		}
 	}
+	ti.FuncMapMerge = funcMap
 	return hcat.NewTemplate(ti)
 }
 
