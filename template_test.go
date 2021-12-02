@@ -184,21 +184,29 @@ func TestTemplate_Execute(t *testing.T) {
 }
 
 func TestCachedTemplate(t *testing.T) {
+	d, err := idep.NewKVGetQuery("key")
+	if err != nil {
+		t.Fatal(err)
+	}
 	t.Run("cache-is-used", func(t *testing.T) {
-		ti := TemplateInput{
-			Contents: `{{ key "key" }}`,
-		}
-		rec := func() *Store {
+		recaller := func() *Store {
 			st := NewStore()
-			d, err := idep.NewKVGetQuery("key")
-			if err != nil {
-				t.Fatal(err)
-			}
 			st.Save(d.ID(), "value")
 			return st
 		}()
+		ti := TemplateInput{
+			Contents: `{{ testStore "key" }}`,
+			FuncMapMerge: map[string]interface{}{
+				"testStore": func(key string) interface{} {
+					v, ok := recaller.Recall(d.ID())
+					if !ok {
+						t.Errorf("key not found")
+					}
+					return v
+				}},
+		}
 		tpl := NewTemplate(ti)
-		w := fakeWatcher{rec}
+		w := fakeWatcher{recaller}
 		content, err := tpl.Execute(w.Recaller(tpl))
 		if err != nil {
 			t.Fatal(err)

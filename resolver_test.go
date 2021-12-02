@@ -15,7 +15,7 @@ func TestResolverRun(t *testing.T) {
 	t.Parallel()
 	t.Run("first-run", func(t *testing.T) {
 		rv := NewResolver()
-		tt := fooTemplate()
+		tt := echoTemplate("foo")
 		w := blindWatcher()
 		defer w.Stop()
 		w.Register(tt)
@@ -31,10 +31,10 @@ func TestResolverRun(t *testing.T) {
 
 	t.Run("no-changes", func(t *testing.T) {
 		rv := NewResolver()
-		tt := fooTemplate()
+		tt := echoTemplate("foo")
 		tt.isDirty() // flush dirty mark set on new templates
 		w := blindWatcher()
-		d, _ := idep.NewKVGetQuery("foo")
+		d := &idep.FakeDep{Name: "foo"}
 		defer w.Stop()
 		w.Register(tt)
 
@@ -65,9 +65,9 @@ func TestResolverRun(t *testing.T) {
 		rv := NewResolver()
 		w := blindWatcher()
 		defer w.Stop()
-		tt := fooTemplate()
+		tt := echoTemplate("foo")
 		w.Register(tt)
-		d, _ := idep.NewKVGetQuery("foo")
+		d := &idep.FakeDep{Name: "foo"}
 
 		// seed the cache and the dependency tracking
 		// maybe abstract out into separate function
@@ -224,13 +224,6 @@ func TestResolverRun(t *testing.T) {
 
 //////////////////////////
 // Helpers
-
-func fooTemplate() *Template {
-	return NewTemplate(
-		TemplateInput{
-			Contents: `{{key "foo"}}`,
-		})
-}
 
 func echoTemplate(data string) *Template {
 	return NewTemplate(
