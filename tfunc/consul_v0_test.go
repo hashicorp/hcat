@@ -183,6 +183,17 @@ func TestConsulV0Execute(t *testing.T) {
 			false,
 		},
 		{
+			"func_node_nil_pointer_evaluation",
+			hcat.TemplateInput{
+				Contents: `{{ $v := node }}{{ $v.Node }}`,
+			},
+			func() hcat.Watcherer {
+				return fakeWatcher{hcat.NewStore()}
+			}(),
+			"<no value>",
+			false,
+		},
+		{
 			"func_nodes",
 			hcat.TemplateInput{
 				Contents: `{{ range nodes }}{{ .Node }}{{ end }}`,
@@ -317,6 +328,17 @@ func TestConsulV0Execute(t *testing.T) {
 				return fakeWatcher{st}
 			}(),
 			"PEMKEY",
+			false,
+		},
+		{
+			"leaf_cert_nil_pointer_evaluation",
+			hcat.TemplateInput{
+				Contents: `{{ $v := caLeaf "foo" }}{{ $v.CertPEM }}`,
+			},
+			func() hcat.Watcherer {
+				return fakeWatcher{hcat.NewStore()}
+			}(),
+			"<no value>",
 			false,
 		},
 		{

@@ -11,11 +11,9 @@ import (
 
 // secretFunc returns or accumulates secret dependencies from Vault.
 func secretFunc(recall hcat.Recaller) interface{} {
-	return func(s ...string) (*dep.Secret, error) {
-		var result *dep.Secret
-
+	return func(s ...string) (interface{}, error) {
 		if len(s) == 0 {
-			return result, nil
+			return nil, nil
 		}
 
 		path, rest := s[0], s[1:]
@@ -26,7 +24,7 @@ func secretFunc(recall hcat.Recaller) interface{} {
 			}
 			parts := strings.SplitN(str, "=", 2)
 			if len(parts) != 2 {
-				return result, fmt.Errorf("not k=v pair %q", str)
+				return nil, fmt.Errorf("not k=v pair %q", str)
 			}
 
 			k, v := strings.TrimSpace(parts[0]), strings.TrimSpace(parts[1])
@@ -48,11 +46,10 @@ func secretFunc(recall hcat.Recaller) interface{} {
 		}
 
 		if value, ok := recall(d); ok {
-			result = value.(*dep.Secret)
-			return result, nil
+			return value.(*dep.Secret), nil
 		}
 
-		return result, nil
+		return nil, nil
 	}
 }
 

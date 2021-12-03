@@ -278,6 +278,17 @@ func TestVaultExecute(t *testing.T) {
 			"",
 			false,
 		},
+		{
+			"func_secret_nil_pointer_evaluation",
+			hcat.TemplateInput{
+				Contents: `{{ $v := secret "secret/foo" }}{{ $v.Data.zip }}`,
+			},
+			func() hcat.Watcherer {
+				return fakeWatcher{hcat.NewStore()}
+			}(),
+			"<no value>",
+			false,
+		},
 	}
 
 	for i, tc := range cases {

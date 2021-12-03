@@ -166,7 +166,7 @@ func lsFunc(emptyIsSafe bool) func(hcat.Recaller) interface{} {
 
 // nodeFunc returns or accumulates catalog node dependency.
 func nodeFunc(recall hcat.Recaller) interface{} {
-	return func(s ...string) (*dep.CatalogNode, error) {
+	return func(s ...string) (interface{}, error) {
 
 		d, err := idep.NewCatalogNodeQuery(strings.Join(s, ""))
 		if err != nil {
@@ -275,7 +275,7 @@ func connectCARootsFunc(recall hcat.Recaller) interface{} {
 
 // connectLeafFunc returns leaf certificate representing a single service.
 func connectLeafFunc(recall hcat.Recaller) interface{} {
-	return func(s ...string) (*api.LeafCert, error) {
+	return func(s ...string) (interface{}, error) {
 		if len(s) == 0 || s[0] == "" {
 			return nil, nil
 		}
