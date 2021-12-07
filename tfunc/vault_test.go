@@ -23,7 +23,7 @@ func TestVaultExecute(t *testing.T) {
 
 	testFunc := func(tc testCase) func(*testing.T) {
 		return func(t *testing.T) {
-			tpl := NewTemplate(tc.ti)
+			tpl := newTemplate(tc.ti)
 
 			a, err := tpl.Execute(tc.i.Recaller(tpl))
 			if (err != nil) != tc.err {

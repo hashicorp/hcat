@@ -51,7 +51,7 @@ func TestEnvExecute(t *testing.T) {
 
 	for i, tc := range cases {
 		t.Run(fmt.Sprintf("%d_%s", i, tc.name), func(t *testing.T) {
-			tpl := NewTemplate(tc.ti)
+			tpl := newTemplate(tc.ti)
 
 			a, err := tpl.Execute(tc.i.Recaller(tpl))
 			if (err != nil) != tc.err {

@@ -25,7 +25,7 @@ func TestTemplateExecuteConsulV1(t *testing.T) {
 	testFunc := func(tc testCase) func(*testing.T) {
 		return func(t *testing.T) {
 			tc.ti.FuncMapMerge = ConsulV1()
-			tpl := NewTemplate(tc.ti)
+			tpl := newTemplate(tc.ti)
 
 			a, err := tpl.Execute(tc.i.Recaller(tpl))
 			if (err != nil) != tc.err {

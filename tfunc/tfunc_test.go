@@ -17,6 +17,7 @@ func testKVListQueryID(prefix string) string {
 	return fmt.Sprintf("kv.list(%s)", prefix)
 }
 
+// simple check for duplicate names for template functions
 func TestAllForDups(t *testing.T) {
 	all := make(template.FuncMap)
 	allfuncs := []func() template.FuncMap{
@@ -31,8 +32,8 @@ func TestAllForDups(t *testing.T) {
 	}
 }
 
-// Wrap the new template to use our template library
-func NewTemplate(ti hcat.TemplateInput) *hcat.Template {
+// Return a new template with all unversioned and V0 template functions.
+func newTemplate(ti hcat.TemplateInput) *hcat.Template {
 	funcMap := AllUnversioned()
 	// use vault v0 api as that is all that is currently supported
 	for k, v := range VaultV0() {

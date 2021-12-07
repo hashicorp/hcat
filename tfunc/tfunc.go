@@ -5,7 +5,7 @@ import (
 	"text/template"
 )
 
-// All available template functions
+// AllUnversioned available template functions
 func AllUnversioned() template.FuncMap {
 	all := make(template.FuncMap)
 	allfuncs := []func() template.FuncMap{
@@ -18,7 +18,7 @@ func AllUnversioned() template.FuncMap {
 	return all
 }
 
-// Consul querying functions
+// ConsulV0 is a set of template functions for querying Consul endpoints.
 func ConsulV0() template.FuncMap {
 	return template.FuncMap{
 		"datacenters":  datacentersFunc,
@@ -60,7 +60,7 @@ func ConsulV1() template.FuncMap {
 	}
 }
 
-// Functions to filter consul results
+// ConsulFilters provides functions to filter consul results
 func ConsulFilters() template.FuncMap {
 	return template.FuncMap{
 		"byKey":  byKey,
@@ -69,7 +69,7 @@ func ConsulFilters() template.FuncMap {
 	}
 }
 
-// Vault querying functions
+// VaultV0 querying functions
 func VaultV0() template.FuncMap {
 	return template.FuncMap{
 		"secret":  secretFunc,
@@ -77,7 +77,7 @@ func VaultV0() template.FuncMap {
 	}
 }
 
-// Environment querying functions
+// Environment variable querying functions
 func Env() template.FuncMap {
 	return template.FuncMap{
 		"env":          envFunc(os.Environ()),
@@ -85,7 +85,7 @@ func Env() template.FuncMap {
 	}
 }
 
-// Flow control functions
+// Control flow functions
 func Control() template.FuncMap {
 	return template.FuncMap{
 		"contains":       contains,
@@ -111,7 +111,7 @@ func Math() template.FuncMap {
 	}
 }
 
-// And the rest... (maybe organize these more?)
+// Helpers are all the rest... (maybe organize these more?)
 func Helpers() template.FuncMap {
 	return template.FuncMap{
 		// Parsing

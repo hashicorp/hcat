@@ -149,7 +149,7 @@ func Test_writeToFile(t *testing.T) {
 			ti := hcat.TemplateInput{
 				Contents: templateContent,
 			}
-			tpl := NewTemplate(ti)
+			tpl := newTemplate(ti)
 
 			a, err := tpl.Execute(nil)
 			if (err != nil) != tc.wantErr {
