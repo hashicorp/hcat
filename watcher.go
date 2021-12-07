@@ -254,6 +254,72 @@ func (w *Watcher) Wait(ctx context.Context) error {
 	}
 }
 
+// Watch will continuously watch for data updates and send template IDs to
+// the provided channel which templates have changes to be rendered. Useful
+// for when caller wants to process templates asynchronously. Only one Watch
+// should be called at given time and should not be called with Wait.
+func (w *Watcher) Watch(ctx context.Context, tmplCh chan string) error {
+	w.stopCh.drain()
+	go func() { w.waitingCh <- struct{}{} }()
+
+	dataUpdateAndNotify := func(v *view) {
+		id := v.ID()
+		w.cache.Save(id, v.Data())
+		for _, n := range w.tracker.notifiersFor(v) {
+			if n.Notify(v.Data()) {
+				tmplCh <- n.ID()
+			}
+		}
+	}
+
+	for {
+		select {
+		case view := <-w.dataCh:
+			dataUpdateAndNotify(view)
+
+			// Drain all dependency data. Prevents re-rendering templates over
+			// and over when a large batch of dependencies are updated.
+			// See consul-template GH-168 for background.
+			for drain := true; drain; {
+				select {
+				case view := <-w.dataCh:
+					dataUpdateAndNotify(view)
+				case <-time.After(time.Microsecond):
+					drain = false
+				}
+			}
+		case tmplID := <-w.bufferTrigger:
+			// A template is now ready to be rendered, though there might be a
+			// few ready around the same time if they have the same dependencies.
+			// Drain the channel similar for the dataCh above.
+			tmplCh <- tmplID
+			for drain := true; drain; {
+				select {
+				case tmplID = <-w.bufferTrigger:
+					tmplCh <- tmplID
+				case <-time.After(time.Microsecond):
+					drain = false
+				}
+			}
+
+		case <-w.stopCh:
+			return nil
+
+		case err := <-w.errCh:
+			// Push the error back up the stack
+			return err
+
+		case <-ctx.Done():
+			// No changes detected is not considered an error when deadline passes or
+			// timeout is reached
+			if ctx.Err() == context.DeadlineExceeded {
+				return nil
+			}
+			return ctx.Err()
+		}
+	}
+}
+
 // Buffer sets the template to activate buffer and accumulate changes for a
 // period. If the template has not been initalized or a buffer period is not
 // configured for the template, it will skip buffering.
