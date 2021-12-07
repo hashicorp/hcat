@@ -5,7 +5,8 @@ import (
 	"text/template"
 )
 
-func All() template.FuncMap {
+// AllUnversioned available template functions
+func AllUnversioned() template.FuncMap {
 	all := make(template.FuncMap)
 	allfuncs := []func() template.FuncMap{
 		ConsulFilters, Env, Control, Helpers, Math}
@@ -17,13 +18,49 @@ func All() template.FuncMap {
 	return all
 }
 
-func Env() template.FuncMap {
+// ConsulV0 is a set of template functions for querying Consul endpoints.
+func ConsulV0() template.FuncMap {
 	return template.FuncMap{
-		"env":          envFunc(os.Environ()),
-		"envOrDefault": envOrDefaultFunc(os.Environ()),
+		"datacenters":  datacentersFunc,
+		"key":          keyFunc,
+		"keyExists":    keyExistsFunc,
+		"keyOrDefault": keyWithDefaultFunc,
+		"ls":           lsFunc(true),
+		"safeLs":       safeLsFunc,
+		"node":         nodeFunc,
+		"nodes":        nodesFunc,
+		"service":      serviceFunc,
+		"connect":      connectFunc,
+		"services":     servicesFunc,
+		"tree":         treeFunc(true),
+		"safeTree":     safeTreeFunc,
+		"caRoots":      connectCARootsFunc,
+		"caLeaf":       connectLeafFunc,
 	}
 }
 
+// ConsulV1 is a set of template functions for querying Consul endpoints.
+// The functions support Consul v1 API filter expressions and Consul enterprise
+// namespaces.
+func ConsulV1() template.FuncMap {
+	return template.FuncMap{
+		"service":      v1ServiceFunc,
+		"connect":      v1ConnectFunc,
+		"services":     v1ServicesFunc,
+		"keys":         v1KVListFunc,
+		"key":          v1KVGetFunc,
+		"keyExists":    v1KVExistsFunc,
+		"keyExistsGet": v1KVExistsGetFunc,
+
+		// Set of Consul functions that are not yet implemented for v1. These
+		// intentionally error instead of defaulting to the v0 implementations
+		// to avoid introducing breaking changes when they are supported.
+		"node":  v1TODOFunc,
+		"nodes": v1TODOFunc,
+	}
+}
+
+// ConsulFilters provides functions to filter consul results
 func ConsulFilters() template.FuncMap {
 	return template.FuncMap{
 		"byKey":  byKey,
@@ -32,6 +69,23 @@ func ConsulFilters() template.FuncMap {
 	}
 }
 
+// VaultV0 querying functions
+func VaultV0() template.FuncMap {
+	return template.FuncMap{
+		"secret":  secretFunc,
+		"secrets": secretsFunc,
+	}
+}
+
+// Environment variable querying functions
+func Env() template.FuncMap {
+	return template.FuncMap{
+		"env":          envFunc(os.Environ()),
+		"envOrDefault": envOrDefaultFunc(os.Environ()),
+	}
+}
+
+// Control flow functions
 func Control() template.FuncMap {
 	return template.FuncMap{
 		"contains":       contains,
@@ -44,6 +98,7 @@ func Control() template.FuncMap {
 	}
 }
 
+// Mathimatical functions
 func Math() template.FuncMap {
 	return template.FuncMap{
 		"add":      add,
@@ -56,6 +111,7 @@ func Math() template.FuncMap {
 	}
 }
 
+// Helpers are all the rest... (maybe organize these more?)
 func Helpers() template.FuncMap {
 	return template.FuncMap{
 		// Parsing

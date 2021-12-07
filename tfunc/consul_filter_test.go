@@ -127,17 +127,32 @@ func Test_byMeta(t *testing.T) {
 	}
 }
 
-func TestConsulExecute(t *testing.T) {
+func TestConsulFilterExecute(t *testing.T) {
 	t.Parallel()
 
-	cases := []struct {
+	type testCase struct {
 		name string
 		ti   hcat.TemplateInput
 		i    hcat.Watcherer
 		e    string
 		err  bool
-	}{
-		// helpers
+	}
+
+	testFunc := func(tc testCase) func(*testing.T) {
+		return func(t *testing.T) {
+			tpl := newTemplate(tc.ti)
+
+			a, err := tpl.Execute(tc.i.Recaller(tpl))
+			if (err != nil) != tc.err {
+				t.Fatal(err)
+			}
+			if !bytes.Equal([]byte(tc.e), a) {
+				t.Errorf("\nexp: %#v\nact: %#v", tc.e, string(a))
+			}
+		}
+	}
+
+	cases := []testCase{
 		{
 			"helper_by_key",
 			hcat.TemplateInput{
@@ -182,28 +197,6 @@ func TestConsulExecute(t *testing.T) {
 	}
 
 	for i, tc := range cases {
-		t.Run(fmt.Sprintf("%d_%s", i, tc.name), func(t *testing.T) {
-			tpl := NewTemplate(tc.ti)
-
-			a, err := tpl.Execute(tc.i.Recaller(tpl))
-			if (err != nil) != tc.err {
-				t.Fatal(err)
-			}
-			if !bytes.Equal([]byte(tc.e), a) {
-				t.Errorf("\nexp: %#v\nact: %#v", tc.e, string(a))
-			}
-		})
-	}
-}
-
-type fakeWatcher struct {
-	*hcat.Store
-}
-
-func (fakeWatcher) Buffer(hcat.Notifier) bool     { return false }
-func (f fakeWatcher) Complete(hcat.Notifier) bool { return true }
-func (f fakeWatcher) Recaller(hcat.Notifier) hcat.Recaller {
-	return func(d dep.Dependency) (value interface{}, found bool) {
-		return f.Store.Recall(d.ID())
+		t.Run(fmt.Sprintf("%d_%s", i, tc.name), testFunc(tc))
 	}
 }
