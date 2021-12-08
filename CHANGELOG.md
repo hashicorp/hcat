@@ -5,7 +5,7 @@
 IMPROVEMENTS:
 
 * Move all template functions into template library [[GH-82](https://github.com/hashicorp/hcat/pull/82), [GH-36](https://github.com/hashicorp/hcat/issues/36)]
-* Port all relavent consul-template updates [[GH-81](https://github.com/hashicorp/hcat/pull/81), [GH-69](https://github.com/hashicorp/hcat/issues/69)]
+* Port all relevant consul-template updates [[GH-81](https://github.com/hashicorp/hcat/pull/81), [GH-69](https://github.com/hashicorp/hcat/issues/69)]
 
 ## v0.1.0 (Nov 11, 2021)
 
