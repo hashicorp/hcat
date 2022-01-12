@@ -260,7 +260,6 @@ func (w *Watcher) Wait(ctx context.Context) error {
 // should be called at given time and should not be called with Wait.
 func (w *Watcher) Watch(ctx context.Context, tmplCh chan string) error {
 	w.stopCh.drain()
-	go func() { w.waitingCh <- struct{}{} }()
 
 	dataUpdateAndNotify := func(v *view) {
 		id := v.ID()
