@@ -11,7 +11,7 @@ jobs:
       - checkout
       - restore_cache:
           keys:
-            - ct-modcache-v1-{{ checksum "go.mod" }}
+            - ct-modcache-v2-{{ checksum "go.mod" }}
       - run: |
           curl -sLo consul.zip https://releases.hashicorp.com/consul/${CONSUL_VERSION}/consul_${CONSUL_VERSION}_linux_amd64.zip
           unzip consul.zip
@@ -23,7 +23,7 @@ jobs:
       - run: |
           go test ./...
       - save_cache:
-          key: ct-modcache-v1-{{ checksum "go.mod" }}
+          key: ct-modcache-v2-{{ checksum "go.mod" }}
           paths:
             - /go/pkg/mod
 
