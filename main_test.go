@@ -11,15 +11,15 @@ import (
 )
 
 var (
-	runExamples = flag.Bool("egs", false, "Run example tests")
-	consuladdr  string
+	RunExamples = flag.Bool("egs", false, "Run example tests")
+	Consuladdr  string
 )
 
 func TestMain(m *testing.M) {
 	flag.Parse()
 	cleanup := func() {}
-	if *runExamples {
-		consuladdr, cleanup = testConsulSetup()
+	if *RunExamples {
+		Consuladdr, cleanup = testConsulSetup()
 	}
 	retCode := m.Run()
 	cleanup() // can't defer w/ os.Exit
