@@ -283,7 +283,6 @@ func (w *Watcher) Register(ns ...Notifier) error {
 // explicit start (see Poll below).
 // It calls Register as a convenience, but ignores the returned error so it can
 // be used with already Registered Notifiers.
-// If the dependency is already registered, no action is taken.
 func (w *Watcher) Track(n Notifier, d dep.Dependency) {
 	w.Register(n)
 	w.track(n, d)
@@ -293,7 +292,7 @@ func (w *Watcher) Track(n Notifier, d dep.Dependency) {
 // Returned view is useful internally and for testing.
 // Private as we don't want `view` public at this point.
 func (w *Watcher) track(n Notifier, d dep.Dependency) *view {
-	w.tracker.inUse(n, d)
+	w.tracker.markInUse(n, d)
 	if v, ok := w.tracker.lookup(n, d); ok {
 		return v
 	}
@@ -364,8 +363,8 @@ func (w *Watcher) Complete(n Notifier) bool {
 // Should be used before/after the code that uses the dependencies (eg. template).
 //
 // Mark's all tracked dependencies as being *not* in use.
-func (w *Watcher) Mark(notifier IDer) {
-	w.tracker.mark(notifier)
+func (w *Watcher) MarkForSweep(notifier IDer) {
+	w.tracker.markForSweep(notifier)
 }
 
 // Sweeps (stop and dereference) all views for dependencies marked as *not* in use.
@@ -440,21 +439,21 @@ func newTracker() *tracker {
 type trackedPair struct {
 	// view: id of view watched, notify: id of notifier (eg. template)
 	view, notify string
-	// inUse flag gets off pre-render and back on at use
-	inUse bool
+	// mark(-n-sweep) flag gets set off pre-render and back on at use
+	mark bool
 	// cacheAccessed is set when recalled from cache the first time
 	cacheAccessed bool
 }
 
-// markUsed sets as inUse (=true) and returns new pair to keep as value
+// markUsed sets as mark (=true) and returns new pair to keep as value
 func (tp trackedPair) markInUse() trackedPair {
-	tp.inUse = true
+	tp.mark = true
 	return tp
 }
 
-// clearUse clears inUse (=false) and returns new pair to keep as value
+// clearUse clears mark (=false) and returns new pair to keep as value
 func (tp trackedPair) clearInUse() trackedPair {
-	tp.inUse = false
+	tp.mark = false
 	return tp
 }
 
@@ -574,11 +573,11 @@ func (t *tracker) add(v *view, n Notifier) {
 		panic("attempt to use an unregistered notifier")
 	}
 	t.tracked = append(t.tracked,
-		trackedPair{view: v.ID(), notify: n.ID(), inUse: true})
+		trackedPair{view: v.ID(), notify: n.ID(), mark: true})
 }
 
 // Marks all trackedPairs w/ a view as having been used
-func (t *tracker) inUse(notifier IDer, d dep.Dependency) {
+func (t *tracker) markInUse(notifier IDer, d dep.Dependency) {
 	notifierID, depID := notifier.ID(), d.ID()
 	t.Lock()
 	defer t.Unlock()
@@ -630,11 +629,11 @@ func (t *tracker) complete(notifier IDer) bool {
 // Checks based on passed in notifier, ignores others.
 //
 // mark all pairs used by this notifier not used (used with sweep)
-func (t *tracker) mark(notifier IDer) {
+func (t *tracker) markForSweep(notifier IDer) {
 	t.Lock()
 	defer t.Unlock()
 	for i, tp := range t.tracked {
-		if tp.notify == notifier.ID() && tp.inUse {
+		if tp.notify == notifier.ID() && tp.mark {
 			t.tracked[i] = tp.clearInUse()
 		}
 	}
@@ -650,7 +649,7 @@ func (t *tracker) sweep(notifier IDer, cache Cacher) {
 	tmp := t.tracked[:0]
 	for _, tp := range t.tracked {
 		otherNotifier := tp.notify != notifier.ID()
-		if tp.inUse || otherNotifier {
+		if tp.mark || otherNotifier {
 			tmp = append(tmp, tp)
 			used[tp.view] = struct{}{}
 			used[tp.notify] = struct{}{}
