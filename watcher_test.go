@@ -785,7 +785,7 @@ func TestWatcherMarkSweep(t *testing.T) {
 		// everything watched
 		checkDeps(fdep, bdep)
 		// marks all dependencies of this notifier as being unused
-		w.Mark(n)
+		w.MarkForSweep(n)
 		// everything still watched
 		checkDeps(fdep, bdep)
 

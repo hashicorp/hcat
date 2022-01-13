@@ -27,37 +27,43 @@ func TestResolverRun(t *testing.T) {
 		if r.Complete != false {
 			t.Fatal("Complete should be false")
 		}
+		if string(r.Contents) != "" {
+			t.Error("bad contents")
+		}
 	})
 
 	t.Run("no-changes", func(t *testing.T) {
 		rv := NewResolver()
 		tt := echoTemplate("foo")
-		tt.isDirty() // flush dirty mark set on new templates
 		w := blindWatcher()
-		d := &idep.FakeDep{Name: "foo"}
 		defer w.Stop()
 		w.Register(tt)
 
-		// seed the dependency tracking
-		// otherwise it will trigger first run
-		w.Track(tt, d)
-		// set receivedData to true to make it think it has it already
-		v := w.tracker.view(d.ID())
-		v.receivedData = true
+		// Run/Wait/Run to get it completed once
+		_, err := rv.Run(tt, w)
+		if err != nil {
+			t.Fatal("Run() error:", err)
+		}
+		w.Wait(context.Background())
+		_, err = rv.Run(tt, w)
+		if err != nil {
+			t.Fatal("Run() error:", err)
+		}
 
+		// This run should have no changes
 		r, err := rv.Run(tt, w)
 		if err != nil {
 			t.Fatal("Run() error:", err)
 		}
 
-		if string(r.Contents) != "" {
-			t.Fatal("bad contents")
+		if string(r.Contents) != "foo" {
+			t.Error("bad contents")
 		}
 		if r.NoChange != true {
-			t.Fatal("NoChange should be true")
+			t.Error("NoChange should be true")
 		}
 		if r.Complete != true {
-			t.Fatal("Complete should be true")
+			t.Error("Complete should be true")
 		}
 	})
 
@@ -92,8 +98,41 @@ func TestResolverRun(t *testing.T) {
 		if r.NoChange != false {
 			t.Fatal("NoChange should be false")
 		}
-		if r.Complete != true {
-			t.Fatal("Complete should be true")
+	})
+
+	t.Run("not-dirty-should-not-mean-complete", func(t *testing.T) {
+		// Tests a situation where template has unresolved dependencies
+		// but they don't count against complete as they haven't been
+		// marked in use yet.
+		// Basically this tests a bug where the mark-n-sweep information was
+		// being used in the complete check erroneously.
+		rv := NewResolver()
+		w := blindWatcher()
+		defer w.Stop()
+		tt := echoTemplate("foo")
+		w.Register(tt)
+
+		// Run it once to get everything registered
+		_, err := rv.Run(tt, w)
+		if err != nil {
+			t.Fatal("Run() error:", err)
+		}
+
+		// Flush the dirty flat and re-run
+		// pre-fix it would return Complete=true w/ no Contents
+		tt.isDirty()
+		r, err := rv.Run(tt, w)
+		if err != nil {
+			t.Fatal("Run() error:", err)
+		}
+		if r.Complete == true {
+			t.Fatal("Complete should be false")
+		}
+		if string(r.Contents) != "" {
+			t.Fatal("bad contents")
+		}
+		if r.NoChange != true {
+			t.Fatal("NoChange should be false")
 		}
 	})
 
