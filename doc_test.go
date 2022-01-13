@@ -1,4 +1,4 @@
-package hcat
+package hcat_test
 
 import (
 	"context"
@@ -8,7 +8,10 @@ import (
 	"time"
 
 	"github.com/hashicorp/consul/api"
+
+	"github.com/hashicorp/hcat"
 	"github.com/hashicorp/hcat/dep"
+	"github.com/hashicorp/hcat/tfunc"
 )
 
 // These examples requires a running consul to test against.
@@ -27,17 +30,19 @@ var examples = []string{exampleServiceTemplate, exampleNodeTemplate}
 // Repeatedly runs the resolver on the template and watcher until the returned
 // ResolveEvent shows the template has fetched all values and completed, then
 // returns the output.
-func RenderExampleOnce(clients *ClientSet) string {
-	tmpl := NewTemplate(TemplateInput{
-		Contents: exampleServiceTemplate,
-	})
-	w := NewWatcher(WatcherInput{
+func RenderExampleOnce(clients *hcat.ClientSet) string {
+	w := hcat.NewWatcher(hcat.WatcherInput{
 		Clients: clients,
-		Cache:   NewStore(),
+		Cache:   hcat.NewStore(),
 	})
+	tmpl := hcat.NewTemplate(hcat.TemplateInput{
+		Contents:     exampleServiceTemplate,
+		FuncMapMerge: tfunc.ConsulV0(),
+	})
+	w.Register(tmpl)
 
 	ctx := context.Background()
-	r := NewResolver()
+	r := hcat.NewResolver()
 	for {
 		re, err := r.Run(tmpl, w)
 		if err != nil {
@@ -57,29 +62,33 @@ func RenderExampleOnce(clients *ClientSet) string {
 // Runs the resolver over multiple templates until all have completed.
 // By looping over all the templates it can start the data lookups in each and
 // better share cached results for faster overall template rendering.
-func RenderMultipleOnce(clients *ClientSet) string {
-	templates := make([]*Template, len(examples))
-	for i, egs := range examples {
-		templates[i] = NewTemplate(TemplateInput{Contents: egs})
-	}
-	w := NewWatcher(WatcherInput{
+func RenderMultipleOnce(clients *hcat.ClientSet) string {
+	w := hcat.NewWatcher(hcat.WatcherInput{
 		Clients: clients,
-		Cache:   NewStore(),
+		Cache:   hcat.NewStore(),
 	})
+	templates := make([]*hcat.Template, len(examples))
+	for i, egs := range examples {
+		tmpl := hcat.NewTemplate(
+			hcat.TemplateInput{Contents: egs, FuncMapMerge: tfunc.ConsulV0()})
+		templates[i] = tmpl
+		w.Register(tmpl)
+	}
 
 	results := []string{}
-	r := NewResolver()
+	r := hcat.NewResolver()
 	for {
-		for _, tmpl := range templates {
+		for i, tmpl := range templates {
 			re, err := r.Run(tmpl, w)
 			if err != nil {
 				log.Fatal(err)
 			}
 			if re.Complete {
 				results = append(results, string(re.Contents))
+				templates = append(templates[:i], templates[(i+1):]...)
 			}
 		}
-		if len(results) == len(templates) {
+		if len(templates) == 0 {
 			break
 		}
 		// Wait pauses until new data has been received
@@ -96,15 +105,16 @@ func RenderMultipleOnce(clients *ClientSet) string {
 // using a custom Notifier. In this case we are wrapping a standard template
 // to have it only trigger notifications and be ready to be updated *only if*
 // the KV value 'notify' is written to.
-func NotifierExample(clients *ClientSet) string {
-	tmpl := KvNotifier{NewTemplate(TemplateInput{
-		Contents: exampleNodeTemplate + exampleKvTrigger,
-	})}
-
-	w := NewWatcher(WatcherInput{
+func NotifierExample(clients *hcat.ClientSet) string {
+	w := hcat.NewWatcher(hcat.WatcherInput{
 		Clients: clients,
-		Cache:   NewStore(),
+		Cache:   hcat.NewStore(),
 	})
+	tmpl := KvNotifier{hcat.NewTemplate(hcat.TemplateInput{
+		Contents:     exampleNodeTemplate + exampleKvTrigger,
+		FuncMapMerge: tfunc.ConsulV0(),
+	})}
+	w.Register(tmpl)
 
 	// post KV trigger after a brief pause
 	// you'd probably do this via another means
@@ -117,7 +127,7 @@ func NotifierExample(clients *ClientSet) string {
 		}
 	}()
 
-	r := NewResolver()
+	r := hcat.NewResolver()
 	for {
 		re, err := r.Run(tmpl, w)
 		if err != nil {
@@ -135,7 +145,7 @@ func NotifierExample(clients *ClientSet) string {
 
 // Embed template to allow overridding of Notify
 type KvNotifier struct {
-	*Template
+	*hcat.Template
 }
 
 // Notify receives the updated value as the argument. You can then use the
@@ -154,11 +164,11 @@ func (n KvNotifier) Notify(d interface{}) (notify bool) {
 
 // Shows multiple examples of usage from a high level perspective.
 func Example() {
-	if *runExamples {
-		clients := NewClientSet()
+	if *hcat.RunExamples {
+		clients := hcat.NewClientSet()
 		defer clients.Stop()
 		// consuladdr is set in TestMain
-		clients.AddConsul(ConsulInput{Address: consuladdr})
+		clients.AddConsul(hcat.ConsulInput{Address: hcat.Consuladdr})
 
 		fmt.Printf("RenderExampleOnce: %s\n",
 			RenderExampleOnce(clients))
