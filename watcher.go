@@ -619,7 +619,7 @@ func (t *tracker) notifiersFor(view IDer) []Notifier {
 func (t *tracker) complete(notifier IDer) bool {
 	for _, tp := range t.tracked {
 		thisNotifier := tp.notify == notifier.ID()
-		if thisNotifier && tp.inUse && !tp.cacheAccessed {
+		if thisNotifier && !tp.cacheAccessed {
 			return false
 		}
 	}
