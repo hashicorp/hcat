@@ -633,6 +633,193 @@ func TestWatcherWait(t *testing.T) {
 	})
 }
 
+func TestWatcherWatch(t *testing.T) {
+	t.Run("ctx-handling", func(t *testing.T) {
+		testCases := []struct {
+			name    string
+			ctxFunc func() (context.Context, context.CancelFunc)
+		}{
+			{
+				"timeout",
+				func() (context.Context, context.CancelFunc) {
+					return context.WithTimeout(context.Background(), time.Microsecond*100)
+				},
+			}, {
+				"deadline",
+				func() (context.Context, context.CancelFunc) {
+					return context.WithDeadline(context.Background(), time.Now().Add(time.Microsecond*100))
+				},
+			},
+		}
+		for _, tc := range testCases {
+			t.Run(tc.name, func(t *testing.T) {
+				w := NewWatcher(WatcherInput{})
+				defer w.Stop()
+				ctx, cancel := tc.ctxFunc()
+				defer cancel()
+				err := w.Watch(ctx, make(chan string))
+				if err != nil {
+					t.Fatal("unexpected watch error from context handling")
+				}
+			})
+		}
+	})
+	t.Run("error-handling", func(t *testing.T) {
+		testErr := fmt.Errorf("test")
+		testCases := []struct {
+			name        string
+			errFunc     func(*Watcher, context.CancelFunc)
+			expectedErr error
+		}{
+			{
+				"stop",
+				func(w *Watcher, cancel context.CancelFunc) {
+					w.Stop()
+				},
+				nil,
+			}, {
+				"ctx-cancelled",
+				func(w *Watcher, cancel context.CancelFunc) {
+					cancel()
+				},
+				context.Canceled,
+			}, {
+				"error-chan",
+				func(w *Watcher, cancel context.CancelFunc) {
+					w.errCh <- testErr
+				},
+				testErr,
+			},
+		}
+		for _, tc := range testCases {
+			t.Run(tc.name, func(t *testing.T) {
+				w := NewWatcher(WatcherInput{})
+				defer w.Stop()
+				ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+				defer cancel()
+
+				errCh := make(chan error, 1)
+				go func() {
+					errCh <- w.Watch(ctx, make(chan string))
+				}()
+				tc.errFunc(w, cancel)
+				err := <-errCh
+				if err != tc.expectedErr {
+					t.Fatalf("unexpected watch error: expected %+v, actual %+v", tc.expectedErr, err)
+				}
+			})
+		}
+	})
+	t.Run("continous-monitoring-and-notify", func(t *testing.T) {
+		tmplCh := make(chan string, 10)
+		w := NewWatcher(WatcherInput{})
+		defer w.Stop()
+
+		fooDep := &idep.FakeDep{Name: "foo"}
+		fooNotifier := fakeNotifier("foo")
+		w.Register(fooNotifier)
+		w.dataCh <- w.track(fooNotifier, fooDep)
+		barDep := &idep.FakeDep{Name: "bar"}
+		barNotifier := fakeNotifier("bar")
+		w.Register(barNotifier)
+		w.dataCh <- w.track(barNotifier, barDep)
+
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+		defer cancel()
+
+		errCh := make(chan error)
+		go func() {
+			errCh <- w.Watch(ctx, tmplCh)
+		}()
+
+		// Expect 2 notifications
+		for i := 0; i < 2; i++ {
+			select {
+			case <-ctx.Done():
+				t.Fatal("unexpected stop of Watch from context:", ctx.Err())
+			case err := <-errCh:
+				t.Fatal("unexpected Watch return:", err)
+			case tmplID := <-tmplCh:
+				if tmplID != "foo" && tmplID != "bar" {
+					t.Fatal("unexpected template notification:", tmplID)
+				}
+			}
+		}
+	})
+	t.Run("notify-buffer", func(t *testing.T) {
+		testCases := []struct {
+			name     string
+			dataFunc func(w *Watcher, n Notifier, d dep.Dependency)
+			expected int
+		}{
+			{
+				"min",
+				func(w *Watcher, n Notifier, d dep.Dependency) {
+					w.dataCh <- w.track(n, d)
+					w.Buffer(n)
+				},
+				2,
+			}, {
+				"multiple",
+				func(w *Watcher, n Notifier, d dep.Dependency) {
+					// Emulate multiple changes but expect 2 notifications within max
+					// buffer delay
+					w.dataCh <- w.track(n, d)
+					w.Buffer(n)
+					w.Buffer(n)
+					w.Buffer(n)
+				},
+				2,
+			},
+		}
+		for _, tc := range testCases {
+			t.Run(tc.name, func(t *testing.T) {
+				tmplCh := make(chan string, 10)
+				w := NewWatcher(WatcherInput{})
+				defer w.Stop()
+
+				fooDep := &idep.FakeDep{Name: "foo"}
+				fooNotifier := fakeNotifier("foo")
+				w.Register(fooNotifier)
+
+				minDuration := time.Millisecond
+				maxDuration := 5 * time.Millisecond
+				w.SetBufferPeriod(minDuration, maxDuration, "foo")
+				time.Sleep(time.Microsecond) // wait for watcher to setup watching buffers
+
+				ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+				defer cancel()
+
+				errCh := make(chan error)
+				go func() {
+					errCh <- w.Watch(ctx, tmplCh)
+				}()
+
+				go tc.dataFunc(w, fooNotifier, fooDep)
+				now := time.Now()
+				for i := 0; i < tc.expected; i++ {
+					select {
+					case <-ctx.Done():
+						t.Fatal("unexpected stop of Watch from context:", ctx.Err())
+					case err := <-errCh:
+						t.Fatal("unexpected Watch return:", err)
+					case tmplID := <-tmplCh:
+						if tmplID != "foo" {
+							t.Fatal("unexpected template notification:", tmplID)
+						}
+					}
+				}
+				duration := time.Since(now)
+				if duration < minDuration {
+					t.Fatal("minimum buffer duration was not met:", duration)
+				} else if duration > maxDuration {
+					t.Fatal("unexpected duration waited:", duration)
+				}
+			})
+		}
+	})
+}
+
 func TestWatcherNotify(t *testing.T) {
 	t.Run("single-notify-true", func(t *testing.T) {
 		w := newWatcher()
