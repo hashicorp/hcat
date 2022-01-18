@@ -28,7 +28,7 @@ func NewResolver() *Resolver {
 // Watcherer is the subset of the Watcher's API that the resolver needs.
 // The interface is used to make the used/required API explicit.
 type Watcherer interface {
-	Buffer(Notifier) bool
+	Buffering(Notifier) bool
 	Recaller(Notifier) Recaller
 	Complete(Notifier) bool
 }
@@ -44,12 +44,6 @@ type Templater interface {
 // output returns Complete as true. It uses the watcher for dependency
 // lookup state. The content will be updated each pass until complete.
 func (r *Resolver) Run(tmpl Templater, w Watcherer) (ResolveEvent, error) {
-
-	// Check if this dependency has any dependencies that have been change and
-	// if not, don't waste time re-rendering it.
-	if w.Buffer(tmpl) {
-		return ResolveEvent{Complete: false}, nil
-	}
 
 	// If Watcherer supports it, wrap the template call with the Mark-n-Sweep
 	// garbage collector to stop and dereference the old/unused views.

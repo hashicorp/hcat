@@ -1,6 +1,7 @@
 package hcat
 
 import (
+	r "reflect"
 	"sync"
 )
 
@@ -29,6 +30,21 @@ func (s *Store) Save(id string, data interface{}) {
 	s.Lock()
 	defer s.Unlock()
 
+	if _, ok := s.data[id]; ok {
+		s.data[id] = data
+		return
+	}
+	// only write initial value if valid/non-empty/non-nil
+	v := r.ValueOf(data)
+	if !v.IsValid() || v.IsZero() {
+		return
+	}
+	switch v.Kind() {
+	case r.Chan, r.Func, r.Interface, r.Ptr, r.Slice:
+		if v.IsNil() {
+			return
+		}
+	}
 	s.data[id] = data
 }
 
