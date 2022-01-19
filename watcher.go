@@ -261,31 +261,37 @@ func (w *Watcher) Wait(ctx context.Context) error {
 func (w *Watcher) Watch(ctx context.Context, tmplCh chan string) error {
 	w.stopCh.drain()
 
-	dataUpdateAndNotify := func(v *view) {
-		id := v.ID()
-		w.cache.Save(id, v.Data())
-		for _, n := range w.tracker.notifiersFor(v) {
-			if n.Notify(v.Data()) {
-				tmplCh <- n.ID()
-			}
-		}
-	}
-
 	for {
 		select {
-		case view := <-w.dataCh:
-			dataUpdateAndNotify(view)
-
+		case v := <-w.dataCh:
+			views := []*view{v}
 			// Drain all dependency data. Prevents re-rendering templates over
 			// and over when a large batch of dependencies are updated.
 			// See consul-template GH-168 for background.
 			for drain := true; drain; {
 				select {
-				case view := <-w.dataCh:
-					dataUpdateAndNotify(view)
+				case v := <-w.dataCh:
+					views = append(views, v)
 				case <-time.After(time.Microsecond):
 					drain = false
 				}
+			}
+
+			// Dedup notifiers from drain so only one notification per template is
+			// sent to the channel, and ensures the cache is updated for this set
+			// of views before the consumer processes the notifcations.
+			notifiers := make(map[string]bool)
+			for _, v := range views {
+				data := v.Data()
+				w.cache.Save(v.ID(), data)
+				for _, n := range w.tracker.notifiersFor(v) {
+					if n.Notify(data) {
+						notifiers[n.ID()] = true
+					}
+				}
+			}
+			for n := range notifiers {
+				tmplCh <- n
 			}
 		case tmplID := <-w.bufferTrigger:
 			// A template is now ready to be rendered, though there might be a
