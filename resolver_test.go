@@ -290,7 +290,12 @@ func TestResolverRun(t *testing.T) {
 		t.Error("bad behavior")
 	})
 
-	// Tests that the buffer actually buffers. Uses
+	// Tests that the buffer actually buffers. Uses timed dependencies that
+	// return once fast and once after a delay. This way it does the initial
+	// fast run and we can check the contents, then the second batch comes in
+	// spread out in time but they are should all be included in the second
+	// update due to buffering. Without buffering it would return after the
+	// first timed one returns.
 	t.Run("buffer-timing-test", func(t *testing.T) {
 		rv := NewResolver()
 		w := blindWatcher()
@@ -298,6 +303,9 @@ func TestResolverRun(t *testing.T) {
 		tt := timedEchoTemplate("foo")
 		w.Register(tt)
 
+		// Disabling this should fail the test
+		// Buffer minumum value is used to reset the timer, so to fail with
+		// buffering on you'll need to set it to <10ms (by a bit to avoid racing)
 		w.SetBufferPeriod(time.Millisecond*30, time.Millisecond*500, tt.ID())
 		ctx, cancel := context.WithTimeout(context.Background(),
 			time.Millisecond*300)
@@ -306,6 +314,9 @@ func TestResolverRun(t *testing.T) {
 		stageOneComplete := false
 		stageOneTarget := "foo_0s foo_0s foo_0s"
 		stageTwoTarget := "foo_10ms foo_20ms foo_30ms"
+		// run 0 initializes the template and variables, triggering lookups
+		// run 1 gets the fast responses version
+		// run 2 gets the delayed responses version
 		for i := 0; i < 3; i++ {
 			r, err := rv.Run(tt, w)
 			if err != nil {

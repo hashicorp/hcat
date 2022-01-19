@@ -132,8 +132,7 @@ func (t *timer) stop() {
 	}
 }
 
-// tick updates the minimum buffer timer and returns whether the timer
-// was active.
+// tick updates the minimum buffer timer
 func (t *timer) tick() {
 	now := time.Now()
 

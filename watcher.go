@@ -331,8 +331,8 @@ func (w *Watcher) Watch(ctx context.Context, tmplCh chan string) error {
 // configured for the template, it will skip the buffering.
 // period.
 func (w *Watcher) Buffering(n Notifier) bool {
-	// add '&& w.Complete(n)' below to enable buffering only after the
-	// notifier/template has been completely evaluated/rendered.
+	// to enable buffering only after the notifier/template has been completely
+	// evaluated/rendered, you need to add '&& w.Complete(n)' to the line below
 	if w.bufferTemplates.isBuffering(n.ID()) {
 		w.bufferTemplates.tick(n.ID())
 		return true

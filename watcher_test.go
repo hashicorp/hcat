@@ -769,8 +769,8 @@ func TestWatcherWatch(t *testing.T) {
 			}, {
 				"multiple",
 				func(w *Watcher, n Notifier, d dep.Dependency) {
-					// Emulate multiple changes but expect 2 notifications within max
-					// buffer delay
+					// Emulate multiple changes but still expect just a single
+					// notifications within max buffer delay
 					w.dataCh <- w.track(n, d)
 					w.Buffering(n)
 					w.Buffering(n)
