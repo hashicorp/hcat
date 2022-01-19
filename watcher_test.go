@@ -83,7 +83,7 @@ func TestWatcherAdd(t *testing.T) {
 	})
 }
 
-func TestWatcherRegisty(t *testing.T) {
+func TestWatcherRegister(t *testing.T) {
 
 	t.Run("base", func(t *testing.T) {
 		w := blindWatcher()
@@ -106,6 +106,59 @@ func TestWatcherRegisty(t *testing.T) {
 			t.Fatal("should have errored")
 		}
 	})
+}
+
+func TestWatcherDeregister(t *testing.T) {
+	tcs := []struct {
+		tt         *Template
+		deregister bool
+	}{
+		{
+			echoTemplate("foo"),
+			false,
+		},
+		{
+			echoTemplate("bar"),
+			true,
+		},
+	}
+	w := blindWatcher()
+	d := &idep.FakeDep{}
+
+	// Register two templates
+	for _, tc := range tcs {
+		if err := w.Register(tc.tt); err != nil {
+			t.Fatal("error should be nil, got:", err)
+		}
+		w.track(tc.tt, d)
+	}
+
+	// Deregister one of the templates
+	for _, tc := range tcs {
+		if tc.deregister {
+			w.Deregister(tc.tt)
+		}
+	}
+
+	// Verify that only the de-registered template is no longer
+	// tracked
+	for _, tc := range tcs {
+		if tc.deregister {
+			if w.tracker.notifierTracked(tc.tt) {
+				t.Fatal("de-registered template tracked")
+			}
+			if _, ok := w.tracker.notifiers[tc.tt.ID()]; ok {
+				t.Fatal("de-registered template tracked")
+			}
+		} else {
+			if !w.tracker.notifierTracked(tc.tt) {
+				t.Fatal("registered template not tracked")
+			}
+			if _, ok := w.tracker.notifiers[tc.tt.ID()]; !ok {
+				t.Fatal("registered template not tracked")
+			}
+		}
+	}
 }
 
 // test propagation of vault's DefaultLease through to view
