@@ -476,10 +476,11 @@ func TestWatcherWait(t *testing.T) {
 		foodep := &idep.FakeDep{Name: "foo"}
 		n := fakeNotifier("foo")
 		w.Register(n)
-		w.dataCh <- w.track(n, foodep)
+		w.dataCh <- w.track(n, foodep).store("foo")
 		w.Wait(context.Background())
+
 		store := w.cache.(*Store)
-		if _, ok := store.data[foodep.ID()]; !ok {
+		if v, ok := store.data[foodep.ID()]; !ok || v != "foo" {
 			t.Fatal("failed update")
 		}
 	})
@@ -490,9 +491,10 @@ func TestWatcherWait(t *testing.T) {
 		w.Register(n)
 		deps := make([]dep.Dependency, 5)
 		for i := 0; i < 5; i++ {
-			deps[i] = &idep.FakeDep{Name: strconv.Itoa(i)}
+			data := strconv.Itoa(i)
+			deps[i] = &idep.FakeDep{Name: data}
 			// doesn't need goroutine as dataCh has a large buffer
-			w.dataCh <- w.track(n, deps[i])
+			w.dataCh <- w.track(n, deps[i]).store(data)
 		}
 		w.Wait(context.Background())
 		store := w.cache.(*Store)
@@ -510,7 +512,7 @@ func TestWatcherWait(t *testing.T) {
 		foodep := &idep.FakeDep{Name: "foo"}
 		n := fakeNotifier("foo")
 		w.Register(n)
-		w.dataCh <- w.track(n, foodep)
+		w.dataCh <- w.track(n, foodep).store("foo")
 		w.Wait(context.Background())
 
 		if len(w.tracker.tracked) != 1 {
@@ -561,7 +563,7 @@ func TestWatcherWait(t *testing.T) {
 		n := fakeNotifier("foo")
 		w.Register(n)
 		foodep := &idep.FakeDep{Name: "foo"}
-		w.dataCh <- w.track(n, foodep)
+		w.dataCh <- w.track(n, foodep).store("foo")
 		err := <-w.WaitCh(context.Background())
 		if err != nil {
 			t.Fatal("wait error:", err)
@@ -761,20 +763,20 @@ func TestWatcherWatch(t *testing.T) {
 				"min",
 				func(w *Watcher, n Notifier, d dep.Dependency) {
 					w.dataCh <- w.track(n, d)
-					w.Buffer(n)
+					w.Buffering(n)
 				},
-				2,
+				1,
 			}, {
 				"multiple",
 				func(w *Watcher, n Notifier, d dep.Dependency) {
 					// Emulate multiple changes but expect 2 notifications within max
 					// buffer delay
 					w.dataCh <- w.track(n, d)
-					w.Buffer(n)
-					w.Buffer(n)
-					w.Buffer(n)
+					w.Buffering(n)
+					w.Buffering(n)
+					w.Buffering(n)
 				},
-				2,
+				1,
 			},
 		}
 		for _, tc := range testCases {
@@ -790,9 +792,9 @@ func TestWatcherWatch(t *testing.T) {
 				minDuration := time.Millisecond
 				maxDuration := 5 * time.Millisecond
 				w.SetBufferPeriod(minDuration, maxDuration, "foo")
-				time.Sleep(time.Microsecond) // wait for watcher to setup watching buffers
 
-				ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+				ctx, cancel := context.WithTimeout(context.Background(),
+					time.Second)
 				defer cancel()
 
 				errCh := make(chan error)

@@ -376,13 +376,15 @@ func (v *view) fetch(doneCh, successCh chan<- struct{}, errCh chan<- error) {
 }
 
 // Store-s the data and marks that it was received
-func (v *view) store(data interface{}) {
+// Returns the view to make test setup easier.
+func (v *view) store(data interface{}) *view {
 	v.dataLock.Lock()
 	defer v.dataLock.Unlock()
 	v.data = data
 	if !v.receivedData {
 		v.receivedData = true
 	}
+	return v
 }
 
 const minDelayBetweenUpdates = time.Millisecond * 100
