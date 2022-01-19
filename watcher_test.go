@@ -702,10 +702,15 @@ func TestWatcherWatch(t *testing.T) {
 				go func() {
 					errCh <- w.Watch(ctx, make(chan string))
 				}()
+				<-w.waitingCh
 				tc.errFunc(w, cancel)
-				err := <-errCh
-				if err != tc.expectedErr {
-					t.Fatalf("unexpected watch error: expected %+v, actual %+v", tc.expectedErr, err)
+				select {
+				case <-time.After(time.Second):
+					t.Fatal("got timeout, should get an error")
+				case err := <-errCh:
+					if err != tc.expectedErr {
+						t.Fatalf("unexpected watch error: expected %+v, actual %+v", tc.expectedErr, err)
+					}
 				}
 			})
 		}

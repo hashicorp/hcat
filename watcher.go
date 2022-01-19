@@ -261,6 +261,12 @@ func (w *Watcher) Wait(ctx context.Context) error {
 func (w *Watcher) Watch(ctx context.Context, tmplCh chan string) error {
 	w.stopCh.drain()
 
+	// send waiting notification, only used for testing
+	select {
+	case w.waitingCh <- struct{}{}:
+	default:
+	}
+
 	dataUpdateAndNotify := func(v *view) {
 		id := v.ID()
 		w.cache.Save(id, v.Data())
