@@ -259,6 +259,80 @@ func TestResolverRun(t *testing.T) {
 			t.Fatal("Wrong contents:", string(r.Contents))
 		}
 	})
+
+	// Test issue where Run/Wait would loop forever as each Run would set the
+	// buffering timer, triggering a bufferTrigger which exited Wait..
+	// This shouldn't ever be an issue again with the new implementation.
+	t.Run("buffered-resolve-loop-hang-check", func(t *testing.T) {
+		rv := NewResolver()
+		w := blindWatcher()
+		defer w.Stop()
+		tt := echoTemplate("foo")
+		w.Register(tt)
+		w.SetBufferPeriod(time.Millisecond, time.Second, tt.ID())
+
+		ctx, cancel := context.WithTimeout(context.Background(),
+			time.Millisecond*30)
+		defer cancel()
+
+		// should stop on second loop
+		for i := 0; i < 4; i++ {
+			_, err := rv.Run(tt, w)
+			if err != nil {
+				t.Fatal("Run() error:", err)
+			}
+			select {
+			case <-w.WaitCh(ctx):
+			case <-ctx.Done():
+				return
+			}
+		}
+		t.Error("bad behavior")
+	})
+
+	// Tests that the buffer actually buffers. Uses
+	t.Run("buffer-timing-test", func(t *testing.T) {
+		rv := NewResolver()
+		w := blindWatcher()
+		defer w.Stop()
+		tt := timedEchoTemplate("foo")
+		w.Register(tt)
+
+		w.SetBufferPeriod(time.Millisecond*30, time.Millisecond*500, tt.ID())
+		ctx, cancel := context.WithTimeout(context.Background(),
+			time.Millisecond*300)
+		defer cancel()
+
+		stageOneComplete := false
+		stageOneTarget := "foo_0s foo_0s foo_0s"
+		stageTwoTarget := "foo_10ms foo_20ms foo_30ms"
+		for i := 0; i < 3; i++ {
+			r, err := rv.Run(tt, w)
+			if err != nil {
+				t.Fatal("Run() error:", err)
+			}
+			if !r.Complete {
+				w.Wait(ctx)
+				continue
+			}
+			switch stageOneComplete {
+			case false:
+				if string(r.Contents) != stageOneTarget {
+					t.Errorf("first pass contents wrong. want: '%s', got '%s'",
+						stageOneTarget, r.Contents)
+				}
+				stageOneComplete = true
+			case true:
+				if string(r.Contents) != stageTwoTarget {
+					t.Errorf("second pass contents wrong. want: '%s', got '%s'",
+						stageTwoTarget, r.Contents)
+				}
+				return
+			}
+			w.Wait(ctx)
+		}
+		t.Error("Updating data failed?!?")
+	})
 }
 
 //////////////////////////
@@ -309,6 +383,35 @@ func echoListTemplate(data ...string) *Template {
 			FuncMapMerge: template.FuncMap{
 				"echo":  echoFunc,
 				"words": wordListFunc},
+		})
+}
+
+func timedEchoFunc(delay time.Duration) interface{} {
+	return func(recall Recaller) interface{} {
+		return func(s string) interface{} {
+			d := &idep.FakeTimedUpdateDep{Name: s, Delay: delay}
+			if value, ok := recall(d); ok {
+				if value == nil {
+					return ""
+				}
+				return value.(string)
+			}
+			return ""
+		}
+	}
+}
+
+func timedEchoTemplate(data string) *Template {
+	return NewTemplate(
+		TemplateInput{
+			Contents: `{{echo1 "` + data + `"}} ` +
+				`{{echo2 "` + data + `"}} ` +
+				`{{echo3 "` + data + `"}}`,
+			FuncMapMerge: template.FuncMap{
+				"echo1": timedEchoFunc(time.Millisecond * 10),
+				"echo2": timedEchoFunc(time.Millisecond * 20),
+				"echo3": timedEchoFunc(time.Millisecond * 30),
+			},
 		})
 }
 
