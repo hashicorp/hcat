@@ -40,6 +40,16 @@ type Templater interface {
 	Execute(Recaller) ([]byte, error)
 }
 
+// Interface that indicates it implements Mark and Sweep "garbage" collection
+// to track and collect (stop/dereference) dependencies and views that are no
+// longer in use. This happens over longer runs with nested dependencies
+// (EG. loop over all services and lookup each service instance, instance
+// goes away) and results in goroutine leaks if not managed.
+type Collector interface {
+	MarkForSweep(IDer)
+	Sweep(IDer)
+}
+
 // Run the template Execute once. You should repeat calling this until
 // output returns Complete as true. It uses the watcher for dependency
 // lookup state. The content will be updated each pass until complete.
@@ -50,7 +60,7 @@ func (r *Resolver) Run(tmpl Templater, w Watcherer) (ResolveEvent, error) {
 	gcViews := func(f func() ([]byte, error)) ([]byte, error) { return f() }
 	if c, ok := w.(Collector); ok {
 		gcViews = func(f func() ([]byte, error)) (data []byte, err error) {
-			c.Mark(tmpl)
+			c.MarkForSweep(tmpl)
 			if data, err = f(); err == nil {
 				c.Sweep(tmpl)
 			}

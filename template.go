@@ -66,16 +66,6 @@ type Renderer interface {
 	Render(contents []byte) (RenderResult, error)
 }
 
-// Interface that indicates it implements Mark and Sweep "garbage" collection
-// to track and collect (stop/dereference) dependencies and views that are no
-// longer in use. This happens over longer runs with nested dependencies
-// (EG. loop over all services and lookup each service instance, instance
-// goes away) and results in goroutine leaks if not managed.
-type Collector interface {
-	Mark(IDer)
-	Sweep(IDer)
-}
-
 // Recaller is the read interface for the cache
 // Implemented by Store and Watcher (which wraps Store)
 type Recaller func(dep.Dependency) (value interface{}, found bool)

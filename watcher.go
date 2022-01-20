@@ -31,6 +31,9 @@ type Cacher interface {
 	Reset()
 }
 
+// Make sure we implement Collector
+var _ Collector = (*Watcher)(nil)
+
 // Watcher is a manager for views that poll external sources for data.
 type Watcher struct {
 	// clients is the collection of API clients to talk to upstreams.
