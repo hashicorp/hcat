@@ -348,12 +348,22 @@ func (w *Watcher) BufferReset(n Notifier) {
 	w.bufferTemplates.Reset(n.ID())
 }
 
-// Register's one or more Notifiers with the Watcher for future use.
+// Register registers one or more Notifiers with the Watcher for future use.
 // Trying to register the same Notifier twice will result in an error and none
 // of the Notifiers will be registered (all or nothing).
 // Trying to use a Notifier without Registering it will result in a *panic*.
 func (w *Watcher) Register(ns ...Notifier) error {
 	return w.tracker.registerNotifiers(ns...)
+}
+
+// Deregister de-registers one or more Notifiers from the Watcher.
+func (w *Watcher) Deregister(ns ...Notifier) {
+	w.tracker.deregisterNotifiers(ns...)
+
+	for _, n := range ns {
+		w.tracker.markForSweep(n)
+		w.tracker.sweep(n, w.cache)
+	}
 }
 
 // Track is used to add dependencies to be monitored by the watcher. It sets
@@ -602,6 +612,16 @@ func (t *tracker) registerNotifiers(ns ...Notifier) error {
 		t.notifiers[n.ID()] = n
 	}
 	return nil
+}
+
+// deregisterNotifiers removes the notifiers from those tracked
+func (t *tracker) deregisterNotifiers(ns ...Notifier) {
+	t.Lock()
+	defer t.Unlock()
+	for _, n := range ns {
+		// Delete from notifier map
+		delete(t.notifiers, n.ID())
+	}
 }
 
 // notifierTracked tests if a registered notifier has been paired with a
