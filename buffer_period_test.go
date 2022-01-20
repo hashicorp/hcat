@@ -50,23 +50,22 @@ func TestBufferPeriod(t *testing.T) {
 			defer bufferPeriods.Stop()
 
 			bufferPeriods.Add(tc.min, tc.max, tc.name)
-			assert.False(t, bufferPeriods.Buffered(tc.name), "buffer isn't activated yet to be buffered")
+			assert.False(t, bufferPeriods.Buffered(tc.name),
+				"buffer isn't activated yet to be buffered")
 
-			active := bufferPeriods.Buffer(tc.name)
-			assert.False(t, active, "buffer is unexpectedly already active")
+			bufferPeriods.tick(tc.name)
 
 			// Simulate consecutive calls to resolver.Run(template)
 			go func() {
 				for i := int64(0); i < tc.snoozeCount; i++ {
 					<-time.After(tc.snoozeAfter)
-					active := bufferPeriods.Buffer(tc.name)
-					assert.True(t, active, "intentionally snoozing before buffer period completes")
+					bufferPeriods.tick(tc.name)
 				}
 			}()
 
 			// Test signal is received within expected duration
 			expectedWithin := tc.min + time.Duration(tc.snoozeCount)*tc.snoozeAfter
-			expectedWithin += 2 * time.Millisecond // add a bit of leniency
+			expectedWithin += 3 * time.Millisecond // add a bit of leniency
 			select {
 			case id := <-triggerCh:
 				assert.Equal(t, tc.name, id, "unexpected id")
@@ -86,7 +85,7 @@ func TestBufferPeriod(t *testing.T) {
 		go bufferPeriods.Run(triggerCh)
 		defer bufferPeriods.Stop()
 
-		isBuffering := bufferPeriods.Buffer("dne")
+		isBuffering := bufferPeriods.isBuffering("dne")
 		assert.False(t, isBuffering, "buffer not configured, should not be buffering")
 
 		select {
@@ -110,8 +109,8 @@ func TestBufferPeriod(t *testing.T) {
 		bufferPeriods.Add(first, first*2, "first")
 		bufferPeriods.Add(second, second*2, "second")
 
-		bufferPeriods.Buffer("first")
-		bufferPeriods.Buffer("second")
+		bufferPeriods.tick("first")
+		bufferPeriods.tick("second")
 
 		completed := make(chan struct{})
 		go func() {
@@ -148,7 +147,7 @@ func TestBufferPeriod(t *testing.T) {
 
 		id := "foo"
 		bufferPeriods.Add(time.Millisecond, 4*time.Millisecond, id)
-		bufferPeriods.Buffer(id) // activate buffer
+		bufferPeriods.tick(id) // activate buffer
 		assert.True(t, bufferPeriods.timers[id].active())
 
 		bufferPeriods.Reset(id)

@@ -79,31 +79,30 @@ func (t *timers) Add(min, max time.Duration, id string) bool {
 }
 
 // Buffered checks the cache of recently expired timers if the timer is done
-// buffering.
+// buffering. (used in testing)
 func (t *timers) Buffered(id string) bool {
 	t.mux.RLock()
 	defer t.mux.RUnlock()
 	return t.buffered[id]
 }
 
-// Buffer activates the buffer period and updates the timer. Returns whether
-// the buffer is already active.
-func (t *timers) Buffer(id string) bool {
+// isBuffering tests whether buffing is currently in use
+func (t *timers) isBuffering(id string) bool {
+	_, ok := t.timers[id]
+	return ok
+}
+
+// tick activates the buffer period and updates the timer.
+// Returns false if no timer is found.
+func (t *timers) tick(id string) bool {
 	t.mux.Lock()
 	defer t.mux.Unlock()
 
-	if t.buffered[id] {
-		// Buffer is being reactivated, remove it from the cache because it's no
-		// longer considered ready.
-		delete(t.buffered, id)
-		return false
-	}
-
 	timer, ok := t.timers[id]
 	if ok {
-		return timer.tick()
+		timer.tick()
 	}
-	return false
+	return ok
 }
 
 // Reset resets an active timer
@@ -133,18 +132,15 @@ func (t *timer) stop() {
 	}
 }
 
-// tick updates the minimum buffer timer and returns whether the timer
-// was active.
-func (t *timer) tick() bool {
+// tick updates the minimum buffer timer
+func (t *timer) tick() {
 	now := time.Now()
 
 	if t.active() {
 		t.activeTick(now)
-		return true
 	}
 
 	t.inactiveTick(now)
-	return false
 }
 
 func (t *timer) active() bool {

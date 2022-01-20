@@ -229,7 +229,7 @@ type fakeWatcher struct {
 	*Store
 }
 
-func (fakeWatcher) Buffer(string) bool       { return false }
+func (fakeWatcher) Buffering(string) bool    { return false }
 func (f fakeWatcher) Complete(Notifier) bool { return true }
 func (f fakeWatcher) Mark(Notifier)          {}
 func (f fakeWatcher) Sweep(Notifier)         {}

@@ -66,6 +66,40 @@ func (d *FakeListDep) String() string {
 }
 
 ////////////
+// FakeTimedUpdateDep is a fake dependency that does not actually speaks to a
+// server. Returns immediately once and uses the delay from then on. This is
+// specifially to test buffering, so it can render once fast and then slow to
+// check the buffering.
+// NOTE: This delay isn't technically necessary with the current implementation
+// but is very handy if we change how buffering is started (eg. if we decide to
+// have buffering wait until the template is rendered fully once).
+type FakeTimedUpdateDep struct {
+	FakeDep
+	Name  string
+	Delay time.Duration
+	index uint64
+}
+
+func (d *FakeTimedUpdateDep) Fetch(dep.Clients) (interface{}, *dep.ResponseMetadata, error) {
+	delay := time.Duration(0)
+	if d.index > 0 {
+		delay = d.Delay
+	}
+	d.index += 1
+	time.Sleep(delay)
+	data := fmt.Sprintf("%s_%v", d.Name, delay)
+	rm := &dep.ResponseMetadata{LastIndex: d.index}
+	return data, rm, nil
+}
+
+func (d *FakeTimedUpdateDep) ID() string {
+	return fmt.Sprintf("test_timed_dep(%s, %v)", d.Name, d.Delay)
+}
+func (d *FakeTimedUpdateDep) String() string {
+	return d.ID()
+}
+
+////////////
 // FakeDepStale is a fake dependency that can be used to test what happens
 // when stale data is permitted.
 type FakeDepStale struct {

@@ -198,7 +198,7 @@ func (w *Watcher) Wait(ctx context.Context) error {
 		id := v.ID()
 		w.cache.Save(id, v.Data())
 		for _, n := range w.tracker.notifiersFor(v) {
-			if n.Notify(v.Data()) {
+			if n.Notify(v.Data()) && !w.Buffering(n) {
 				notify = true
 			}
 		}
@@ -207,6 +207,7 @@ func (w *Watcher) Wait(ctx context.Context) error {
 	for {
 		select {
 		case view := <-w.dataCh:
+			// this case (<-w.dataCh) only happens if there is new/udpated data
 			notify := dataUpdate(view)
 			// Drain all dependency data. Prevents re-rendering templates over
 			// and over when a large batch of dependencies are updated.
@@ -271,7 +272,7 @@ func (w *Watcher) Watch(ctx context.Context, tmplCh chan string) error {
 		id := v.ID()
 		w.cache.Save(id, v.Data())
 		for _, n := range w.tracker.notifiersFor(v) {
-			if n.Notify(v.Data()) {
+			if n.Notify(v.Data()) && !w.Buffering(n) {
 				tmplCh <- n.ID()
 			}
 		}
@@ -325,15 +326,18 @@ func (w *Watcher) Watch(ctx context.Context, tmplCh chan string) error {
 	}
 }
 
-// Buffer sets the template to activate buffer and accumulate changes for a
+// Buffering sets the template to activate buffer and accumulate changes for a
 // period. If the template has not been initalized or a buffer period is not
-// configured for the template, it will skip buffering.
-func (w *Watcher) Buffer(n Notifier) bool {
-	// first pass skips buffering.
-	if !w.tracker.notifierTracked(n) {
-		return false
+// configured for the template, it will skip the buffering.
+// period.
+func (w *Watcher) Buffering(n Notifier) bool {
+	// to enable buffering only after the notifier/template has been completely
+	// evaluated/rendered, you need to add '&& w.Complete(n)' to the line below
+	if w.bufferTemplates.isBuffering(n.ID()) {
+		w.bufferTemplates.tick(n.ID())
+		return true
 	}
-	return w.bufferTemplates.Buffer(n.ID())
+	return false
 }
 
 // BufferReset resets an active buffer period to inactive.
@@ -403,6 +407,7 @@ func (w *Watcher) Poll(deps ...dep.Dependency) {
 	}
 	for _, d := range deps {
 		if v := w.tracker.view(d.ID()); v != nil {
+			// view.poll checks if it is already polling
 			go v.poll(w.dataCh, w.errCh)
 		}
 	}
@@ -689,7 +694,8 @@ func (t *tracker) notifiersFor(view IDer) []Notifier {
 func (t *tracker) complete(notifier IDer) bool {
 	for _, tp := range t.tracked {
 		thisNotifier := tp.notify == notifier.ID()
-		if thisNotifier && !tp.cacheAccessed {
+		cacheNotAccessed := !tp.cacheAccessed
+		if thisNotifier && cacheNotAccessed {
 			return false
 		}
 	}
