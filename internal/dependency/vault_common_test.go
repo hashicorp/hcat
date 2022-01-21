@@ -92,7 +92,7 @@ func TestVaultRenewDuration(t *testing.T) {
 			secretDur := leaseCheckWait(&secret).Seconds()
 
 			if secretDur < 0.85*(leaseDur+1) || secretDur > 0.95*(leaseDur+1) {
-				t.Fatalf("renewable duration is not within 85%% to 95%% of lease duration: %f", secretDur)
+				t.Fatalf("renewable duration is not within 85%% (%f) to 95%% (%f) of lease duration: %f", 0.85*(leaseDur+1), 0.95*(leaseDur+1), secretDur)
 			}
 		})
 
