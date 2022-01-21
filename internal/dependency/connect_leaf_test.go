@@ -2,6 +2,7 @@ package dependency
 
 import (
 	"fmt"
+	"math/rand"
 	"testing"
 	"time"
 
@@ -23,6 +24,11 @@ func TestNewConnectLeafQuery(t *testing.T) {
 func TestConnectLeafQuery_Fetch(t *testing.T) {
 	t.Parallel()
 
+	// leaf tests require new/unique names to generate the certs correctly
+	uniqueName := func(name string) string {
+		return fmt.Sprintf("%s_%d", name, rand.Int31())
+	}
+
 	t.Run("empty-service", func(t *testing.T) {
 		d := NewConnectLeafQuery("")
 
@@ -34,13 +40,14 @@ func TestConnectLeafQuery_Fetch(t *testing.T) {
 		}
 	})
 	t.Run("with-service", func(t *testing.T) {
-		d := NewConnectLeafQuery("foo")
+		name := uniqueName("foo")
+		d := NewConnectLeafQuery(name)
 		raw, _, err := d.Fetch(testClients)
 		if err != nil {
 			t.Fatal(err)
 		}
 		cert := raw.(*api.LeafCert)
-		if cert.Service != "foo" {
+		if cert.Service != name {
 			t.Fatalf("Unexpected service: %v", cert.Service)
 		}
 		if cert.CertPEM == "" {
@@ -54,13 +61,14 @@ func TestConnectLeafQuery_Fetch(t *testing.T) {
 		}
 	})
 	t.Run("double-check", func(t *testing.T) {
-		d1 := NewConnectLeafQuery("foo")
+		name := uniqueName("foo")
+		d1 := NewConnectLeafQuery(name)
 		raw1, _, err := d1.Fetch(testClients)
 		if err != nil {
 			t.Fatal(err)
 		}
 		cert1 := raw1.(*api.LeafCert)
-		d2 := NewConnectLeafQuery("foo")
+		d2 := NewConnectLeafQuery(name)
 		raw2, _, err := d2.Fetch(testClients)
 		if err != nil {
 			t.Fatal(err)
