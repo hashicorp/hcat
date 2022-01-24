@@ -185,75 +185,88 @@ func (w *Watcher) WaitCh(ctx context.Context) <-chan error {
 	return errCh
 }
 
+type notifierMap map[string]struct{}
+
+func (w *Watcher) wait(ctx context.Context) (notifierMap, error) {
+	empty := struct{}{}
+	// send waiting notification, only used for testing
+	select {
+	case w.waitingCh <- empty:
+	default:
+	}
+
+	dataUpdate := func(v *view, notifiers notifierMap) notifierMap {
+		id := v.ID()
+		w.cache.Save(id, v.Data())
+		for _, n := range w.tracker.notifiersFor(v) {
+			if n.Notify(v.Data()) && !w.Buffering(n) {
+				notifiers[n.ID()] = empty
+			}
+		}
+		return notifiers
+	}
+
+	// use map to dedup results
+	notifiers := make(notifierMap)
+
+	select {
+	case v := <-w.dataCh:
+		notifiers = dataUpdate(v, notifiers)
+		// this case (<-w.dataCh) only happens if there is new/udpated data
+		for drain := true; drain; {
+			select {
+			case v := <-w.dataCh:
+				notifiers = dataUpdate(v, notifiers)
+			case <-time.After(time.Microsecond):
+				drain = false
+			}
+		}
+		return notifiers, nil
+	case nID := <-w.bufferTrigger:
+		notifiers[nID] = empty
+		// A template is now ready to be rendered, though there might be a
+		// few ready around the same time if they have the same dependencies.
+		// Drain the channel similar for the dataCh above.
+		for drain := true; drain; {
+			select {
+			case nID := <-w.bufferTrigger:
+				notifiers[nID] = empty
+			case <-time.After(time.Microsecond):
+				drain = false
+			}
+		}
+		return notifiers, nil
+	case <-w.stopCh:
+		return nil, StopError
+
+	case err := <-w.errCh:
+		// Push the error back up the stack
+		return nil, err
+
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	}
+}
+
+var StopError = fmt.Errorf("Stop")
+
 // Wait blocks until new a watched value changes or until context is closed
 // or exceeds its deadline.
 func (w *Watcher) Wait(ctx context.Context) error {
 	w.stopCh.drain() // in case Stop was already called
 
-	// send waiting notification, only used for testing
-	select {
-	case w.waitingCh <- struct{}{}:
-	default:
-	}
-
-	// combine cache and changed updates so we don't forget one
-	dataUpdate := func(v *view) (notify bool) {
-		id := v.ID()
-		w.cache.Save(id, v.Data())
-		for _, n := range w.tracker.notifiersFor(v) {
-			if n.Notify(v.Data()) && !w.Buffering(n) {
-				notify = true
-			}
-		}
-		return notify
-	}
 	for {
-		select {
-		case view := <-w.dataCh:
-			// this case (<-w.dataCh) only happens if there is new/udpated data
-			notify := dataUpdate(view)
-			// Drain all dependency data. Prevents re-rendering templates over
-			// and over when a large batch of dependencies are updated.
-			// See consul-template GH-168 for background.
-			for drain := true; drain; {
-				select {
-				case view := <-w.dataCh:
-					if dataUpdate(view) && !notify {
-						notify = true
-					}
-				case <-time.After(time.Microsecond):
-					drain = false
-				}
-			}
-			if notify {
-				return nil
-			}
-		case <-w.bufferTrigger:
-			// A template is now ready to be rendered, though there might be a
-			// few ready around the same time if they have the same dependencies.
-			// Drain the channel similar for the dataCh above.
-			for {
-				select {
-				case <-w.bufferTrigger:
-				case <-time.After(time.Microsecond):
-					return nil
-				}
-			}
-
-		case <-w.stopCh:
+		notifiers, err := w.wait(ctx)
+		switch err {
+		case nil: // continue
+		case context.DeadlineExceeded, StopError:
 			return nil
-
-		case err := <-w.errCh:
-			// Push the error back up the stack
+		default:
 			return err
+		}
 
-		case <-ctx.Done():
-			// No changes detected is not considered an error when deadline passes or
-			// timeout is reached
-			if ctx.Err() == context.DeadlineExceeded {
-				return nil
-			}
-			return ctx.Err()
+		if len(notifiers) > 0 {
+			return nil
 		}
 	}
 }
@@ -271,60 +284,18 @@ func (w *Watcher) Watch(ctx context.Context, tmplCh chan string) error {
 	default:
 	}
 
-	dataUpdateAndNotify := func(v *view) {
-		id := v.ID()
-		w.cache.Save(id, v.Data())
-		for _, n := range w.tracker.notifiersFor(v) {
-			if n.Notify(v.Data()) && !w.Buffering(n) {
-				tmplCh <- n.ID()
-			}
-		}
-	}
-
 	for {
-		select {
-		case view := <-w.dataCh:
-			dataUpdateAndNotify(view)
-
-			// Drain all dependency data. Prevents re-rendering templates over
-			// and over when a large batch of dependencies are updated.
-			// See consul-template GH-168 for background.
-			for drain := true; drain; {
-				select {
-				case view := <-w.dataCh:
-					dataUpdateAndNotify(view)
-				case <-time.After(time.Microsecond):
-					drain = false
-				}
-			}
-		case tmplID := <-w.bufferTrigger:
-			// A template is now ready to be rendered, though there might be a
-			// few ready around the same time if they have the same dependencies.
-			// Drain the channel similar for the dataCh above.
-			tmplCh <- tmplID
-			for drain := true; drain; {
-				select {
-				case tmplID = <-w.bufferTrigger:
-					tmplCh <- tmplID
-				case <-time.After(time.Microsecond):
-					drain = false
-				}
-			}
-
-		case <-w.stopCh:
+		notifiers, err := w.wait(ctx)
+		switch err {
+		case nil: // continue
+		case context.DeadlineExceeded, StopError:
 			return nil
-
-		case err := <-w.errCh:
-			// Push the error back up the stack
+		default:
 			return err
+		}
 
-		case <-ctx.Done():
-			// No changes detected is not considered an error when deadline passes or
-			// timeout is reached
-			if ctx.Err() == context.DeadlineExceeded {
-				return nil
-			}
-			return ctx.Err()
+		for nID := range notifiers {
+			tmplCh <- nID
 		}
 	}
 }
