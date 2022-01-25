@@ -3,13 +3,15 @@ package tfunc
 import (
 	"os"
 	"text/template"
+
+	"github.com/Masterminds/sprig"
 )
 
 // AllUnversioned available template functions
 func AllUnversioned() template.FuncMap {
 	all := make(template.FuncMap)
 	allfuncs := []func() template.FuncMap{
-		ConsulFilters, Env, Control, Helpers, Math}
+		ConsulFilters, Env, Control, Helpers, Math, Sprig}
 	for _, f := range allfuncs {
 		for k, v := range f() {
 			all[k] = v
@@ -156,4 +158,15 @@ func Helpers() template.FuncMap {
 		"sockaddr":    sockaddr,
 		"writeToFile": writeToFile,
 	}
+}
+
+// Sprig returns a FuncMap containing all of the sprig library functions.
+func Sprig() template.FuncMap {
+	funcs := make(map[string]interface{})
+	// Add the Sprig functions to the funcmap
+	for k, v := range sprig.FuncMap() {
+		target := "sprig_" + k
+		funcs[target] = v
+	}
+	return funcs
 }
