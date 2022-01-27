@@ -426,6 +426,27 @@ func timedEchoTemplate(data string) *Template {
 		})
 }
 
+func errorFunc(recall Recaller) interface{} {
+	return func(recall Recaller) interface{} {
+		return func(s string) error {
+			d := &idep.FakeDepFetchError{Name: s}
+			_, _, err := recall(d)
+			if err != nil {
+				return err
+			}
+			return nil
+		}
+	}
+}
+
+func errorTemplate(data string) *Template {
+	return NewTemplate(
+		TemplateInput{
+			Contents:     `{{testErr "` + data + `"}} `,
+			FuncMapMerge: template.FuncMap{"testErr": errorFunc},
+		})
+}
+
 // watcher with no Looker
 func blindWatcher() *Watcher {
 	return NewWatcher(WatcherInput{Cache: NewStore()})

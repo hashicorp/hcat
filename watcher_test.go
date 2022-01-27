@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/hcat/dep"
 	idep "github.com/hashicorp/hcat/internal/dependency"
 	"github.com/pkg/errors"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestWatcherAdd(t *testing.T) {
@@ -1063,5 +1064,23 @@ func newWatcher() *Watcher {
 	return NewWatcher(WatcherInput{
 		Clients: NewClientSet(),
 		Cache:   NewStore(),
+	})
+}
+
+func TestWatcherValidateTemplate(t *testing.T) {
+	t.Run("happy-path", func(t *testing.T) {
+		w := newWatcher()
+		defer w.Stop()
+		tt := echoTemplate("foo")
+		err := w.ValidateTemplate(tt)
+		assert.NoError(t, err)
+	})
+
+	t.Run("fetch-errors", func(t *testing.T) {
+		w := newWatcher()
+		defer w.Stop()
+		tt := errorTemplate("foo")
+		err := w.ValidateTemplate(tt)
+		assert.Error(t, err)
 	})
 }

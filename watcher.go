@@ -336,6 +336,25 @@ func (w *Watcher) Deregister(ns ...Notifier) {
 	}
 }
 
+// ValidateTemplate verifies that executing the fetch requests of
+// a template's dependencies does not error.
+func (w *Watcher) ValidateTemplate(t *Template) error {
+	recaller := func(dep dep.Dependency) (interface{}, bool, error) {
+		data, _, err := dep.Fetch(w.clients)
+		if err != nil {
+			return nil, false, err
+		}
+		return data, true, nil
+	}
+	_, err := t.Execute(recaller)
+	t.Notify(nil)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // Track is used to add dependencies to be monitored by the watcher. It sets
 // everything up but stops short of running the polling, waiting for an
 // explicit start (see Poll below).
