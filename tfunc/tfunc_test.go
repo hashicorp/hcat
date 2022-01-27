@@ -63,7 +63,8 @@ type fakeWatcher struct {
 func (fakeWatcher) Buffering(hcat.Notifier) bool  { return false }
 func (f fakeWatcher) Complete(hcat.Notifier) bool { return true }
 func (f fakeWatcher) Recaller(hcat.Notifier) hcat.Recaller {
-	return func(d dep.Dependency) (value interface{}, found bool) {
-		return f.Store.Recall(d.ID())
+	return func(d dep.Dependency) (value interface{}, found bool, err error) {
+		v, found := f.Store.Recall(d.ID())
+		return v, found, nil
 	}
 }

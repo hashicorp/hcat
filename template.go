@@ -68,7 +68,7 @@ type Renderer interface {
 
 // Recaller is the read interface for the cache
 // Implemented by Store and Watcher (which wraps Store)
-type Recaller func(dep.Dependency) (value interface{}, found bool)
+type Recaller func(dep.Dependency) (value interface{}, found bool, err error)
 
 // TemplateInput is used as input when creating the template.
 type TemplateInput struct {

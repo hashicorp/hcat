@@ -360,7 +360,7 @@ func echoTemplate(data string) *Template {
 func echoFunc(recall Recaller) interface{} {
 	return func(s string) interface{} {
 		d := &idep.FakeDep{Name: s}
-		if value, ok := recall(d); ok {
+		if value, ok, _ := recall(d); ok {
 			if value == nil {
 				return ""
 			}
@@ -376,7 +376,7 @@ func wordListFunc(recall Recaller) interface{} {
 			Name: "words",
 			Data: s,
 		}
-		if value, ok := recall(d); ok {
+		if value, ok, _ := recall(d); ok {
 			if value == nil {
 				return []string{}
 			}
@@ -401,7 +401,7 @@ func timedEchoFunc(delay time.Duration) interface{} {
 	return func(recall Recaller) interface{} {
 		return func(s string) interface{} {
 			d := &idep.FakeTimedUpdateDep{Name: s, Delay: delay}
-			if value, ok := recall(d); ok {
+			if value, ok, _ := recall(d); ok {
 				if value == nil {
 					return ""
 				}

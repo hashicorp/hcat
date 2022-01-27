@@ -399,7 +399,7 @@ func (w *Watcher) Poll(deps ...dep.Dependency) {
 // Recaller returns a Recaller (function) that wraps the Store (cache)
 // to enable tracking dependencies on the Watcher.
 func (w *Watcher) Recaller(n Notifier) Recaller {
-	return func(dep dep.Dependency) (interface{}, bool) {
+	return func(dep dep.Dependency) (interface{}, bool, error) {
 		w.track(n, dep)
 		data, ok := w.cache.Recall(dep.ID())
 		switch {
@@ -408,7 +408,7 @@ func (w *Watcher) Recaller(n Notifier) Recaller {
 		default:
 			w.Poll(dep)
 		}
-		return data, ok
+		return data, ok, nil
 	}
 }
 

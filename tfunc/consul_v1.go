@@ -53,7 +53,11 @@ func v1ServicesFunc(recall hcat.Recaller) interface{} {
 			return nil, err
 		}
 
-		if value, ok := recall(d); ok {
+		value, ok, err := recall(d)
+		if err != nil {
+			return nil, err
+		}
+		if ok {
 			return value.([]*dep.CatalogSnippet), nil
 		}
 
@@ -78,7 +82,11 @@ func v1ServiceFunc(recall hcat.Recaller) interface{} {
 			return nil, err
 		}
 
-		if value, ok := recall(d); ok {
+		value, ok, err := recall(d)
+		if err != nil {
+			return nil, err
+		}
+		if ok {
 			return value.([]*dep.HealthService), nil
 		}
 
@@ -105,7 +113,11 @@ func v1ConnectFunc(recall hcat.Recaller) interface{} {
 			return nil, err
 		}
 
-		if value, ok := recall(d); ok {
+		value, ok, err := recall(d)
+		if err != nil {
+			return nil, err
+		}
+		if ok {
 			return value.([]*dep.HealthService), nil
 		}
 
@@ -130,7 +142,11 @@ func v1KVListFunc(recall hcat.Recaller) interface{} {
 			return nil, err
 		}
 
-		if value, ok := recall(d); ok {
+		value, ok, err := recall(d)
+		if err != nil {
+			return nil, err
+		}
+		if ok {
 			return value.([]*dep.KeyPair), nil
 		}
 
@@ -155,7 +171,11 @@ func v1KVGetFunc(recall hcat.Recaller) interface{} {
 			return "", err
 		}
 
-		if value, ok := recall(d); ok {
+		value, ok, err := recall(d)
+		if err != nil {
+			return "", err
+		}
+		if ok {
 			return value.(dep.KvValue), nil
 		}
 
@@ -180,7 +200,11 @@ func v1KVExistsFunc(recall hcat.Recaller) interface{} {
 			return dep.KVExists(false), err
 		}
 
-		if value, ok := recall(d); ok {
+		value, ok, err := recall(d)
+		if err != nil {
+			return dep.KVExists(false), err
+		}
+		if ok {
 			return value.(dep.KVExists), nil
 		}
 
@@ -206,7 +230,11 @@ func v1KVExistsGetFunc(recall hcat.Recaller) interface{} {
 			return result, err
 		}
 
-		if value, ok := recall(d); ok {
+		value, ok, err := recall(d)
+		if err != nil {
+			return nil, err
+		}
+		if ok {
 			return value.(*dep.KeyPair), nil
 		}
 

@@ -31,7 +31,11 @@ func datacentersFunc(recall hcat.Recaller) interface{} {
 			return result, err
 		}
 
-		if value, ok := recall(d); ok {
+		value, ok, err := recall(d)
+		if err != nil {
+			return nil, err
+		}
+		if ok {
 			return value.([]string), nil
 		}
 
@@ -51,7 +55,11 @@ func keyFunc(recall hcat.Recaller) interface{} {
 			return "", err
 		}
 
-		if value, ok := recall(d); ok {
+		value, ok, err := recall(d)
+		if err != nil {
+			return "", err
+		}
+		if ok {
 			switch v := value.(type) {
 			case nil:
 				return "", nil
@@ -78,7 +86,11 @@ func keyExistsFunc(recall hcat.Recaller) interface{} {
 			return false, err
 		}
 
-		if value, ok := recall(d); ok {
+		value, ok, err := recall(d)
+		if err != nil {
+			return false, err
+		}
+		if ok {
 			return value != nil, nil
 		}
 
@@ -99,7 +111,11 @@ func keyWithDefaultFunc(recall hcat.Recaller) interface{} {
 			return "", err
 		}
 
-		if value, ok := recall(d); ok {
+		value, ok, err := recall(d)
+		if err != nil {
+			return "", err
+		}
+		if ok {
 			if value == nil || value.(string) == "" {
 				return def, nil
 			}
@@ -134,7 +150,11 @@ func lsFunc(emptyIsSafe bool) func(hcat.Recaller) interface{} {
 			}
 
 			// Only return non-empty top-level keys
-			if value, ok := recall(d); ok {
+			value, ok, err := recall(d)
+			if err != nil {
+				return nil, err
+			}
+			if ok {
 				for _, pair := range value.([]*dep.KeyPair) {
 					if pair.Key != "" && !strings.Contains(pair.Key, "/") {
 						result = append(result, pair)
@@ -173,7 +193,11 @@ func nodeFunc(recall hcat.Recaller) interface{} {
 			return nil, err
 		}
 
-		if value, ok := recall(d); ok {
+		value, ok, err := recall(d)
+		if err != nil {
+			return nil, err
+		}
+		if ok {
 			return value.(*dep.CatalogNode), nil
 		}
 
@@ -191,7 +215,11 @@ func nodesFunc(recall hcat.Recaller) interface{} {
 			return nil, err
 		}
 
-		if value, ok := recall(d); ok {
+		value, ok, err := recall(d)
+		if err != nil {
+			return nil, err
+		}
+		if ok {
 			return value.([]*dep.Node), nil
 		}
 
@@ -213,7 +241,11 @@ func serviceFunc(recall hcat.Recaller) interface{} {
 			return nil, err
 		}
 
-		if value, ok := recall(d); ok {
+		value, ok, err := recall(d)
+		if err != nil {
+			return nil, err
+		}
+		if ok {
 			return value.([]*dep.HealthService), nil
 		}
 
@@ -231,7 +263,11 @@ func servicesFunc(recall hcat.Recaller) interface{} {
 			return nil, err
 		}
 
-		if value, ok := recall(d); ok {
+		value, ok, err := recall(d)
+		if err != nil {
+			return nil, err
+		}
+		if ok {
 			return value.([]*dep.CatalogSnippet), nil
 		}
 
@@ -253,7 +289,11 @@ func connectFunc(recall hcat.Recaller) interface{} {
 			return nil, err
 		}
 
-		if value, ok := recall(d); ok {
+		value, ok, err := recall(d)
+		if err != nil {
+			return nil, err
+		}
+		if ok {
 			return value.([]*dep.HealthService), nil
 		}
 
@@ -266,7 +306,11 @@ func connectFunc(recall hcat.Recaller) interface{} {
 func connectCARootsFunc(recall hcat.Recaller) interface{} {
 	return func(...string) ([]*api.CARoot, error) {
 		d := idep.NewConnectCAQuery()
-		if value, ok := recall(d); ok {
+		value, ok, err := recall(d)
+		if err != nil {
+			return nil, err
+		}
+		if ok {
 			return value.([]*api.CARoot), nil
 		}
 		return nil, nil
@@ -280,7 +324,11 @@ func connectLeafFunc(recall hcat.Recaller) interface{} {
 			return nil, nil
 		}
 		d := idep.NewConnectLeafQuery(s[0])
-		if value, ok := recall(d); ok {
+		value, ok, err := recall(d)
+		if err != nil {
+			return nil, err
+		}
+		if ok {
 			return value.(*api.LeafCert), nil
 		}
 		return nil, nil
@@ -312,7 +360,11 @@ func treeFunc(emptyIsSafe bool) func(hcat.Recaller) interface{} {
 			}
 
 			// Only return non-empty top-level keys
-			if value, ok := recall(d); ok {
+			value, ok, err := recall(d)
+			if err != nil {
+				return nil, err
+			}
+			if ok {
 				for _, pair := range value.([]*dep.KeyPair) {
 					parts := strings.Split(pair.Key, "/")
 					if parts[len(parts)-1] != "" {

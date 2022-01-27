@@ -45,7 +45,11 @@ func secretFunc(recall hcat.Recaller) interface{} {
 			return nil, err
 		}
 
-		if value, ok := recall(d); ok {
+		value, ok, err := recall(d)
+		if err != nil {
+			return nil, err
+		}
+		if ok {
 			return value.(*dep.Secret), nil
 		}
 
@@ -67,7 +71,11 @@ func secretsFunc(recall hcat.Recaller) interface{} {
 			return nil, err
 		}
 
-		if value, ok := recall(d); ok {
+		value, ok, err := recall(d)
+		if err != nil {
+			return nil, err
+		}
+		if ok {
 			result = value.([]string)
 			return result, nil
 		}

@@ -234,7 +234,8 @@ func (f fakeWatcher) Complete(Notifier) bool { return true }
 func (f fakeWatcher) Mark(Notifier)          {}
 func (f fakeWatcher) Sweep(Notifier)         {}
 func (f fakeWatcher) Recaller(Notifier) Recaller {
-	return func(d dep.Dependency) (value interface{}, found bool) {
-		return f.Store.Recall(d.ID())
+	return func(d dep.Dependency) (value interface{}, found bool, err error) {
+		v, found := f.Store.Recall(d.ID())
+		return v, found, nil
 	}
 }
