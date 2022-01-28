@@ -102,7 +102,7 @@ func TestWatcherRegister(t *testing.T) {
 		if err := w.Register(tt); err != nil {
 			t.Fatal("error should be nil, got:", err)
 		}
-		if err := w.Register(tt); err != RegistryErr {
+		if err := w.Register(tt); err != ErrRegistry {
 			t.Fatal("should have errored")
 		}
 	})
