@@ -138,6 +138,7 @@ func (t *timer) tick() {
 
 	if t.active() {
 		t.activeTick(now)
+		return
 	}
 
 	t.inactiveTick(now)
