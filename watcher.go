@@ -16,7 +16,8 @@ import (
 const dataBufferSize = 2048
 
 // standard error returned when you try to register the same notifier twice
-var RegistryErr = fmt.Errorf("duplicate watcher registry entry")
+var ErrRegistry = fmt.Errorf("duplicate watcher registry entry")
+var ErrStop = fmt.Errorf("Stop")
 
 // RetryFunc defines the function type used to determine how many and how often
 // to retry calls to the external services.
@@ -237,7 +238,7 @@ func (w *Watcher) wait(ctx context.Context) (notifierMap, error) {
 		}
 		return notifiers, nil
 	case <-w.stopCh:
-		return nil, StopError
+		return nil, ErrStop
 
 	case err := <-w.errCh:
 		// Push the error back up the stack
@@ -248,8 +249,6 @@ func (w *Watcher) wait(ctx context.Context) (notifierMap, error) {
 	}
 }
 
-var StopError = fmt.Errorf("Stop")
-
 // Wait blocks until new a watched value changes or until context is closed
 // or exceeds its deadline.
 func (w *Watcher) Wait(ctx context.Context) error {
@@ -259,7 +258,7 @@ func (w *Watcher) Wait(ctx context.Context) error {
 		notifiers, err := w.wait(ctx)
 		switch err {
 		case nil: // continue
-		case context.DeadlineExceeded, StopError:
+		case context.DeadlineExceeded, ErrStop:
 			return nil
 		default:
 			return err
@@ -288,7 +287,7 @@ func (w *Watcher) Watch(ctx context.Context, tmplCh chan string) error {
 		notifiers, err := w.wait(ctx)
 		switch err {
 		case nil: // continue
-		case context.DeadlineExceeded, StopError:
+		case context.DeadlineExceeded, ErrStop:
 			return nil
 		default:
 			return err
@@ -576,7 +575,7 @@ func (t *tracker) registerNotifiers(ns ...Notifier) error {
 	defer t.Unlock()
 	for _, n := range ns {
 		if _, ok := t.notifiers[n.ID()]; ok {
-			return RegistryErr
+			return ErrRegistry
 		}
 	}
 	for _, n := range ns {
