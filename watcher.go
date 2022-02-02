@@ -176,6 +176,12 @@ func (w *Watcher) WatchVaultToken(token string) error {
 	return nil
 }
 
+// Clients returns the Looker/ClientSet to give easy access to the clients
+// after initial setup.
+func (w *Watcher) Clients() Looker {
+	return w.clients
+}
+
 // WaitCh returns an error channel and runs Wait sending the result down
 // the channel. Useful for when you need to use Wait in a select block.
 func (w *Watcher) WaitCh(ctx context.Context) <-chan error {
