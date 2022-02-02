@@ -6,7 +6,32 @@ import (
 	"os/user"
 	"strconv"
 	"strings"
+
+	"github.com/hashicorp/hcat"
+	idep "github.com/hashicorp/hcat/internal/dependency"
 )
+
+// fileFunc returns the contents of the file and monitors a file for changes
+func fileFunc(recall hcat.Recaller) interface{} {
+	return func(s string) (string, error) {
+		if len(s) == 0 {
+			return "", nil
+		}
+		d, err := idep.NewFileQuery(s)
+		if err != nil {
+			return "", err
+		}
+
+		if value, ok := recall(d); ok {
+			if value == nil {
+				return "", nil
+			}
+			return value.(string), nil
+		}
+
+		return "", nil
+	}
+}
 
 // writeToFile writes the content to a file allowing the setting of username,
 // group name, permissions and flags to select appending mode or add a newline.

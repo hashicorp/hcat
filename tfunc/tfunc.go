@@ -9,7 +9,7 @@ import (
 func AllUnversioned() template.FuncMap {
 	all := make(template.FuncMap)
 	allfuncs := []func() template.FuncMap{
-		ConsulFilters, Env, Control, Helpers, Math}
+		ConsulFilters, Env, Control, Helpers, Math, Files}
 	for _, f := range allfuncs {
 		for k, v := range f() {
 			all[k] = v
@@ -85,6 +85,14 @@ func Env() template.FuncMap {
 	}
 }
 
+// Files provides functions for working with files
+func Files() template.FuncMap {
+	return template.FuncMap{
+		"file":        fileFunc,
+		"writeToFile": writeToFile,
+	}
+}
+
 // Control flow functions
 func Control() template.FuncMap {
 	return template.FuncMap{
@@ -152,8 +160,7 @@ func Helpers() template.FuncMap {
 		"mergeMap":             mergeMap,
 		"mergeMapWithOverride": mergeMapWithOverride,
 		// Misc/Other
-		"timestamp":   timestamp,
-		"sockaddr":    sockaddr,
-		"writeToFile": writeToFile,
+		"timestamp": timestamp,
+		"sockaddr":  sockaddr,
 	}
 }
