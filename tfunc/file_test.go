@@ -9,9 +9,220 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/hcat"
+	idep "github.com/hashicorp/hcat/internal/dependency"
+
+	"github.com/stretchr/testify/assert"
 )
+
+func init() {
+	idep.FileQuerySleepTime = 50 * time.Millisecond
+}
+
+func Test_NewFileQuery(t *testing.T) {
+
+	cases := []struct {
+		name string
+		i    string
+		id   string
+		err  bool
+	}{
+		{
+			"empty",
+			"",
+			"error prevents object creation, so no ID test",
+			true,
+		},
+		{
+			"path",
+			"path",
+			"file(path)",
+			false,
+		},
+	}
+
+	for i, tc := range cases {
+		t.Run(fmt.Sprintf("%d_%s", i, tc.name), func(t *testing.T) {
+			act, err := idep.NewFileQuery(tc.i)
+			if err != nil {
+				if !tc.err {
+					t.Fatal(err)
+				}
+				return
+			}
+			act.Stop()
+			assert.Equal(t, tc.id, act.ID())
+		})
+	}
+}
+
+func Test_FileQuery_Fetch(t *testing.T) {
+
+	f, err := ioutil.TempFile("", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(f.Name())
+	if _, err := f.WriteString("hello world"); err != nil {
+		t.Fatal(err)
+	}
+
+	cases := []struct {
+		name string
+		i    string
+		exp  string
+		err  bool
+	}{
+		{
+			"non_existent",
+			"/not/a/real/path/ever",
+			"",
+			true,
+		},
+		{
+			"contents",
+			f.Name(),
+			"hello world",
+			false,
+		},
+	}
+
+	for i, tc := range cases {
+		t.Run(fmt.Sprintf("%d_%s", i, tc.name), func(t *testing.T) {
+			d, err := idep.NewFileQuery(tc.i)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			act, _, err := d.Fetch(nil)
+			if (err != nil) != tc.err {
+				t.Fatal(err)
+			}
+
+			assert.Equal(t, tc.exp, act)
+		})
+	}
+
+	t.Run("stops", func(t *testing.T) {
+		f, err := ioutil.TempFile("", "")
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer os.Remove(f.Name())
+
+		d, err := idep.NewFileQuery(f.Name())
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		errCh := make(chan error, 1)
+		go func() {
+			for {
+				_, _, err := d.Fetch(nil)
+				if err != nil {
+					errCh <- err
+					return
+				}
+			}
+		}()
+
+		d.Stop()
+
+		select {
+		case err := <-errCh:
+			if err != idep.ErrStopped {
+				t.Fatal(err)
+			}
+		case <-time.After(100 * time.Millisecond):
+			t.Errorf("did not stop")
+		}
+	})
+
+	syncWriteFile := func(name string, data []byte, perm os.FileMode) error {
+		f, err := os.OpenFile(name,
+			os.O_WRONLY|os.O_CREATE|os.O_TRUNC|os.O_SYNC, perm)
+		if err == nil {
+			_, err = f.Write(data)
+			if err1 := f.Close(); err1 != nil && err == nil {
+				err = err1
+			}
+		}
+		return err
+	}
+	t.Run("fires_changes", func(t *testing.T) {
+		f, err := ioutil.TempFile("", "")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := syncWriteFile(f.Name(), []byte("hello"), 0644); err != nil {
+			t.Fatal(err)
+		}
+		defer os.Remove(f.Name())
+
+		d, err := idep.NewFileQuery(f.Name())
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		dataCh := make(chan interface{}, 1)
+		errCh := make(chan error, 1)
+		go func() {
+			for {
+				data, _, err := d.Fetch(nil)
+				if err != nil {
+					errCh <- err
+					return
+				}
+				dataCh <- data
+			}
+		}()
+		defer d.Stop()
+
+		select {
+		case err := <-errCh:
+			t.Fatal(err)
+		case <-dataCh:
+		}
+
+		if err := syncWriteFile(f.Name(), []byte("goodbye"), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		select {
+		case err := <-errCh:
+			t.Fatal(err)
+		case data := <-dataCh:
+			assert.Equal(t, "goodbye", data)
+		}
+	})
+}
+
+func Test_FileQuery_String(t *testing.T) {
+
+	cases := []struct {
+		name string
+		i    string
+		exp  string
+	}{
+		{
+			"path",
+			"path",
+			"file(path)",
+		},
+	}
+
+	for i, tc := range cases {
+		t.Run(fmt.Sprintf("%d_%s", i, tc.name), func(t *testing.T) {
+			d, err := idep.NewFileQuery(tc.i)
+			if err != nil {
+				t.Fatal(err)
+			}
+			assert.Equal(t, tc.exp, d.String())
+		})
+	}
+}
 
 func Test_writeToFile(t *testing.T) {
 	// Use current user and its primary group for input
