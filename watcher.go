@@ -186,9 +186,61 @@ func (w *Watcher) WaitCh(ctx context.Context) <-chan error {
 	return errCh
 }
 
-type notifierMap map[string]struct{}
+// Wait blocks until new a watched value changes or until context is closed
+// or exceeds its deadline.
+func (w *Watcher) Wait(ctx context.Context) error {
+	w.stopCh.drain() // in case Stop was already called
 
-func (w *Watcher) wait(ctx context.Context) (notifierMap, error) {
+	for {
+		notifiers, err := w.wait(ctx)
+		switch err {
+		case nil: // continue
+		case context.DeadlineExceeded, ErrStop:
+			return nil
+		default:
+			return err
+		}
+
+		if len(notifiers) > 0 {
+			return nil
+		}
+	}
+}
+
+// Watch will continuously watch for data updates and send template IDs to
+// the provided channel which templates have changes to be rendered. Useful
+// for when caller wants to process templates asynchronously. Only one Watch
+// should be called at given time and should not be called with Wait.
+func (w *Watcher) Watch(ctx context.Context, tmplCh chan string) error {
+	w.stopCh.drain()
+
+	// send waiting notification, only used for testing
+	select {
+	case w.waitingCh <- struct{}{}:
+	default:
+	}
+
+	for {
+		notifiers, err := w.wait(ctx)
+		switch err {
+		case nil: // continue
+		case context.DeadlineExceeded, ErrStop:
+			return nil
+		default:
+			return err
+		}
+
+		for nID := range notifiers {
+			tmplCh <- nID
+		}
+	}
+}
+
+// wait implements the watchers select/data update blocking call along with the
+// cache update and buffering check. It returns a list (as a map to dedup) of
+// the notifiers that need to be notified (handled ball caller).
+func (w *Watcher) wait(ctx context.Context) (map[string]struct{}, error) {
+	type notifierMap map[string]struct{}
 	empty := struct{}{}
 	// send waiting notification, only used for testing
 	select {
@@ -246,56 +298,6 @@ func (w *Watcher) wait(ctx context.Context) (notifierMap, error) {
 
 	case <-ctx.Done():
 		return nil, ctx.Err()
-	}
-}
-
-// Wait blocks until new a watched value changes or until context is closed
-// or exceeds its deadline.
-func (w *Watcher) Wait(ctx context.Context) error {
-	w.stopCh.drain() // in case Stop was already called
-
-	for {
-		notifiers, err := w.wait(ctx)
-		switch err {
-		case nil: // continue
-		case context.DeadlineExceeded, ErrStop:
-			return nil
-		default:
-			return err
-		}
-
-		if len(notifiers) > 0 {
-			return nil
-		}
-	}
-}
-
-// Watch will continuously watch for data updates and send template IDs to
-// the provided channel which templates have changes to be rendered. Useful
-// for when caller wants to process templates asynchronously. Only one Watch
-// should be called at given time and should not be called with Wait.
-func (w *Watcher) Watch(ctx context.Context, tmplCh chan string) error {
-	w.stopCh.drain()
-
-	// send waiting notification, only used for testing
-	select {
-	case w.waitingCh <- struct{}{}:
-	default:
-	}
-
-	for {
-		notifiers, err := w.wait(ctx)
-		switch err {
-		case nil: // continue
-		case context.DeadlineExceeded, ErrStop:
-			return nil
-		default:
-			return err
-		}
-
-		for nID := range notifiers {
-			tmplCh <- nID
-		}
 	}
 }
 
