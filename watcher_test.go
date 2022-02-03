@@ -12,6 +12,19 @@ import (
 	"github.com/pkg/errors"
 )
 
+func TestWatcherClients(t *testing.T) {
+	w := newWatcher()
+	defer w.Stop()
+	var _ Watcherer = Watcherer(newWatcher())
+
+	clients := w.Clients()
+	switch clients.(type) {
+	case *ClientSet:
+	default:
+		t.Errorf("w.Clients() returning wrong type")
+	}
+}
+
 func TestWatcherAdd(t *testing.T) {
 	t.Run("updates-tracker", func(t *testing.T) {
 		w := newWatcher()

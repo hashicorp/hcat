@@ -31,6 +31,7 @@ type Watcherer interface {
 	Buffering(Notifier) bool
 	Recaller(Notifier) Recaller
 	Complete(Notifier) bool
+	Clients() Looker
 }
 
 // Templater the interface the Template provides.
