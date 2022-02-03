@@ -23,6 +23,7 @@ const (
 		"{{end}}{{end}}"
 	exampleNodeTemplate = "{{range nodes}}node at {{.Address}}{{end}}"
 	exampleKvTrigger    = `{{if keyExists "notify"}}{{end}}`
+	exampleNoFileError  = `{{ file "/nofile" }}`
 )
 
 var examples = []string{exampleServiceTemplate, exampleNodeTemplate}
@@ -162,6 +163,29 @@ func (n KvNotifier) Notify(d interface{}) (notify bool) {
 	}
 }
 
+// Runs a validation method over a template to be sure it's top level lookups
+// are good. Note that this would do everything independently of the normal
+// setup and would not initialize the cache, etc.
+func ValidateTemplate(w hcat.Watcherer, t hcat.Templater) error {
+	renotify := t.Notify(nil)
+	var outer_err error = fmt.Errorf("")
+	recaller := func(dep dep.Dependency) (interface{}, bool) {
+		data, _, err := dep.Fetch(w.Clients())
+		if err != nil {
+			outer_err = err
+			return nil, false
+		}
+		return data, true
+	}
+	if _, err := t.Execute(recaller); err != nil {
+		return err
+	}
+	if renotify {
+		t.Notify(nil)
+	}
+	return outer_err
+}
+
 // Shows multiple examples of usage from a high level perspective.
 func Example() {
 	if *hcat.RunExamples {
@@ -170,21 +194,35 @@ func Example() {
 		// consuladdr is set in TestMain
 		clients.AddConsul(hcat.ConsulInput{Address: hcat.Consuladdr})
 
-		fmt.Printf("RenderExampleOnce: %s\n",
-			RenderExampleOnce(clients))
-		fmt.Printf("RenderMultipleOnce: %s\n",
-			RenderMultipleOnce(clients))
-		fmt.Printf("NotifierExample: %s\n",
-			NotifierExample(clients))
+		fmt.Printf("RenderExampleOnce: %s\n", RenderExampleOnce(clients))
+		fmt.Printf("RenderMultipleOnce: %s\n", RenderMultipleOnce(clients))
+		fmt.Printf("NotifierExample: %s\n", NotifierExample(clients))
+		fmt.Printf("ValidateTemplate: %s\n", runValidateTemplate(clients))
 	} else {
 		// so test doesn't fail when skipping
 		fmt.Printf("RenderExampleOnce: %s\n", "service consul at 127.0.0.1")
 		fmt.Printf("RenderMultipleOnce: %s\n",
 			"node at 127.0.0.1, service consul at 127.0.0.1")
 		fmt.Printf("NotifierExample: node at 127.0.0.1\n")
+		fmt.Printf("ValidateTemplate: %s\n",
+			"file(/nofile): stat /nofile: no such file or directory")
 	}
 	// Output:
 	// RenderExampleOnce: service consul at 127.0.0.1
 	// RenderMultipleOnce: node at 127.0.0.1, service consul at 127.0.0.1
 	// NotifierExample: node at 127.0.0.1
+	// ValidateTemplate: file(/nofile): stat /nofile: no such file or directory
+}
+
+// ValidateTemplate example requires a little more testing setup
+func runValidateTemplate(clients *hcat.ClientSet) string {
+	w := hcat.NewWatcher(hcat.WatcherInput{
+		Clients: clients,
+	})
+	tmpl := hcat.NewTemplate(hcat.TemplateInput{
+		Contents:     exampleNoFileError,
+		FuncMapMerge: tfunc.Files(), // we're using `file` for an easy error
+	})
+	w.Register(tmpl)
+	return ValidateTemplate(w, tmpl).Error()
 }
