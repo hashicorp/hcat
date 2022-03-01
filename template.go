@@ -141,14 +141,13 @@ func (t *Template) ID() string {
 
 // Notify template that a dependency it relies on has been updated. Works by
 // marking the template so it knows it has new data to process when Execute is
-// called. Return true to indicate that the template needs to be re-run.
+// called.
 func (t *Template) Notify(interface{}) bool {
 	select {
 	case t.dirty <- struct{}{}:
-		return true
 	default:
-		return false
 	}
+	return true
 }
 
 // Check and clear dirty flag
