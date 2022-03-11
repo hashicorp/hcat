@@ -30,3 +30,154 @@ Additionally, for issues and pull requests we'll be using the :+1: reactions as
 a rough voting system to help gauge community priorities. So please add :+1: to
 any issue or pull request you'd like to see worked on. Thanks.
 
+## Diagrams
+
+While the primary documentation for Hashicat is intended to use official godocs
+formatting, I thought a few diagrams might help get some aspects across better
+and have been working on a few. I'm not great at it but with mermaid I'm hoping
+to incrementally improve them over time. Please feel free to file issues/PRs
+against them if you have ideas. Thanks.
+
+### Overview
+
+These are some general attempts to get an high level view of what's going on with mixed results. Might be useful...
+
+This diagram is kind of "thing" (struct) oriented. Showing the main structs and
+the contact points between them.
+
+``` mermaid
+graph TB
+    Watcher((Watcher))
+    View[View]
+    Template[Template]
+    TemplateFunction[Template Function]
+    Tracker[Tracker]
+    Resolver[Resolver]
+    Event[Event Notifier]
+    Dependency[Dependency]
+    Consul{Consul}
+    Vault{Vault}
+
+    Watcher --> Template
+    Watcher --> Resolver
+    Resolver --> Template
+    Template --> TemplateFunction
+    TemplateFunction --> Dependency
+    Template --> Watcher
+    Watcher --> View
+    View --> Dependency
+    Watcher --> Event
+    Watcher --> Tracker
+    Tracker --> View
+    Dependency --> Vault
+    Dependency --> Consul
+```
+
+This diagram was another attempt at the above but including more information on
+what the contact points are and the general flow of things. In it the squares are
+structs and the ovals are calls/things-happening.
+
+``` mermaid
+flowchart TB
+    NW([NewWatcher])
+    W[Watcher]
+    T[Templates]
+    R([Register])
+    TN[TrackedNotifers]
+    TE([TemplatesEvaluated])
+    TF[TemplateFunctions]
+    D[Dependencies]
+    Rc([Recaller])
+    TD[TrackedDependencies]
+    V[View]
+
+    NW --> W
+    T --> R --> W --> TN
+    W --> TE --> TF
+    TF --> D--> Rc
+    D --> TD
+    W --> Rc
+    Rc --> V
+    V --> W
+    TD --- TN
+
+```
+
+### Channels
+
+This shows the main internal channels.
+
+``` mermaid
+flowchart TB
+    W[Watcher]
+    V[View]
+    Ti[Timer]
+
+    V -. err-from-dependencies .-> W
+    V -.data-from-dependencies.-> W
+    Ti -.buffer-period.-> W
+    W -.internal-stop.-> W
+```
+
+### States
+
+I thought a state diagram was a good idea until I realized there just aren't
+that many states.
+
+``` mermaid
+stateDiagram-v2
+    [*] --> Initialized
+    Initialized --> NotifiersTracked: templates registered
+    NotifiersTracked --> ResovingDependencies: templates run
+    ResovingDependencies --> ResovingDependencies: templates run
+    ResovingDependencies --> Watching: steady state achieved
+    Watching --> ResovingDependencies: data updates
+    Watching --> [*]: stop
+```
+
+### Template.Execute() Flow
+
+This is probably one of the more useful diagrams, dipicting the call flow of
+a Template execution. Note that "Dirty" is a term I swiped from filesystems, it
+denotes that some data that the template uses has been changed.
+
+``` mermaid
+flowchart TB
+    Start --> Execute
+    Execute --> D{Dirty?}
+    D -->|no| Rc[Return Cache]
+    D -->|yes| TE[Template Exec]
+    TE --> TF[Template Functions]
+    TF --> R[Recaller]
+    R --> Tr[Tracker]
+    R --> Ca{Cache?}
+    Ca -->|hit|Rd[Return Data]
+    Ca -->|miss| Poll
+    Poll --> Dep[Dependency]
+    Dep --> Cl((Cloud))
+    Cl --> Dep
+    Dep --> Poll
+    Poll --> Ca
+```
+
+### Watcher.Wait() Flow
+
+Similar to the above.. What happens when you call watcher.Wait()?
+
+``` mermaid
+flowchart TB
+    Start --> Wait
+    Wait --> S{Select?}
+    S -->|dataChan| NewData
+    S -->|bufferTimer| Return
+    S -->|stopChan| Return
+    S -->|errChan| Return
+    S -->|context.Done| Return
+    NewData --> SC[Save To Cache]
+    NewData --> N{Notifier approved?}
+    N -->|yes| B{Buffering?}
+    B -->|yes| Wait
+    B -->|no| Return
+    N -->|no| Return
+```
+
