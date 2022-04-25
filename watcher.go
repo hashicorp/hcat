@@ -682,6 +682,8 @@ func (t *tracker) stopViews() {
 func (t *tracker) notifiersFor(view IDer) []Notifier {
 	viewID := view.ID()
 	results := make([]Notifier, 0, 8)
+	t.Lock()
+	defer t.Unlock()
 	for _, tp := range t.tracked {
 		if tp.view == viewID {
 			results = append(results, t.notifiers[tp.notify])
@@ -693,6 +695,8 @@ func (t *tracker) notifiersFor(view IDer) []Notifier {
 // complete returns true if every dependency used has been initialized
 // ie. it returns true if all values have been fetched
 func (t *tracker) complete(notifier IDer) bool {
+	t.Lock()
+	defer t.Unlock()
 	for _, tp := range t.tracked {
 		thisNotifier := tp.notify == notifier.ID()
 		cacheNotAccessed := !tp.cacheAccessed
