@@ -80,7 +80,13 @@ func (d *CatalogNodesQuery) Fetch(clients dep.Clients) (interface{}, *dep.Respon
 
 	// Sort unless the user explicitly asked for nearness
 	if d.near == "" {
-		sort.Stable(ByNode(nodes))
+		sort.SliceStable(nodes,
+			func(i, j int) bool {
+				if nodes[i].Node == nodes[j].Node {
+					return nodes[i].Address < nodes[j].Address
+				}
+				return nodes[i].Node < nodes[j].Node
+			})
 	}
 
 	rm := &dep.ResponseMetadata{
@@ -120,18 +126,6 @@ func (d *CatalogNodesQuery) String() string {
 // Stop halts the dependency's fetch function.
 func (d *CatalogNodesQuery) Stop() {
 	close(d.stopCh)
-}
-
-// ByNode is a sortable list of nodes by name and then IP address.
-type ByNode []*dep.Node
-
-func (s ByNode) Len() int      { return len(s) }
-func (s ByNode) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
-func (s ByNode) Less(i, j int) bool {
-	if s[i].Node == s[j].Node {
-		return s[i].Address <= s[j].Address
-	}
-	return s[i].Node <= s[j].Node
 }
 
 func (d *CatalogNodesQuery) SetOptions(opts QueryOptions) {

@@ -255,7 +255,15 @@ func (d *HealthServiceQuery) Fetch(clients dep.Clients) (interface{}, *dep.Respo
 
 	// Sort unless the user explicitly asked for nearness
 	if d.near == "" {
-		sort.Stable(ByNodeThenID(list))
+		sort.SliceStable(list,
+			func(i, j int) bool {
+				if list[i].Node < list[j].Node {
+					return true
+				} else if list[i].Node == list[j].Node {
+					return list[i].ID < list[j].ID
+				}
+				return false
+			})
 	}
 
 	rm := &dep.ResponseMetadata{
@@ -324,21 +332,6 @@ func acceptStatus(filters []string, status string) bool {
 		if filter == status || filter == HealthAny {
 			return true
 		}
-	}
-	return false
-}
-
-// ByNodeThenID is a sortable slice of Service
-type ByNodeThenID []*dep.HealthService
-
-// Len, Swap, and Less are used to implement the sort.Sort interface.
-func (s ByNodeThenID) Len() int      { return len(s) }
-func (s ByNodeThenID) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
-func (s ByNodeThenID) Less(i, j int) bool {
-	if s[i].Node < s[j].Node {
-		return true
-	} else if s[i].Node == s[j].Node {
-		return s[i].ID <= s[j].ID
 	}
 	return false
 }

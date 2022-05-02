@@ -99,7 +99,13 @@ func (d *CatalogNodeQuery) Fetch(clients dep.Clients) (interface{}, *dep.Respons
 			EnableTagOverride: v.EnableTagOverride,
 		})
 	}
-	sort.Stable(ByService(services))
+	sort.SliceStable(services,
+		func(i, j int) bool {
+			if services[i].Service == services[j].Service {
+				return services[i].ID < services[j].ID
+			}
+			return services[i].Service < services[j].Service
+		})
 
 	detail := &dep.CatalogNode{
 		Node: &dep.Node{
@@ -142,18 +148,6 @@ func (d *CatalogNodeQuery) String() string {
 // Stop halts the dependency's fetch function.
 func (d *CatalogNodeQuery) Stop() {
 	close(d.stopCh)
-}
-
-// ByService is a sorter of node services by their service name and then ID.
-type ByService []*dep.CatalogNodeService
-
-func (s ByService) Len() int      { return len(s) }
-func (s ByService) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
-func (s ByService) Less(i, j int) bool {
-	if s[i].Service == s[j].Service {
-		return s[i].ID <= s[j].ID
-	}
-	return s[i].Service <= s[j].Service
 }
 
 func (d *CatalogNodeQuery) SetOptions(opts QueryOptions) {
