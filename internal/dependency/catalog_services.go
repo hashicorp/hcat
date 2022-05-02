@@ -121,7 +121,13 @@ func (d *CatalogServicesQuery) Fetch(clients dep.Clients) (interface{}, *dep.Res
 		})
 	}
 
-	sort.Stable(ByName(catalogServices))
+	sort.SliceStable(catalogServices,
+		func(i, j int) bool {
+			if catalogServices[i].Name < catalogServices[j].Name {
+				return true
+			}
+			return false
+		})
 
 	rm := &dep.ResponseMetadata{
 		LastIndex:   qm.LastIndex,
@@ -167,18 +173,6 @@ func (d *CatalogServicesQuery) Stop() {
 
 func (d *CatalogServicesQuery) SetOptions(opts QueryOptions) {
 	d.opts = opts
-}
-
-// ByName is a sortable slice of CatalogService structs.
-type ByName []*dep.CatalogSnippet
-
-func (s ByName) Len() int      { return len(s) }
-func (s ByName) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
-func (s ByName) Less(i, j int) bool {
-	if s[i].Name <= s[j].Name {
-		return true
-	}
-	return false
 }
 
 // stringsSplit2 splits a string
