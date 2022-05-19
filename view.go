@@ -4,7 +4,10 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
+	"net/http"
 	"reflect"
+	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -13,6 +16,8 @@ import (
 	"github.com/hashicorp/hcat/events"
 	idep "github.com/hashicorp/hcat/internal/dependency"
 )
+
+var regexUnexpectedResponseCode = regexp.MustCompile("Unexpected response code: ([0-9]{3})")
 
 // Temporarily raise these types to the top level via aliasing.
 // This is to address a bug in the short term and this should be refactored
@@ -215,7 +220,7 @@ func (v *view) poll(viewCh chan<- *view, errCh chan<- error) {
 				skipRetry = true
 			}
 
-			if strings.Contains(err.Error(), "connection refused") {
+			if getResponseCodeFromError(err) == http.StatusInternalServerError {
 				// This indicates that Consul may have restarted. If Consul
 				// restarted, the current lastIndex will be stale and cause the
 				// next blocking query to hang until the wait time expires. To
@@ -404,4 +409,23 @@ func (v *view) stop() {
 	v.dependency.Stop()
 	close(v.stopCh)
 	v.ctxCancel()
+}
+
+func getResponseCodeFromError(err error) int {
+	// Extract the unexpected response substring
+	s := regexUnexpectedResponseCode.FindString(err.Error())
+	if s == "" {
+		return 0
+	}
+
+	// Extract the response code substring from the unexpected response substring
+	s = s[len(s)-3:]
+
+	// Convert the response code to an integer
+	i, err := strconv.Atoi(s)
+	if err != nil {
+		return 0
+	}
+
+	return i
 }
