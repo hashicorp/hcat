@@ -3,9 +3,11 @@ package dependency
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"sync"
 	"time"
 
+	consulapi "github.com/hashicorp/consul/api"
 	"github.com/hashicorp/hcat/dep"
 )
 
@@ -141,7 +143,10 @@ type FakeDepFetchError struct {
 
 func (d *FakeDepFetchError) Fetch(dep.Clients) (interface{}, *dep.ResponseMetadata, error) {
 	time.Sleep(time.Microsecond)
-	return nil, nil, fmt.Errorf("failed to contact server: connection refused")
+	err := consulapi.StatusError{
+		Code: http.StatusInternalServerError,
+	}
+	return nil, nil, err
 }
 
 func (d *FakeDepFetchError) ID() string {

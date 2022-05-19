@@ -159,7 +159,9 @@ func runTestConsul() {
 	if err != nil {
 		Fatalf("failed to open test key file: %v\n", err)
 	}
-	consul, err := testutil.NewTestServerConfig(
+
+	var t *testing.T
+	consul, err := testutil.NewTestServerConfigT(t,
 		func(c *testutil.TestServerConfig) {
 			c.LogLevel = "warn"
 			c.Stdout = ioutil.Discard

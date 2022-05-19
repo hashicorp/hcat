@@ -34,7 +34,8 @@ func testConsulSetup() (string, func()) {
 	if err != nil {
 		os.Stderr = origStderr
 	}
-	consul, err := testutil.NewTestServerConfig(
+	var t *testing.T
+	consul, err := testutil.NewTestServerConfigT(t,
 		func(c *testutil.TestServerConfig) {
 			c.LogLevel = "error"
 			c.Stdout = ioutil.Discard
