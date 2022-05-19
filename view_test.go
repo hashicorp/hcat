@@ -2,6 +2,7 @@ package hcat
 
 import (
 	"context"
+	"net/http"
 	"reflect"
 	"sync"
 	"testing"
@@ -48,9 +49,10 @@ func TestPoll_returnsErrCh(t *testing.T) {
 	case data := <-viewCh:
 		t.Errorf("expected no data, but got %+v", data)
 	case err := <-errCh:
-		expected := "failed to contact server: connection refused"
-		if err.Error() != expected {
-			t.Errorf("expected %q to be %q", err.Error(), expected)
+		expected := http.StatusInternalServerError
+		actual := getResponseCodeFromError(err)
+		if actual != expected {
+			t.Errorf("expected status code %q to be %q", actual, expected)
 		}
 		if vw.lastIndex != 0 {
 			t.Errorf("expected last index to be 0 but %q", vw.lastIndex)
@@ -221,9 +223,10 @@ func TestFetch_returnsErrCh(t *testing.T) {
 	case <-doneCh:
 		t.Errorf("expected error, but received doneCh")
 	case err := <-errCh:
-		expected := "failed to contact server: connection refused"
-		if err.Error() != expected {
-			t.Fatalf("expected error %q to be %q", err.Error(), expected)
+		expected := http.StatusInternalServerError
+		actual := getResponseCodeFromError(err)
+		if actual != expected {
+			t.Fatalf("expected status code %q to be %q", actual, expected)
 		}
 	}
 }

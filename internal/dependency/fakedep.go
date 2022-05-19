@@ -141,7 +141,7 @@ type FakeDepFetchError struct {
 
 func (d *FakeDepFetchError) Fetch(dep.Clients) (interface{}, *dep.ResponseMetadata, error) {
 	time.Sleep(time.Microsecond)
-	return nil, nil, fmt.Errorf("failed to contact server: connection refused")
+	return nil, nil, fmt.Errorf("Unexpected response code: 500")
 }
 
 func (d *FakeDepFetchError) ID() string {
