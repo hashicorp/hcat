@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
+	"net/http"
 	"reflect"
 	"strings"
 	"sync"
@@ -215,7 +216,7 @@ func (v *view) poll(viewCh chan<- *view, errCh chan<- error) {
 				skipRetry = true
 			}
 
-			if strings.Contains(err.Error(), "connection refused") {
+			if s, ok := idep.DecodeConsulStatusError(err); ok && s.Code == http.StatusInternalServerError {
 				// This indicates that Consul may have restarted. If Consul
 				// restarted, the current lastIndex will be stale and cause the
 				// next blocking query to hang until the wait time expires. To
