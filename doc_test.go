@@ -1,6 +1,7 @@
 package hcat_test
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"log"
@@ -11,6 +12,7 @@ import (
 
 	"github.com/hashicorp/hcat"
 	"github.com/hashicorp/hcat/dep"
+	"github.com/hashicorp/hcat/events"
 	"github.com/hashicorp/hcat/tfunc"
 )
 
@@ -163,6 +165,73 @@ func (n KvNotifier) Notify(d interface{}) (notify bool) {
 	}
 }
 
+// Set up Event handling for Logging
+// Logging to STDOUT (ie. printing them, best for example/test)
+// Based on best practice derived from logging interface discussions
+// https://github.com/golang/go/issues/28412
+func EventHandlerLogger(clients *hcat.ClientSet) string {
+	logout := bytes.NewBuffer(nil)
+
+	// Setup the EventHandler to switch on the event types and do the
+	// appropriate thing. Designed for Logging but not limited to that.
+	var eventH events.EventHandler = func(event events.Event) {
+		switch e := event.(type) {
+		case events.TrackStart:
+			fmt.Fprintf(logout, "[Info] Tracking %s\n", e.ID)
+		case events.NewData:
+			// You can get more info from included Data if desired
+			switch d := e.Data.(type) {
+			case []*dep.HealthService:
+				for _, h := range d {
+					if h.Status == "critical" {
+						fmt.Fprintf(logout,
+							"[Info] service %s is in trouble", h.Name)
+					}
+				}
+			}
+			fmt.Fprintf(logout, "[Info] New data for '%s'\n", e.ID)
+		case events.RetryAttempt:
+			fmt.Fprintf(logout,
+				"[Warn] retry; id: '%s', try '%d', delay '%s', error '%s'\n",
+				e.ID, e.Attempt, e.Sleep.String(), e.Error)
+		case events.BlockingWait, events.ServerContacted, events.ServerError,
+			events.ServerTimeout, events.MaxRetries,
+			events.StaleData, events.NoNewData,
+			events.TrackStop, events.PollingWait, events.Trace:
+			// Lots of options, file issues if you think of more!
+			// See ./events/events.go for fields available on each event type.
+		}
+	}
+
+	// Now lets do a simple template run...
+	w := hcat.NewWatcher(hcat.WatcherInput{
+		Clients:      clients,
+		Cache:        hcat.NewStore(),
+		EventHandler: eventH,
+	})
+	tmpl := hcat.NewTemplate(hcat.TemplateInput{
+		Contents:     exampleServiceTemplate,
+		FuncMapMerge: tfunc.ConsulV0(),
+	})
+	w.Register(tmpl)
+
+	ctx := context.Background()
+	r := hcat.NewResolver()
+	for {
+		re, err := r.Run(tmpl, w)
+		if err != nil {
+			log.Fatal(err)
+		}
+		if re.Complete {
+			return logout.String()
+		}
+		err = w.Wait(ctx)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+}
+
 // Runs a validation method over a template to be sure it's top level lookups
 // are good. Note that this would do everything independently of the normal
 // setup and would not initialize the cache, etc.
@@ -198,6 +267,7 @@ func Example() {
 		fmt.Printf("RenderMultipleOnce: %s\n", RenderMultipleOnce(clients))
 		fmt.Printf("NotifierExample: %s\n", NotifierExample(clients))
 		fmt.Printf("ValidateTemplate: %s\n", runValidateTemplate(clients))
+		fmt.Printf("EventHandlerLogger: %s\n", EventHandlerLogger(clients))
 	} else {
 		// so test doesn't fail when skipping
 		fmt.Printf("RenderExampleOnce: %s\n", "service consul at 127.0.0.1")
@@ -206,12 +276,25 @@ func Example() {
 		fmt.Printf("NotifierExample: node at 127.0.0.1\n")
 		fmt.Printf("ValidateTemplate: %s\n",
 			"file(/nofile): stat /nofile: no such file or directory")
+		fmt.Printf("EventHandlerLogger: %s\n",
+			"[Info] Tracking catalog.services\n"+
+				"[Info] Tracking catalog.services\n"+
+				"[Info] New data for 'catalog.services'\n"+
+				"[Info] Tracking health.service(consul|passing)\n"+
+				"[Info] Tracking health.service(consul|passing)\n"+
+				"[Info] New data for 'health.service(consul|passing)'")
 	}
 	// Output:
 	// RenderExampleOnce: service consul at 127.0.0.1
 	// RenderMultipleOnce: node at 127.0.0.1, service consul at 127.0.0.1
 	// NotifierExample: node at 127.0.0.1
 	// ValidateTemplate: file(/nofile): stat /nofile: no such file or directory
+	// EventHandlerLogger: [Info] Tracking catalog.services
+	// [Info] Tracking catalog.services
+	// [Info] New data for 'catalog.services'
+	// [Info] Tracking health.service(consul|passing)
+	// [Info] Tracking health.service(consul|passing)
+	// [Info] New data for 'health.service(consul|passing)'
 }
 
 // ValidateTemplate example requires a little more testing setup
