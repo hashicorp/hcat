@@ -214,7 +214,7 @@ func TestVaultReadQuery_Fetch_KVv1(t *testing.T) {
 		errCh := make(chan error, 1)
 		go func() {
 			for {
-				//data, _, err := d.Fetch(clients, &QueryOptions{WaitIndex: qm.LastIndex})
+				// data, _, err := d.Fetch(clients, &QueryOptions{WaitIndex: qm.LastIndex})
 				data, _, err := d.Fetch(clients)
 				if err != nil {
 					errCh <- err
@@ -504,7 +504,7 @@ func TestVaultReadQuery_Fetch_KVv2(t *testing.T) {
 			errCh := make(chan error, 1)
 			go func() {
 				for {
-					//data, _, err := d.Fetch(clients, &QueryOptions{WaitIndex: qm.LastIndex})
+					// data, _, err := d.Fetch(clients, &QueryOptions{WaitIndex: qm.LastIndex})
 					data, _, err := d.Fetch(clients)
 					if err != nil {
 						errCh <- err
@@ -558,9 +558,11 @@ func TestVaultReadQuery_Fetch_PKI_Anonymous(t *testing.T) {
 		Token:   "",
 	})
 	_, err = anonClient.vault.client.Auth().Token().LookupSelf()
-	if err == nil || !strings.Contains(err.Error(), "missing client token") {
+	if err == nil ||
+		!(strings.Contains(err.Error(), "missing client token") ||
+			strings.Contains(err.Error(), "permission denied")) {
 		// check environment for VAULT_TOKEN
-		t.Fatalf("expected a missing client token error but found: %v", err)
+		t.Fatalf("expected a 'missing client token' (vault < 1.10) or 'permission denied' error but found: %v", err)
 	}
 
 	d, err := NewVaultReadQuery("pki/cert/ca")
