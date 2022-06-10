@@ -3,8 +3,8 @@ as we get it in shape. We'll do an official release when it is ready.*
 
 # Hashicorp Configuration And Templating (hashicat) library
 
-[![Go Documentation](https://img.shields.io/badge/go-documentation-%2300acd7)](https://godoc.org/github.com/hashicorp/hcat)
-[![CircleCI](https://circleci.com/gh/hashicorp/hcat.svg?style=svg)](https://circleci.com/gh/hashicorp/hcat)
+[![Go Reference](https://pkg.go.dev/badge/github.com/hashicorp/hcat.svg)](https://pkg.go.dev/github.com/hashicorp/hcat)
+[![ci](https://github.com/hashicorp/hcat/actions/workflows/ci.yml/badge.svg)](https://github.com/hashicorp/hcat/actions/workflows/ci.yml)
 
 This library provides a means to fetch data managed by external services and
 render templates using that data. It also enables monitoring those services for
