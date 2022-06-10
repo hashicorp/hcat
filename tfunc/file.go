@@ -1,9 +1,9 @@
 package tfunc
 
 import (
-	"fmt"
 	"os"
 	"os/user"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -33,64 +33,52 @@ func fileFunc(recall hcat.Recaller) interface{} {
 	}
 }
 
-// writeToFile writes the content to a file allowing the setting of username,
-// group name, permissions and flags to select appending mode or add a newline.
+// writeToFile writes the content to a file with optional flags for
+// permissions, username (or UID), group name (or GID), and to select appending
+// mode or add a newline.
 //
-// If not set, username and groupname default to those running the process and
-// perms default to 0755 (plus umask). If only one of username or groupname are
-// given it will be used for both.
+// The username and group name fields can be left blank to default to the
+// current user and group.
 //
 // For example:
-//   key "key/path" | writeToFile "/file/path.txt"
-//   key "key/path" | writeToFile "/file/path.txt" "my-user" "my-group" "0644" "append"
-//   key "key/path" | writeToFile "/file/path.txt" "my-user" "my-group" "0644" "append,newline"
+//   key "my/key/path" | writeToFile "/my/file/path.txt" "" "" "0644"
+//   key "my/key/path" | writeToFile "/my/file/path.txt" "100" "1000" "0644"
+//   key "my/key/path" | writeToFile "/my/file/path.txt" "my-user" "my-group" "0644"
+//   key "my/key/path" | writeToFile "/my/file/path.txt" "my-user" "my-group" "0644" "append"
+//   key "my/key/path" | writeToFile "/my/file/path.txt" "my-user" "my-group" "0644" "append,newline"
 //
-func writeToFile(path string, args ...string) (string, error) {
-	if len(args) == 0 {
-		return "", fmt.Errorf("writeToFile: no content provided")
-	}
-	// content is always last arg
-	content, args := args[len(args)-1], args[:len(args)-1]
+func writeToFile(path, username, groupName, permissions string, args ...string) (string, error) {
 	// Parse arguments
-	var shouldAppend, shouldAddNewLine bool
-	var perms, username, groupname string
-	var err error
-	for _, arg := range args {
-		switch {
-		case strings.Contains(arg, "append") || strings.Contains(arg, "newline"):
-			shouldAppend = strings.Contains(arg, "append")
-			shouldAddNewLine = strings.Contains(arg, "newline")
-		case isPerm(arg):
-			perms = arg
-		case userExists(arg):
-			username = arg
-			if groupname == "" && groupExists(arg) {
-				groupname = arg
-			}
-		case groupExists(arg):
-			groupname = arg
-		default:
-			return "", fmt.Errorf("writeToFile: bad argument, %v", arg)
-		}
+	flags := ""
+	if len(args) == 2 {
+		flags = args[0]
 	}
+	content := args[len(args)-1]
 
-	perm := os.FileMode(0755) // default
-	if perms != "" {
-		p_u, err := strconv.ParseUint(perms, 8, 32)
-		if err != nil {
-			return "", err
-		}
-		perm = os.FileMode(p_u)
+	p_u, err := strconv.ParseUint(permissions, 8, 32)
+	if err != nil {
+		return "", err
 	}
+	perm := os.FileMode(p_u)
 
 	// Write to file
 	var f *os.File
+	shouldAppend := strings.Contains(flags, "append")
 	if shouldAppend {
 		f, err = os.OpenFile(path, os.O_APPEND|os.O_WRONLY|os.O_CREATE, perm)
 		if err != nil {
 			return "", err
 		}
 	} else {
+		dirPath := filepath.Dir(path)
+
+		if _, err := os.Stat(dirPath); err != nil {
+			err := os.MkdirAll(dirPath, os.ModePerm)
+			if err != nil {
+				return "", err
+			}
+		}
+
 		f, err = os.Create(path)
 		if err != nil {
 			return "", err
@@ -99,6 +87,7 @@ func writeToFile(path string, args ...string) (string, error) {
 	defer f.Close()
 
 	writingContent := []byte(content)
+	shouldAddNewLine := strings.Contains(flags, "newline")
 	if shouldAddNewLine {
 		writingContent = append(writingContent, []byte("\n")...)
 	}
@@ -106,18 +95,46 @@ func writeToFile(path string, args ...string) (string, error) {
 		return "", err
 	}
 
-	if username != "" {
-		// Change ownership and permissions
+	// Change ownership and permissions
+	var uid int
+	var gid int
+	if err != nil {
+		return "", err
+	}
+
+	if username == "" {
+		uid = os.Getuid()
+	} else {
+		var convErr error
 		u, err := user.Lookup(username)
 		if err != nil {
-			return "", err
+			// Check if username string is already a UID
+			uid, convErr = strconv.Atoi(username)
+			if convErr != nil {
+				return "", err
+			}
+		} else {
+			uid, _ = strconv.Atoi(u.Uid)
 		}
-		g, err := user.LookupGroup(groupname)
+	}
+
+	if groupName == "" {
+		gid = os.Getgid()
+	} else {
+		var convErr error
+		g, err := user.LookupGroup(groupName)
 		if err != nil {
-			return "", err
+			gid, convErr = strconv.Atoi(groupName)
+			if convErr != nil {
+				return "", err
+			}
+		} else {
+			gid, _ = strconv.Atoi(g.Gid)
 		}
-		uid, _ := strconv.Atoi(u.Uid)
-		gid, _ := strconv.Atoi(g.Gid)
+	}
+
+	// Avoid the chown call altogether if using current user and group.
+	if username != "" || groupName != "" {
 		err = os.Chown(path, uid, gid)
 		if err != nil {
 			return "", err
@@ -130,19 +147,4 @@ func writeToFile(path string, args ...string) (string, error) {
 	}
 
 	return "", nil
-}
-
-func isPerm(perms string) bool {
-	_, err := strconv.ParseUint(perms, 8, 32)
-	return err == nil
-}
-
-func userExists(username string) bool {
-	_, err := user.Lookup(username)
-	return err == nil
-}
-
-func groupExists(groupname string) bool {
-	_, err := user.LookupGroup(groupname)
-	return err == nil
 }
