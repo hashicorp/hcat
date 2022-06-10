@@ -23,7 +23,7 @@ func TestVaultRenewDuration(t *testing.T) {
 		t.Fatalf("renewable duration is not within 85%% to 95%% of lease duration: %f", nonRenewableDur)
 	}
 
-	var data = map[string]interface{}{
+	data := map[string]interface{}{
 		"rotation_period": json.Number("60"),
 		"ttl":             json.Number("30"),
 	}
@@ -106,11 +106,10 @@ func TestVaultRenewDuration(t *testing.T) {
 			secret := dep.Secret{LeaseDuration: leaseDur, Data: data}
 			secretDur := leaseCheckWait(&secret).Seconds()
 
-			if secretDur < 0.85*(leaseDur+1) || secretDur > 0.95*(leaseDur+1) {
+			if secretDur < 0.85*(leaseDur-1) || secretDur > 0.95*(leaseDur+1) {
 				t.Fatalf("renewable duration is not within 85%% to 95%% of lease duration: %f", secretDur)
 			}
 		})
-
 	})
 }
 

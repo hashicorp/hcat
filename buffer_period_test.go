@@ -120,7 +120,7 @@ func TestBufferPeriod(t *testing.T) {
 		}()
 
 		select {
-		case <-time.After(5 * time.Millisecond):
+		case <-time.After(5900 * time.Microsecond):
 			assert.Fail(t, "expected both buffer periods to send a signal")
 		case <-completed:
 		}
@@ -146,7 +146,7 @@ func TestBufferPeriod(t *testing.T) {
 		defer bufferPeriods.Stop()
 
 		id := "foo"
-		bufferPeriods.Add(time.Millisecond, 4*time.Millisecond, id)
+		bufferPeriods.Add(2*time.Millisecond, 8*time.Millisecond, id)
 		bufferPeriods.tick(id) // activate buffer
 		assert.True(t, bufferPeriods.timers[id].active())
 
