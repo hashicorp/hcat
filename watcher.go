@@ -276,7 +276,7 @@ func (w *Watcher) wait(ctx context.Context) (map[string]struct{}, error) {
 			select {
 			case v := <-w.dataCh:
 				notifiers = dataUpdate(v, notifiers)
-			case <-time.After(time.Microsecond):
+			default:
 				drain = false
 			}
 		}
@@ -290,7 +290,7 @@ func (w *Watcher) wait(ctx context.Context) (map[string]struct{}, error) {
 			select {
 			case nID := <-w.bufferTrigger:
 				notifiers[nID] = empty
-			case <-time.After(time.Microsecond):
+			default:
 				drain = false
 			}
 		}
