@@ -104,10 +104,10 @@ func TestBufferPeriod(t *testing.T) {
 		go bufferPeriods.Run(triggerCh)
 		defer bufferPeriods.Stop()
 
-		first := time.Duration(2 * time.Millisecond)
-		second := time.Duration(4 * time.Millisecond)
-		bufferPeriods.Add(first, first*2, "first")
-		bufferPeriods.Add(second, second*2, "second")
+		first := time.Duration(3 * time.Millisecond)
+		second := time.Duration(6 * time.Millisecond)
+		bufferPeriods.Add(first, first*3, "first")
+		bufferPeriods.Add(second, second*3, "second")
 
 		bufferPeriods.tick("first")
 		bufferPeriods.tick("second")
@@ -120,7 +120,7 @@ func TestBufferPeriod(t *testing.T) {
 		}()
 
 		select {
-		case <-time.After(5900 * time.Microsecond):
+		case <-time.After(8800 * time.Microsecond):
 			assert.Fail(t, "expected both buffer periods to send a signal")
 		case <-completed:
 		}
