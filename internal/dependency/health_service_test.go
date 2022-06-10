@@ -213,7 +213,8 @@ func TestHealthConnectServiceQuery_Fetch(t *testing.T) {
 					NodeDatacenter: "dc1",
 					Tags:           dep.ServiceTags([]string{}),
 					NodeMeta: map[string]string{
-						"consul-network-segment": ""},
+						"consul-network-segment": "",
+					},
 					Weights: api.AgentWeights{
 						Passing: 1,
 						Warning: 1,
@@ -245,6 +246,7 @@ func TestHealthConnectServiceQuery_Fetch(t *testing.T) {
 			inst.Node, inst.NodeID = "", ""
 			inst.Checks = nil
 			inst.NodeTaggedAddresses = nil
+			inst.ServiceTaggedAddresses = nil
 
 			assert.Equal(t, tc.exp, act)
 		})
