@@ -184,7 +184,7 @@ func TestFileQuery_Fetch(t *testing.T) {
 		case err := <-errCh:
 			t.Fatal(err)
 		case data := <-dataCh:
-			assert.Equal(t, data, "goodbye")
+			assert.Equal(t, "goodbye", data)
 		}
 	})
 }
