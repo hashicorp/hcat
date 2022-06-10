@@ -97,7 +97,6 @@ func TestWatcherAdd(t *testing.T) {
 }
 
 func TestWatcherRegister(t *testing.T) {
-
 	t.Run("base", func(t *testing.T) {
 		w := blindWatcher()
 		tt := echoTemplate("foo")
@@ -562,8 +561,10 @@ func TestWatcherWait(t *testing.T) {
 			// doesn't need goroutine as dataCh has a large buffer
 			w.dataCh <- w.track(n, deps[i]).store(data)
 		}
-		w.Wait(context.Background())
 		store := w.cache.(*Store)
+		if err := w.Wait(context.Background()); err != nil {
+			t.Fatal("Wait error:", err)
+		}
 		if len(store.data) != 5 {
 			t.Fatal("failed update")
 		}
