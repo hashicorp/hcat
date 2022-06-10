@@ -139,11 +139,11 @@ func TestFileQuery_Fetch(t *testing.T) {
 	})
 
 	t.Run("fires_changes", func(t *testing.T) {
-		f, err := ioutil.TempFile("", "")
+		f, err := os.CreateTemp("", "")
 		if err != nil {
 			t.Fatal(err)
 		}
-		if err := ioutil.WriteFile(f.Name(), []byte("hello"), 0644); err != nil {
+		if err := os.WriteFile(f.Name(), []byte("hello"), 0644); err != nil {
 			t.Fatal(err)
 		}
 		defer os.Remove(f.Name())
@@ -173,10 +173,19 @@ func TestFileQuery_Fetch(t *testing.T) {
 		case <-dataCh:
 		}
 
-		if err := ioutil.WriteFile(f.Name(), []byte("goodbye"), 0644); err != nil {
+		tmp, err := os.CreateTemp("", "")
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer os.Remove(tmp.Name())
+
+		if err := os.WriteFile(tmp.Name(), []byte("goodbye"), 0644); err != nil {
 			t.Fatal(err)
 		}
 		if err := f.Sync(); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Rename(tmp.Name(), f.Name()); err != nil {
 			t.Fatal(err)
 		}
 
