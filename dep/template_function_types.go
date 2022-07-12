@@ -62,6 +62,7 @@ type HealthService struct {
 	Port                   int
 	Weights                api.AgentWeights
 	Namespace              string
+	Proxy                  *api.AgentServiceConnectProxyConfig
 }
 
 // KvValue is here to type the KV return string
