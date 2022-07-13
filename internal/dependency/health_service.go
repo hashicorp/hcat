@@ -250,6 +250,7 @@ func (d *HealthServiceQuery) Fetch(clients dep.Clients) (interface{}, *dep.Respo
 			Port:      entry.Service.Port,
 			Weights:   entry.Service.Weights,
 			Namespace: entry.Service.Namespace,
+			Proxy:     entry.Service.Proxy,
 		})
 	}
 

@@ -220,6 +220,9 @@ func TestHealthConnectServiceQuery_Fetch(t *testing.T) {
 						Warning: 1,
 					},
 					Namespace: "",
+					Proxy: &api.AgentServiceConnectProxyConfig{
+						DestinationServiceName: "foo",
+					},
 				},
 			},
 		},
@@ -288,6 +291,7 @@ func TestHealthServiceQuery_Fetch(t *testing.T) {
 						Warning: 1,
 					},
 					Namespace: "",
+					Proxy:     &api.AgentServiceConnectProxyConfig{},
 				},
 			},
 		},
@@ -323,6 +327,7 @@ func TestHealthServiceQuery_Fetch(t *testing.T) {
 						Warning: 1,
 					},
 					Namespace: "",
+					Proxy:     &api.AgentServiceConnectProxyConfig{},
 				},
 			},
 		},
@@ -354,6 +359,7 @@ func TestHealthServiceQuery_Fetch(t *testing.T) {
 						Warning: 1,
 					},
 					Namespace: "",
+					Proxy:     &api.AgentServiceConnectProxyConfig{},
 				},
 			},
 		},
@@ -392,6 +398,7 @@ func TestHealthServiceQuery_Fetch(t *testing.T) {
 						Passing: 1,
 						Warning: 1,
 					},
+					Proxy: &api.AgentServiceConnectProxyConfig{},
 				},
 			},
 		},
@@ -761,6 +768,7 @@ func TestHealthServiceQueryV1_Fetch(t *testing.T) {
 			Warning: 1,
 		},
 		Namespace: "",
+		Proxy:     &api.AgentServiceConnectProxyConfig{},
 	}
 
 	cases := []struct {
