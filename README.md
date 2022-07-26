@@ -176,7 +176,7 @@ flowchart TB
     NewData --> SC[Save To Cache]
     NewData --> N{Notifier approved?}
     N -->|yes| B{Buffering?}
-    B -->|yes| Wait
+    B -->|yes| S
     B -->|no| Return
     N -->|no| Return
 ```
