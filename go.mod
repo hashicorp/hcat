@@ -3,7 +3,7 @@ module github.com/hashicorp/hcat
 go 1.14
 
 require (
-	github.com/BurntSushi/toml v0.3.1
+	github.com/BurntSushi/toml v1.2.0
 	github.com/armon/go-metrics v0.3.3 // indirect
 	github.com/frankban/quicktest v1.4.0 // indirect
 	github.com/google/btree v1.0.0 // indirect
