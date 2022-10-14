@@ -12,18 +12,23 @@ import (
 
 	"github.com/hashicorp/consul/api"
 	"github.com/hashicorp/consul/sdk/testutil"
+	"github.com/hashicorp/hcat/internal/test"
 	vapi "github.com/hashicorp/vault/api"
 )
 
-const vaultAddr = "http://127.0.0.1:8200"
-const vaultToken = "a_token"
+const (
+	vaultAddr  = "http://127.0.0.1:8200"
+	vaultToken = "a_token"
+)
 
-var testConsul *testutil.TestServer
-var testVault *vaultServer
-var testClients *ClientSet
+var (
+	testConsul  *testutil.TestServer
+	testVault   *vaultServer
+	testClients *ClientSet
+)
 
 func TestMain(m *testing.M) {
-	//log.SetOutput(ioutil.Discard)
+	// log.SetOutput(ioutil.Discard)
 	runTestVault()
 	runTestConsul()
 	testConsulHttp2Connect()
@@ -89,7 +94,8 @@ func TestMain(m *testing.M) {
 		ID:   "foo",
 		Port: 21999,
 		Proxy: &api.AgentServiceConnectProxyConfig{
-			DestinationServiceName: "foo"},
+			DestinationServiceName: "foo",
+		},
 	}
 
 	if err := consul_agent.ServiceRegister(testService); err != nil {
@@ -159,7 +165,8 @@ func runTestConsul() {
 	if err != nil {
 		Fatalf("failed to open test key file: %v\n", err)
 	}
-	consul, err := testutil.NewTestServerConfig(
+	tb := &test.TestingTB{}
+	consul, err := testutil.NewTestServerConfigT(tb,
 		func(c *testutil.TestServerConfig) {
 			c.LogLevel = "warn"
 			c.Stdout = ioutil.Discard
@@ -183,8 +190,10 @@ func runTestVault() {
 	if err != nil || path == "" {
 		Fatalf("vault not found on $PATH")
 	}
-	args := []string{"server", "-dev", "-dev-root-token-id", vaultToken,
-		"-dev-no-store-token"}
+	args := []string{
+		"server", "-dev", "-dev-root-token-id", vaultToken,
+		"-dev-no-store-token",
+	}
 	cmd := exec.Command("vault", args...)
 	cmd.Stdout = ioutil.Discard
 	cmd.Stderr = ioutil.Discard

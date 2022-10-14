@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/consul/sdk/testutil"
+	"github.com/hashicorp/hcat/internal/test"
 )
 
 var (
@@ -30,11 +31,12 @@ func TestMain(m *testing.M) {
 func testConsulSetup() (string, func()) {
 	var err error
 	origStderr := os.Stderr
-	os.Stderr, err = os.OpenFile(os.DevNull, os.O_WRONLY, 0666)
+	os.Stderr, err = os.OpenFile(os.DevNull, os.O_WRONLY, 0o666)
 	if err != nil {
 		os.Stderr = origStderr
 	}
-	consul, err := testutil.NewTestServerConfig(
+	tb := &test.TestingTB{}
+	consul, err := testutil.NewTestServerConfigT(tb,
 		func(c *testutil.TestServerConfig) {
 			c.LogLevel = "error"
 			c.Stdout = ioutil.Discard
