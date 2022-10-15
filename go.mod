@@ -13,7 +13,7 @@ require (
 	github.com/imdario/mergo v0.3.13
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.8.0
-	gopkg.in/yaml.v2 v2.3.0
+	gopkg.in/yaml.v2 v2.4.0
 )
 
 require (
