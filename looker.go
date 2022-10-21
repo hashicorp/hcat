@@ -23,10 +23,9 @@ type Looker interface {
 // the looker interface.
 type ClientSet struct {
 	*idep.ClientSet
-
 	// map of client-structs to retry functions
-	injectedEnv   []string
 	*sync.RWMutex // locking for env and retry
+	injectedEnv   []string
 }
 
 // NewClientSet is used to create the clients used.
@@ -38,6 +37,16 @@ func NewClientSet() *ClientSet {
 		RWMutex:     &sync.RWMutex{},
 		injectedEnv: []string{},
 	}
+}
+
+// "Default" singleton ClientSet simplifies sharing of ClientSet's single-use
+// lookup fields, E.g. unwrapped vault tokens
+var oneClientSet sync.Once
+var defaultClientSet *ClientSet
+
+func DefaultClientSet() *ClientSet {
+	oneClientSet.Do(func() { defaultClientSet = NewClientSet() })
+	return defaultClientSet
 }
 
 // AddConsul creates a Consul client and adds to the client set
@@ -84,13 +93,12 @@ func (cs *ClientSet) Env() []string {
 
 // VaultInput defines the inputs needed to configure the Vault client.
 type VaultInput struct {
+	HttpClient  *http.Client // optional, principally for testing
 	Address     string
 	Namespace   string
 	Token       string
 	UnwrapToken bool
 	Transport   TransportInput
-	// optional, principally for testing
-	HttpClient *http.Client
 }
 
 func (i VaultInput) toInternal() *idep.CreateClientInput {

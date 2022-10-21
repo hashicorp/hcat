@@ -121,7 +121,7 @@ func NewWatcher(i WatcherInput) *Watcher {
 	}
 	clients := i.Clients
 	if clients == nil {
-		clients = NewClientSet()
+		clients = DefaultClientSet()
 	}
 	eventHandler := i.EventHandler
 	if eventHandler == nil {
