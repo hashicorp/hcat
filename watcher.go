@@ -57,9 +57,9 @@ type Watcher struct {
 	// tracker tracks template<->dependencies (see bottom of this file)
 	tracker *tracker
 
-	// bufferTemplates manages the buffer period per template to accumulate
+	// bufferTimers manages the buffer period per notifier to accumulate
 	// dependency changes.
-	bufferTemplates *timers
+	bufferTimers *timers
 	// bufferTrigger is the notification channel for template IDs that have
 	// completed their active buffer period.
 	bufferTrigger chan string
@@ -139,7 +139,7 @@ func NewWatcher(i WatcherInput) *Watcher {
 		stopCh:          make(chan struct{}, 1),
 		tracker:         newTracker(),
 		bufferTrigger:   bufferTriggerCh,
-		bufferTemplates: newTimers(),
+		bufferTimers:    newTimers(),
 		retryFuncConsul: i.ConsulRetryFunc,
 		maxStale:        i.ConsulMaxStale,
 		blockWaitTime:   i.ConsulBlockWait,
@@ -147,7 +147,7 @@ func NewWatcher(i WatcherInput) *Watcher {
 		defaultLease:    i.VaultDefaultLease,
 	}
 
-	go w.bufferTemplates.Run(bufferTriggerCh)
+	go w.bufferTimers.Run(bufferTriggerCh)
 
 	return w
 }
@@ -217,7 +217,7 @@ func (w *Watcher) Wait(ctx context.Context) error {
 // the provided channel which templates have changes to be rendered. Useful
 // for when caller wants to process templates asynchronously. Only one Watch
 // should be called at given time and should not be called with Wait.
-func (w *Watcher) Watch(ctx context.Context, tmplCh chan string) error {
+func (w *Watcher) Watch(ctx context.Context, notifierCh chan string) error {
 	w.stopCh.drain()
 
 	// send waiting notification, only used for testing
@@ -237,7 +237,7 @@ func (w *Watcher) Watch(ctx context.Context, tmplCh chan string) error {
 		}
 
 		for nID := range notifiers {
-			tmplCh <- nID
+			notifierCh <- nID
 		}
 	}
 }
@@ -314,8 +314,8 @@ func (w *Watcher) wait(ctx context.Context) (map[string]struct{}, error) {
 func (w *Watcher) Buffering(n Notifier) bool {
 	// to enable buffering only after the notifier/template has been completely
 	// evaluated/rendered, you need to add '&& w.Complete(n)' to the line below
-	if w.bufferTemplates.isBuffering(n.ID()) {
-		w.bufferTemplates.tick(n.ID())
+	if w.bufferTimers.isBuffering(n.ID()) {
+		w.bufferTimers.tick(n.ID())
 		return true
 	}
 	return false
@@ -323,7 +323,7 @@ func (w *Watcher) Buffering(n Notifier) bool {
 
 // BufferReset resets an active buffer period to inactive.
 func (w *Watcher) BufferReset(n Notifier) {
-	w.bufferTemplates.Reset(n.ID())
+	w.bufferTimers.Reset(n.ID())
 }
 
 // Register registers one or more Notifiers with the Watcher for future use.
@@ -441,9 +441,9 @@ func (w *Watcher) Sweep(notifier IDer) {
 
 // SetBufferPeriod sets a buffer period to accumulate dependency changes for
 // a template.
-func (w *Watcher) SetBufferPeriod(min, max time.Duration, tmplIDs ...string) {
-	for _, id := range tmplIDs {
-		w.bufferTemplates.Add(min, max, id)
+func (w *Watcher) SetBufferPeriod(min, max time.Duration, notifierIDs ...string) {
+	for _, id := range notifierIDs {
+		w.bufferTimers.Add(min, max, id)
 	}
 }
 
@@ -456,7 +456,7 @@ func (w *Watcher) ID() string {
 // view was in the middle of a poll, no data will be returned.
 func (w *Watcher) Stop() {
 	w.event(events.Trace{ID: w.ID(), Message: "stopping watcher"})
-	w.bufferTemplates.Stop()
+	w.bufferTimers.Stop()
 
 	w.tracker.stopViews()
 
@@ -756,16 +756,21 @@ type dummyNotifier struct {
 }
 
 func fakeNotifier(name string) *dummyNotifier {
-	return &dummyNotifier{name: name, notify: true,
-		deps: make(chan interface{}, 100)}
+	return &dummyNotifier{
+		name: name, notify: true,
+		deps: make(chan interface{}, 100),
+	}
 }
+
 func (n *dummyNotifier) Notify(d interface{}) bool {
 	n.deps <- d
 	return n.notify
 }
+
 func (n *dummyNotifier) ID() string {
 	return string(n.name)
 }
+
 func (n *dummyNotifier) count() int {
 	return len(n.deps)
 }
