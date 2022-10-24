@@ -3,7 +3,7 @@ module github.com/hashicorp/hcat
 go 1.19
 
 require (
-	github.com/BurntSushi/toml v1.2.0
+	github.com/BurntSushi/toml v1.2.1
 	github.com/hashicorp/consul/api v1.15.3
 	github.com/hashicorp/consul/sdk v0.11.0
 	github.com/hashicorp/go-bexpr v0.1.11
