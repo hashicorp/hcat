@@ -340,13 +340,15 @@ func (v *view) fetch(doneCh, successCh chan<- struct{}, errCh chan<- error) {
 			allowStale = true
 		}
 
-		if dur := rateLimiter(start); dur > 1 {
-			time.Sleep(dur)
-		}
-
 		if rm.LastIndex == v.lastIndex {
 			v.event(events.Trace{ID: v.ID(), Message: "same index, no new data"})
 			continue
+		}
+
+		if v.receivedData { // ratelimit after first
+			if dur := rateLimiter(start); dur > 1 {
+				time.Sleep(dur)
+			}
 		}
 
 		v.dataLock.Lock()
