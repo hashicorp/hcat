@@ -13,7 +13,7 @@ import (
 )
 
 // dataBufferSize is the default number of views to process in a batch.
-const dataBufferSize = 2048
+const DefaultDataBufferSize = 2048
 
 // standard error returned when you try to register the same notifier twice
 var ErrRegistry = fmt.Errorf("duplicate watcher registry entry")
@@ -99,6 +99,9 @@ type WatcherInput struct {
 	ConsulBlockWait time.Duration
 	// RetryFun for Consul
 	ConsulRetryFunc RetryFunc
+
+	// Override the default data buffer size (for testing)
+	DataBufferSize *int
 }
 
 type drainableChan chan struct{}
@@ -126,6 +129,14 @@ func NewWatcher(i WatcherInput) *Watcher {
 	eventHandler := i.EventHandler
 	if eventHandler == nil {
 		eventHandler = func(events.Event) {}
+	}
+
+	var dataBufferSize int
+	switch i.DataBufferSize {
+	case nil:
+		dataBufferSize = DefaultDataBufferSize
+	default:
+		dataBufferSize = *i.DataBufferSize
 	}
 
 	bufferTriggerCh := make(chan string, dataBufferSize/2)
