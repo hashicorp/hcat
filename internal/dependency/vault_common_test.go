@@ -96,7 +96,6 @@ func TestVaultRenewDuration(t *testing.T) {
 			}
 		})
 
-		// XXX this has a race XXX
 		t.Run("0 ttl", func(t *testing.T) {
 			const leaseDur = 1000
 
