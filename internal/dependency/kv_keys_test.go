@@ -205,6 +205,7 @@ func TestKVKeysQuery_Fetch(t *testing.T) {
 					return
 				}
 				dataCh <- data
+				d.Stop()
 			}
 		}()
 
@@ -213,8 +214,6 @@ func TestKVKeysQuery_Fetch(t *testing.T) {
 			t.Fatal(err)
 		case <-dataCh:
 		}
-
-		d.Stop()
 
 		select {
 		case err := <-errCh:
