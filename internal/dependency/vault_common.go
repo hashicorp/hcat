@@ -1,6 +1,7 @@
 package dependency
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"math/rand"
@@ -8,13 +9,10 @@ import (
 	"strings"
 	"time"
 
-	"encoding/json"
-
 	"github.com/hashicorp/hcat/dep"
 	"github.com/hashicorp/vault/api"
 )
 
-//
 type renewer interface {
 	dep.Dependency
 	stopChan() chan struct{}
@@ -44,9 +42,27 @@ func renewSecret(clients dep.Clients, d renewer) error {
 	}
 }
 
+// (Test) Options for leaseCheckWait
+type LCWopts struct {
+	nowF      func() time.Time
+	jitterOFF bool
+}
+
+// default to live/real values
+func (to *LCWopts) getOpts() (func() time.Time, bool) {
+	switch {
+	case to == nil: // defaults
+		return time.Now, true
+	case to.nowF != nil:
+		return to.nowF, !to.jitterOFF
+	}
+	return time.Now, !to.jitterOFF
+}
+
 // leaseCheckWait accepts a secret and returns the recommended amount of
 // time to sleep.
-func leaseCheckWait(s *dep.Secret) time.Duration {
+func leaseCheckWait(s *dep.Secret, topts *LCWopts) time.Duration {
+	nowFunc, jitter := topts.getOpts()
 	// base should be set to the default already
 	// be sure not to set base to <=0 below
 	base := s.LeaseDuration
@@ -59,7 +75,7 @@ func leaseCheckWait(s *dep.Secret) time.Duration {
 	if _, ok := s.Data["certificate"]; ok && s.LeaseID == "" {
 		if expInterface, ok := s.Data["expiration"]; ok {
 			if expData, err := expInterface.(json.Number).Int64(); err == nil {
-				base = int(expData - time.Now().Unix())
+				base = int(expData - nowFunc().Unix())
 			}
 		}
 	}
@@ -93,14 +109,14 @@ func leaseCheckWait(s *dep.Secret) time.Duration {
 	// Convert to float seconds.
 	sleep := float64(time.Duration(base) * time.Second)
 
-	if vaultSecretRenewable(s) {
+	switch {
+	case vaultSecretRenewable(s):
 		// Renew at 1/3 the remaining lease. This will give us an opportunity
 		// to retry at least one more time should the first renewal fail.
 		sleep = sleep / 3.0
-
 		// Use some randomness so many clients do not hit Vault simultaneously.
 		sleep = sleep * (rand.Float64() + 1) / 2.0
-	} else if !rotatingSecret {
+	case !rotatingSecret && jitter:
 		// If the secret doesn't have a rotation period, this is a
 		// non-renewable leased secret.
 		// For non-renewable leases set the renew duration to use much of the
