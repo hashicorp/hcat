@@ -11,10 +11,8 @@ import (
 	"github.com/pkg/errors"
 )
 
-var (
-	// Ensure implements
-	_ isDependency = (*VaultReadQuery)(nil)
-)
+// Ensure implements
+var _ isDependency = (*VaultReadQuery)(nil)
 
 // VaultReadQuery is the dependency to Vault for a secret
 type VaultReadQuery struct {
@@ -82,7 +80,7 @@ func (d *VaultReadQuery) Fetch(clients dep.Clients) (interface{}, *dep.ResponseM
 	}
 
 	if !vaultSecretRenewable(d.secret) {
-		dur := leaseCheckWait(d.secret)
+		dur := leaseCheckWait(d.secret, nil)
 		d.sleepCh <- dur
 	}
 
@@ -150,7 +148,6 @@ func (d *VaultReadQuery) readSecret(clients dep.Clients, opts *QueryOptions) (*a
 
 	vaultSecret, err := vaultClient.Logical().ReadWithData(d.secretPath,
 		d.queryValues)
-
 	if err != nil {
 		return nil, errors.Wrap(err, d.ID())
 	}

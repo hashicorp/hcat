@@ -13,10 +13,8 @@ import (
 	"github.com/pkg/errors"
 )
 
-var (
-	// Ensure implements
-	_ isDependency = (*VaultWriteQuery)(nil)
-)
+// Ensure implements
+var _ isDependency = (*VaultWriteQuery)(nil)
 
 // VaultWriteQuery is the dependency to Vault for a secret
 type VaultWriteQuery struct {
@@ -89,7 +87,7 @@ func (d *VaultWriteQuery) Fetch(clients dep.Clients) (interface{}, *dep.Response
 	d.secret = transformSecret(vaultSecret, opts.DefaultLease)
 
 	if !vaultSecretRenewable(d.secret) {
-		dur := leaseCheckWait(d.secret)
+		dur := leaseCheckWait(d.secret, nil)
 		d.sleepCh <- dur
 	}
 
