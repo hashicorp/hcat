@@ -1,6 +1,7 @@
 package hcat
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -12,7 +13,7 @@ func getTestTimer(ts *timers, name string) *testTimer {
 	if ok {
 		return timer
 	}
-	panic("should be *testTimer")
+	panic(fmt.Sprintf("should be *testTimer, got: %#v", timer))
 }
 
 func TestBufferPeriod(t *testing.T) {
