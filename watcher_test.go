@@ -829,7 +829,7 @@ func TestWatcherWatch(t *testing.T) {
 		testCases := []struct {
 			name     string
 			dataFunc func(w *Watcher, n Notifier, d dep.Dependency)
-			expected int
+			expected time.Duration
 		}{
 			{
 				"min",
@@ -837,24 +837,24 @@ func TestWatcherWatch(t *testing.T) {
 					w.dataCh <- w.track(n, d)
 					w.Buffering(n)
 				},
-				1,
+				2 * time.Millisecond,
 			}, {
 				"multiple",
 				func(w *Watcher, n Notifier, d dep.Dependency) {
 					// Emulate multiple changes but still expect just a single
 					// notifications within max buffer delay
+					// NOTE max buffer delay is hardcoded below as maxDuration.
 					w.dataCh <- w.track(n, d)
 					w.Buffering(n)
 					w.Buffering(n)
 					w.Buffering(n)
 				},
-				1,
+				4 * time.Millisecond,
 			},
 		}
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
-				N := 1
-				tmplCh := make(chan string, 10)
+				N := 0
 				w := NewWatcher(WatcherInput{DataBufferSize: &N})
 				defer w.Stop()
 
@@ -864,36 +864,23 @@ func TestWatcherWatch(t *testing.T) {
 
 				minDuration := time.Millisecond
 				maxDuration := 5 * time.Millisecond
-				w.SetBufferPeriod(minDuration, maxDuration, "foo")
+				w.bufferTimers.testAdd(minDuration, maxDuration, "foo")
 
-				ctx, cancel := context.WithTimeout(context.Background(),
-					time.Second)
-				defer cancel()
-
-				errCh := make(chan error)
+				var timer *testTimer
 				go func() {
-					errCh <- w.Watch(ctx, tmplCh)
+					tc.dataFunc(w, fooNotifier, fooDep)
+					// timer created during dataFunc run
+					timer = getTestTimer(w.bufferTimers, "foo")
+					timer.send() // fake send timer notification
 				}()
 
-				go tc.dataFunc(w, fooNotifier, fooDep)
-				now := time.Now()
-				for i := 0; i < tc.expected; i++ {
-					select {
-					case <-ctx.Done():
-						t.Fatal("unexpected stop of Watch from context:", ctx.Err())
-					case err := <-errCh:
-						t.Fatal("unexpected Watch return:", err)
-					case tmplID := <-tmplCh:
-						if tmplID != "foo" {
-							t.Fatal("unexpected template notification:", tmplID)
-						}
-					}
+				// mimicing Watch's use of Wait to keep test code sane
+				if err := w.Wait(context.Background()); err != nil {
+					t.Error("Unexpected error:", err)
 				}
-				duration := time.Since(now)
-				if duration < minDuration {
-					t.Fatal("minimum buffer duration was not met:", duration)
-				} else if duration > maxDuration {
-					t.Fatal("unexpected duration waited:", duration)
+
+				if timer.totalTime != tc.expected {
+					t.Fatal("unexpected duration waited:", timer.totalTime)
 				}
 			})
 		}
