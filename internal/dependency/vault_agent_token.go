@@ -10,10 +10,8 @@ import (
 	"github.com/pkg/errors"
 )
 
-var (
-	// Ensure implements
-	_ isDependency = (*VaultAgentTokenQuery)(nil)
-)
+// Ensure implements
+var _ isDependency = (*VaultAgentTokenQuery)(nil)
 
 const (
 	// VaultAgentTokenSleepTime is the amount of time to sleep between queries, since
@@ -41,7 +39,6 @@ func NewVaultAgentTokenQuery(path string) (*VaultAgentTokenQuery, error) {
 // Fetch retrieves this dependency and returns the result or any errors that
 // occur in the process.
 func (d *VaultAgentTokenQuery) Fetch(clients dep.Clients) (interface{}, *dep.ResponseMetadata, error) {
-
 	select {
 	case <-d.stopCh:
 		return "", nil, ErrStopped
@@ -113,7 +110,11 @@ func (d *VaultAgentTokenQuery) watch(lastStat os.FileInfo) <-chan *watchResult {
 				}
 			}
 
-			time.Sleep(VaultAgentTokenSleepTime)
+			select {
+			case <-d.stopCh:
+				return
+			case <-time.After(VaultAgentTokenSleepTime):
+			}
 		}
 	}(lastStat)
 

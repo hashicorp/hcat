@@ -44,7 +44,6 @@ func NewFileQuery(s string) (*FileQuery, error) {
 // Fetch retrieves this dependency and returns the result or any errors that
 // occur in the process.
 func (d *FileQuery) Fetch(clients dep.Clients) (interface{}, *dep.ResponseMetadata, error) {
-
 	select {
 	case <-d.stopCh:
 		return "", nil, ErrStopped
@@ -118,8 +117,11 @@ func (d *FileQuery) watch(lastStat os.FileInfo) <-chan *watchResult {
 					return
 				}
 			}
-
-			time.Sleep(FileQuerySleepTime)
+			select {
+			case <-d.stopCh:
+				return
+			case <-time.After(FileQuerySleepTime):
+			}
 		}
 	}(lastStat)
 

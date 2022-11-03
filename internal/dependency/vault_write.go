@@ -54,11 +54,13 @@ func (d *VaultWriteQuery) Fetch(clients dep.Clients) (interface{}, *dep.Response
 	select {
 	case <-d.stopCh:
 		return nil, nil, ErrStopped
-	default:
-	}
-	select {
 	case dur := <-d.sleepCh:
-		time.Sleep(dur)
+		select {
+		case <-time.After(dur):
+			break
+		case <-d.stopCh:
+			return nil, nil, ErrStopped
+		}
 	default:
 	}
 
