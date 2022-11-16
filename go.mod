@@ -5,7 +5,7 @@ go 1.19
 require (
 	github.com/BurntSushi/toml v1.2.1
 	github.com/hashicorp/consul/api v1.15.3
-	github.com/hashicorp/consul/sdk v0.11.0
+	github.com/hashicorp/consul/sdk v0.12.0
 	github.com/hashicorp/go-bexpr v0.1.11
 	github.com/hashicorp/go-rootcerts v1.0.2
 	github.com/hashicorp/go-sockaddr v1.0.2
