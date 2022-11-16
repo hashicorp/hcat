@@ -4,8 +4,8 @@ go 1.19
 
 require (
 	github.com/BurntSushi/toml v1.2.1
-	github.com/hashicorp/consul/api v1.15.3
-	github.com/hashicorp/consul/sdk v0.11.0
+	github.com/hashicorp/consul/api v1.16.0
+	github.com/hashicorp/consul/sdk v0.12.0
 	github.com/hashicorp/go-bexpr v0.1.11
 	github.com/hashicorp/go-rootcerts v1.0.2
 	github.com/hashicorp/go-sockaddr v1.0.2
@@ -31,7 +31,7 @@ require (
 	github.com/hashicorp/go-uuid v1.0.2 // indirect
 	github.com/hashicorp/golang-lru v0.5.4 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
-	github.com/hashicorp/serf v0.9.7 // indirect
+	github.com/hashicorp/serf v0.10.1 // indirect
 	github.com/hashicorp/vault/sdk v0.1.14-0.20190730042320-0dc007d98cc8 // indirect
 	github.com/mattn/go-colorable v0.1.6 // indirect
 	github.com/mattn/go-isatty v0.0.12 // indirect
@@ -43,7 +43,7 @@ require (
 	github.com/ryanuber/go-glob v1.0.0 // indirect
 	golang.org/x/crypto v0.0.0-20200429183012-4b2356b1ed79 // indirect
 	golang.org/x/net v0.0.0-20211216030914-fe4d6282115f // indirect
-	golang.org/x/sys v0.0.0-20220722155257-8c9f86f7a55f // indirect
+	golang.org/x/sys v0.0.0-20220728004956-3c1f35247d10 // indirect
 	golang.org/x/text v0.3.8 // indirect
 	golang.org/x/time v0.0.0-20200416051211-89c76fbcd5d1 // indirect
 	gopkg.in/square/go-jose.v2 v2.5.1 // indirect
