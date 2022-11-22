@@ -17,11 +17,12 @@ func filterMeta(meta map[string]string) map[string]string {
 
 // filterVersionMeta filters out all version information from the returned
 // metadata. It allocates the meta map if it is nil to make the tests backward
-// compatible with versions < 1.5.2.
+// compatible with older versions.
 func filterVersionMeta(meta map[string]string) map[string]string {
 	filteredMeta := []string{
-		"raft_version", "serf_protocol_current",
-		"serf_protocol_min", "serf_protocol_max", "version", "grpc_port",
+		"raft_version", "version",
+		"serf_protocol_current", "serf_protocol_min", "serf_protocol_max",
+		"grpc_port", "grpc_tls_port",
 	}
 	return filter(meta, filteredMeta)
 }

@@ -3,6 +3,7 @@ package dependency
 import (
 	"fmt"
 	"math/rand"
+	"strings"
 	"testing"
 	"time"
 
@@ -33,9 +34,8 @@ func TestConnectLeafQuery_Fetch(t *testing.T) {
 		d := NewConnectLeafQuery("")
 
 		_, _, err := d.Fetch(testClients)
-		exp := "Unexpected response code: 500 (" +
-			"URI must be either service, agent, or kind)"
-		if errors.Cause(err).Error() != exp {
+		expPrefix := "Unexpected response code: 500 (URI must be either"
+		if !strings.HasPrefix(errors.Cause(err).Error(), expPrefix) {
 			t.Fatalf("Unexpected error: %v", err)
 		}
 	})
