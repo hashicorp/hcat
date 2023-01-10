@@ -3,6 +3,7 @@ as we get it in shape. We'll do an official release when it is ready.*
 
 # Hashicorp Configuration And Templating (hashicat) library
 
+[![Project unmaintained](https://img.shields.io/badge/project-unmaintained-red.svg)](https://github.com/hashicorp/hcat/issues/132)
 [![Go Reference](https://pkg.go.dev/badge/github.com/hashicorp/hcat.svg)](https://pkg.go.dev/github.com/hashicorp/hcat)
 [![ci](https://github.com/hashicorp/hcat/actions/workflows/ci.yml/badge.svg)](https://github.com/hashicorp/hcat/actions/workflows/ci.yml)
 
